@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { SaveIndicator, useSaveIndicator } from '@/components/SaveIndicator'
 import { Icon } from '@/components/Icon'
+import { TablerIcon } from '@/components/TablerIcon'
 import { useRouter } from 'next/navigation'
 
 type Me = {
@@ -467,7 +468,7 @@ export default function SettingsPage() {
       <div className="space-y-6">
       <h1 className="text-xl font-semibold">
         <span className="inline-flex items-center gap-1">
-          <Icon name="settings" />
+          <TablerIcon name="settings" />
           <span>Einstellungen</span>
         </span>
       </h1>
@@ -475,7 +476,7 @@ export default function SettingsPage() {
       <div className="card p-4 space-y-3">
         <h2 className="font-medium">
           <span className="inline-flex items-center gap-1">
-            <Icon name="manage_accounts" />
+            <TablerIcon name="manage_accounts" />
             <span>Profil</span>
           </span>
         </h2>
@@ -486,9 +487,9 @@ export default function SettingsPage() {
           <label className="text-sm text-gray-400">Benutzername
             <input className="w-full bg-background border border-slate-700 rounded px-2 py-1" value={username} onChange={e => setUsername(e.target.value)} />
           </label>
-          {profileError && <div className="text-sm text-red-400">{profileError}</div>}
+          {profileError && <div className="alert alert-error"><span className="text-sm">{profileError}</span></div>}
           <div className="flex items-center gap-2">
-            <button type="submit" className="pill !bg-green-600 !text-white hover:bg-pill-light dark:hover:bg-pill hover:text-gray-900 dark:hover:text-gray-100">Speichern</button>
+            <button type="submit" className="btn btn-success">Speichern</button>
             <SaveIndicator saving={saving} savedAt={savedAt} />
           </div>
 
@@ -513,7 +514,7 @@ export default function SettingsPage() {
       <div className="card p-4 space-y-3 max-w-md">
         <h2 className="font-medium">
           <span className="inline-flex items-center gap-1">
-            <Icon name="palette" />
+            <TablerIcon name="palette" />
             <span>UI</span>
           </span>
         </h2>
@@ -532,7 +533,7 @@ export default function SettingsPage() {
       <div className="card p-4 space-y-3">
         <h2 className="font-medium">
           <span className="inline-flex items-center gap-1">
-            <Icon name="checklist" />
+            <TablerIcon name="checklist" />
             <span>Gewohnheiten</span>
           </span>
         </h2>
@@ -562,7 +563,7 @@ export default function SettingsPage() {
                   {h.userId && (
                     <div className="flex items-center gap-2">
                       <button className="pill" title="Löschen" aria-label="Löschen" onClick={() => deleteHabit(h.id, h.userId)}>
-                        <Icon name="delete" />
+                        <TablerIcon name="delete" />
                       </button>
                     </div>
                   )}
@@ -575,7 +576,7 @@ export default function SettingsPage() {
                   <div className="flex items-end gap-2">
                     <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-surface border border-slate-700"><Icon name={(habitIconDrafts[h.id] ?? h.icon) || ''} /></span>
                     <button className="pill" title="Icon speichern" aria-label="Icon speichern" onClick={() => saveHabitIcon(h.id, habitIconDrafts[h.id] ?? (h.icon ?? ''))}>
-                      <Icon name="save" />
+                      <TablerIcon name="save" />
                     </button>
                   </div>
                 </div>
@@ -588,7 +589,7 @@ export default function SettingsPage() {
       <div className="card p-4 space-y-3 max-w-xl">
         <h2 className="font-medium">
           <span className="inline-flex items-center gap-1">
-            <Icon name="tune" />
+            <TablerIcon name="tune" />
             <span>Erfassung</span>
           </span>
         </h2>
@@ -638,7 +639,7 @@ export default function SettingsPage() {
       <div className="card p-4 space-y-3 max-w-xl">
         <h2 className="font-medium">
           <span className="inline-flex items-center gap-1">
-            <Icon name="stethoscope" />
+            <TablerIcon name="stethoscope" />
             <span>Symptome</span>
           </span>
         </h2>
@@ -672,7 +673,7 @@ export default function SettingsPage() {
                     </label>
                     <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-surface border border-slate-700"><Icon name={current || ''} /></span>
                     <button className="pill" title="Icon speichern" aria-label="Icon speichern" onClick={() => saveStdSymptomIcon(type, current)}>
-                      <Icon name="save" />
+                      <TablerIcon name="save" />
                     </button>
                   </div>
                 </div>
@@ -695,10 +696,10 @@ export default function SettingsPage() {
                     </label>
                     <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-surface border border-slate-700"><Icon name={current || ''} /></span>
                     <button className="pill" title="Icon speichern" aria-label="Icon speichern" onClick={() => saveUserSymptomIcon(s.id, current)}>
-                      <Icon name="save" />
+                      <TablerIcon name="save" />
                     </button>
                     <button className="pill" title="Löschen" aria-label="Löschen" onClick={() => deleteUserSymptom(s.id)}>
-                      <Icon name="delete" />
+                      <TablerIcon name="delete" />
                     </button>
                   </div>
                 </div>
@@ -710,7 +711,7 @@ export default function SettingsPage() {
       <div className="card p-4 space-y-3 max-w-xl">
         <h2 className="font-medium">
           <span className="inline-flex items-center gap-1">
-            <Icon name="add_link" />
+            <TablerIcon name="add_link" />
             <span>Links</span>
           </span>
         </h2>

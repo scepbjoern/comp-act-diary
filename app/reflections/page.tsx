@@ -1,6 +1,7 @@
 "use client"
 import React, { useEffect, useMemo, useState } from 'react'
-import { Icon } from '@/components/Icon'
+import { Icon } from '@/components/Icon' // Keep for symptom/habit icons
+import { TablerIcon } from '@/components/TablerIcon'
 import { CameraPicker } from '@/components/CameraPicker'
 import { MicrophoneButton } from '@/components/MicrophoneButton'
 import { ImproveTextButton } from '@/components/ImproveTextButton'
@@ -185,7 +186,7 @@ export default function ReflectionsPage() {
     <div className="space-y-6">
       <h1 className="text-xl font-semibold">
         <span className="inline-flex items-center gap-1">
-          <Icon name="rate_review" />
+          <TablerIcon name="rate_review" />
           <span>Reflexion</span>
         </span>
       </h1>

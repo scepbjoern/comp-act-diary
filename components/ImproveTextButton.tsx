@@ -1,6 +1,7 @@
 "use client"
 import React, { useState } from 'react'
 import { TextImprovementDialog } from './TextImprovementDialog'
+import { TablerIcon } from './TablerIcon'
 
 /**
  * ImproveTextButton
@@ -48,7 +49,7 @@ export function ImproveTextButton(props: {
           }
         }}
       >
-        🪄
+        <TablerIcon name="sparkles" size={16} />
       </span>
 
       {showDialog && (

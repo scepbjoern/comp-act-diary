@@ -10,8 +10,10 @@ import { ImproveTextButton } from '@/components/ImproveTextButton'
 import { SaveBar } from '@/components/SaveBar'
 import { Toasts, useToasts } from '@/components/Toast'
 import { Icon } from '@/components/Icon'
+import { MealNotesAccordion } from '@/components/MealNotesAccordion'
+import { DiaryEntriesAccordion } from '@/components/DiaryEntriesAccordion'
 import { DEFAULT_STOOL_ICON } from '@/lib/default-icons'
-import AudioPlayer from '@/components/AudioPlayer'
+import { AudioPlayerH5 } from '@/components/AudioPlayerH5'
 import AudioUploadButton from '@/components/AudioUploadButton'
 
 const SYMPTOM_LABELS: Record<string, string> = {
@@ -154,6 +156,7 @@ export default function HeutePage() {
   // Diary entries state
   const [newDiaryText, setNewDiaryText] = useState('')
   const [newDiaryAudio, setNewDiaryAudio] = useState<string | null>(null)
+  const [newDiaryAudioFileId, setNewDiaryAudioFileId] = useState<string | null>(null)
   const [newDiaryOriginalTranscript, setNewDiaryOriginalTranscript] = useState<string | null>(null)
   const [keepAudio, setKeepAudio] = useState(true)
   const [notesLoading, setNotesLoading] = useState(false)
@@ -221,10 +224,11 @@ export default function HeutePage() {
     }
   }
 
-  async function deleteAudio(note: DayNote) {
-    if (!note.audioFilePath) return
+  async function deleteAudio(noteId: string) {
+    const note = notes.find(n => n.id === noteId)
+    if (!note?.audioFilePath) return
     if (!window.confirm('Nur die Audioaufnahme löschen?')) return
-    setPendingAudioDelete(note.id)
+    setPendingAudioDelete(noteId)
     try {
       const res = await fetch(`/api/notes/${note.id}`, {
         method: 'PATCH',
@@ -591,7 +595,7 @@ export default function HeutePage() {
         body: JSON.stringify({
           type: 'DIARY',
           text: newDiaryText.trim(),
-          audioFilePath: newDiaryAudio,
+          audioFileId: newDiaryAudioFileId,
           keepAudio,
           originalTranscript: newDiaryOriginalTranscript,
           time: new Date().toISOString().slice(11, 16),
@@ -604,6 +608,7 @@ export default function HeutePage() {
       // Reset form
       setNewDiaryText('')
       setNewDiaryAudio(null)
+      setNewDiaryAudioFileId(null)
       setNewDiaryOriginalTranscript(null)
       push('Tagebucheintrag gespeichert', 'success')
     } catch (e) {
@@ -714,7 +719,15 @@ export default function HeutePage() {
               
               <div className="flex items-center gap-2 flex-wrap">
                 <MicrophoneButton
-                  onText={(t) => setNewDiaryText(prev => prev ? (prev + ' ' + t) : t)}
+                  date={date}
+                  keepAudio={keepAudio}
+                  onAudioData={({ text, audioFileId, audioFilePath }) => {
+                    setNewDiaryText(prev => prev ? (prev + ' ' + text) : text)
+                    if (audioFileId) {
+                      setNewDiaryAudioFileId(audioFileId)
+                      setNewDiaryAudio(audioFilePath || null)
+                    }
+                  }}
                   className="text-gray-300 hover:text-gray-100"
                   compact
                 />
@@ -722,9 +735,12 @@ export default function HeutePage() {
                 <AudioUploadButton
                   date={date}
                   keepAudio={keepAudio}
-                  onAudioUploaded={({ text, audioFilePath }) => {
+                  onAudioUploaded={({ text, audioFileId, audioFilePath }) => {
                     setNewDiaryText(prev => prev ? (prev + ' ' + text) : text)
-                    setNewDiaryAudio(audioFilePath)
+                    if (audioFileId) {
+                      setNewDiaryAudioFileId(audioFileId)
+                      setNewDiaryAudio(audioFilePath || null)
+                    }
                   }}
                   compact
                 />
@@ -757,64 +773,22 @@ export default function HeutePage() {
             </div>
 
             {/* Existing diary entries */}
-            <div className="space-y-3">
-              {notes.filter(n => n.type === 'DIARY').length === 0 ? (
-                <div className="text-sm text-gray-400">Noch keine Tagebucheinträge für diesen Tag.</div>
-              ) : (
-                <>
-                  <div className="text-xs text-gray-500">
-                    {notesLoading ? 'Aktualisiere…' : `${notes.filter(n => n.type === 'DIARY').length} Einträge`}
-                  </div>
-                  {notes
-                    .filter(n => n.type === 'DIARY')
-                    .sort((a, b) => (b.occurredAtIso || '').localeCompare(a.occurredAtIso || ''))
-                    .map(entry => (
-                      <div key={entry.id} className="p-3 rounded border border-slate-700 bg-slate-800/20 space-y-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="text-xs text-gray-400">{fmtHMLocal(entry.occurredAtIso)}</div>
-                          <div className="flex items-center gap-1">
-                            {entry.audioFilePath && (
-                              <button
-                                className="text-xs"
-                                title="Audio löschen"
-                                onClick={() => deleteAudio(entry)}
-                                disabled={pendingAudioDelete === entry.id}
-                              >
-                                🔇
-                              </button>
-                            )}
-                            <button 
-                              className="text-xs" 
-                              title="Löschen" 
-                              onClick={() => deleteNote(entry.id)}
-                              disabled={pendingDelete === entry.id}
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <div className="whitespace-pre-wrap text-sm leading-5">{entry.text}</div>
-                        
-                        {entry.audioFilePath && (
-                          <AudioPlayer audioFilePath={entry.audioFilePath} compact />
-                        )}
-                        
-                        {entry.originalTranscript && (
-                          <details className="text-xs">
-                            <summary className="cursor-pointer text-gray-400 hover:text-gray-300">
-                              Original-Transkript anzeigen
-                            </summary>
-                            <div className="mt-1 p-2 rounded bg-slate-900/50 text-gray-400 whitespace-pre-wrap">
-                              {entry.originalTranscript}
-                            </div>
-                          </details>
-                        )}
-                      </div>
-                    ))}
-                </>
-              )}
-            </div>
+            <DiaryEntriesAccordion
+              notes={notes}
+              editingNoteId={editingNoteId}
+              editingText={editingText}
+              editingTime={editingTime}
+              onEdit={startEditNote}
+              onSave={saveEditNote}
+              onCancel={cancelEditNote}
+              onDelete={deleteNote}
+              onTextChange={setEditingText}
+              onTimeChange={setEditingTime}
+              onUploadPhotos={uploadPhotos}
+              onDeletePhoto={deletePhoto}
+              onViewPhoto={(noteId, index) => setViewer({ noteId, index })}
+              onDeleteAudio={deleteAudio}
+            />
             
             <SaveIndicator saving={saving} savedAt={savedAt} />
           </div>
@@ -1004,112 +978,38 @@ export default function HeutePage() {
                       <span>Ernährungsnotizen</span>
                     </span>
                   </h3>
-                  <div className="space-y-[10px]">
-                    {notes.filter(n => n.type === 'MEAL').length === 0 ? (
-                      <div className="text-sm text-gray-400">Noch keine Einträge.</div>
-                    ) : (
-                      <ul className="space-y-3">
-                        {notes
-                          .filter(n => n.type === 'MEAL')
-                          .sort((a, b) => (a.occurredAtIso || '').localeCompare(b.occurredAtIso || ''))
-                          .map(n => (
-                            <li key={n.id} className="flex items-start gap-2 text-sm">
-                              <span className="text-gray-400 w-28">{fmtHMLocal(n.occurredAtIso) + (n.createdAtIso ? ` (${fmtHMLocal(n.createdAtIso)})` : '')}</span>
-                              <div className="flex-1 space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <div className="text-xs text-gray-400">&nbsp;</div>
-                                  <div className="flex items-center gap-1">
-                                    {editingNoteId === n.id ? (
-                                      <>
-                                        <button className="pill text-xs !bg-green-600 !text-white hover:bg-pill-light dark:hover:bg-pill hover:text-gray-900 dark:hover:text-gray-100" onClick={() => saveEditNote(n.id)}>Speichern</button>
-                                        <button className="pill text-xs" onClick={cancelEditNote}>Abbrechen</button>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <button className="text-xs" title="Bearbeiten" onClick={() => startEditNote(n)}>✏️</button>
-                                        <button className="text-xs" title="Löschen" onClick={() => deleteNote(n.id)}>🗑️</button>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                                {editingNoteId === n.id ? (
-                                  <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs text-gray-400">Zeit</span>
-                                      <input type="time" value={editingTime} onChange={e => setEditingTime(e.target.value)} className="bg-background border border-slate-700 rounded px-2 py-1 text-xs" />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <textarea value={editingText} onChange={e => setEditingText(e.target.value)} className="w-full bg-background border border-slate-700 rounded p-2 text-xs leading-5" rows={3} />
-                                      <div className="flex items-center gap-2">
-                                        <MicrophoneButton
-                                          onText={(t) => setEditingText(prev => prev ? (prev + ' ' + t) : t)}
-                                          className="text-gray-300 hover:text-gray-100 text-xs"
-                                          compact
-                                        />
-                                        <ImproveTextButton
-                                          text={editingText}
-                                          onImprovedText={(t) => setEditingText(t)}
-                                          className="text-gray-300 hover:text-gray-100 text-xs"
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="whitespace-pre-wrap text-xs leading-5">{n.text}</div>
-                                )}
-                          {n.photos && n.photos.length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {n.photos.map((p, idx) => (
-                                <div key={p.id} className="relative group">
-                                  <img src={`${p.url}?v=${p.id}`} alt="Foto" className="w-16 h-16 object-cover rounded border border-slate-700 cursor-zoom-in" onClick={() => setViewer({ noteId: n.id, index: idx })} />
-                                  <button className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100" title="Foto löschen" onClick={e => { e.stopPropagation(); deletePhoto(p.id) }}>×</button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          <div className="flex flex-wrap gap-2">
-                            <label className="inline-flex items-center gap-2">
-                              <span className="pill text-xs">Foto hochladen</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                className="hidden"
-                                onChange={e => {
-                                  if (e.target.files && e.target.files.length > 0) uploadPhotos(n.id, e.target.files)
-                                  e.currentTarget.value = ''
-                                }}
-                              />
-                            </label>
-                            <CameraPicker
-                              label="Kamera"
-                              buttonClassName="pill text-xs"
-                              onCapture={(files) => uploadPhotos(n.id, files)}
-                            />
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                </ul>
-              )}
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-2">
-              <input type="time" value={mealTime} onChange={e => setMealTime(e.target.value)} className="bg-background border border-slate-700 rounded px-2 py-1 text-sm w-full sm:w-auto" />
-              <textarea value={mealText} onChange={e => setMealText(e.target.value)} placeholder="Beschreibung…" className="flex-1 bg-background border border-slate-700 rounded px-2 py-1 text-sm w-full" rows={3} />
-              <div className="flex items-center gap-2">
-                <MicrophoneButton
-                  onText={(t) => setMealText(prev => prev ? (prev + ' ' + t) : t)}
-                  className="text-gray-300 hover:text-gray-100 text-xs"
-                  compact
-                />
-                <ImproveTextButton
-                  text={mealText}
-                  onImprovedText={(t) => setMealText(t)}
-                  className="text-gray-300 hover:text-gray-100 text-xs"
-                />
-                <button className="pill w-full sm:w-auto" onClick={addMealNote} disabled={!mealText.trim()}>Hinzufügen</button>
-              </div>
-            </div>
+                  <MealNotesAccordion
+                    notes={notes}
+                    editingNoteId={editingNoteId}
+                    editingText={editingText}
+                    editingTime={editingTime}
+                    onEdit={startEditNote}
+                    onSave={saveEditNote}
+                    onCancel={cancelEditNote}
+                    onDelete={deleteNote}
+                    onTextChange={setEditingText}
+                    onTimeChange={setEditingTime}
+                    onUploadPhotos={uploadPhotos}
+                    onDeletePhoto={deletePhoto}
+                    onViewPhoto={(noteId, index) => setViewer({ noteId, index })}
+                  />
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-2">
+                    <input type="time" value={mealTime} onChange={e => setMealTime(e.target.value)} className="bg-background border border-slate-700 rounded px-2 py-1 text-sm w-full sm:w-auto" />
+                    <textarea value={mealText} onChange={e => setMealText(e.target.value)} placeholder="Beschreibung…" className="flex-1 bg-background border border-slate-700 rounded px-2 py-1 text-sm w-full" rows={3} />
+                    <div className="flex items-center gap-2">
+                      <MicrophoneButton
+                        onText={(t) => setMealText(prev => prev ? (prev + ' ' + t) : t)}
+                        className="text-gray-300 hover:text-gray-100 text-xs"
+                        compact
+                      />
+                      <ImproveTextButton
+                        text={mealText}
+                        onImprovedText={(t) => setMealText(t)}
+                        className="text-gray-300 hover:text-gray-100 text-xs"
+                      />
+                      <button className="pill w-full sm:w-auto" onClick={addMealNote} disabled={!mealText.trim()}>Hinzufügen</button>
+                    </div>
+                  </div>
                   <SaveIndicator saving={saving} savedAt={savedAt} />
                 </div>
               </div>

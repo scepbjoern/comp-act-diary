@@ -6,9 +6,9 @@ datasource db {
 model HabitIcon {
   id       String  @id @default(uuid())
   userId   String
-  user     User    @relation(fields: [userId], references: [id])
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   habitId  String
-  habit    Habit   @relation(fields: [habitId], references: [id])
+  habit    Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)
   icon     String?
 
   @@unique([userId, habitId])
@@ -69,7 +69,7 @@ model User {
 
 model UserSettings {
   userId              String  @id
-  user                User    @relation(fields: [userId], references: [id])
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   theme               String  @default("dark")
   timeFormat24h       Boolean @default(true)
   weekStart           String  @default("mon")
@@ -80,7 +80,7 @@ model UserSettings {
 model Habit {
   id        String   @id @default(uuid())
   userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
   icon      String?
   isActive  Boolean  @default(true)
@@ -92,7 +92,7 @@ model Habit {
 model DayEntry {
   id           String         @id @default(uuid())
   userId       String
-  user         User           @relation(fields: [userId], references: [id])
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   date         DateTime
   phase        Phase
   careCategory CareCategory
@@ -110,7 +110,7 @@ model DayEntry {
 model SymptomScore {
   id         String      @id @default(uuid())
   dayEntryId String
-  day        DayEntry    @relation(fields: [dayEntryId], references: [id])
+  day        DayEntry    @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
   type       SymptomType
   score      Int
 
@@ -120,16 +120,16 @@ model SymptomScore {
 model StoolScore {
   id         String   @id @default(uuid())
   dayEntryId String   @unique
-  day        DayEntry @relation(fields: [dayEntryId], references: [id])
+  day        DayEntry @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
   bristol    Int
 }
 
 model HabitTick {
   id         String   @id @default(uuid())
   dayEntryId String
-  day        DayEntry @relation(fields: [dayEntryId], references: [id])
+  day        DayEntry @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
   habitId    String
-  habit      Habit    @relation(fields: [habitId], references: [id])
+  habit      Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
   checked    Boolean  @default(false)
 
   @@unique([dayEntryId, habitId])
@@ -138,29 +138,56 @@ model HabitTick {
 model DayNote {
   id                 String     @id @default(uuid())
   dayEntryId         String
-  day                DayEntry   @relation(fields: [dayEntryId], references: [id])
+  day                DayEntry   @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
   type               NoteType
   text               String?
   originalTranscript String?
-  audioFilePath      String?
+  audioFileId        String?    @unique
+  audioFile          AudioFile? @relation(fields: [audioFileId], references: [id])
   keepAudio          Boolean    @default(true)
   occurredAt         DateTime
   createdAt          DateTime   @default(now())
-  photos             DayNotePhoto[]
-  reflection         ReflectionFields?
+  updatedAt          DateTime   @updatedAt
+  photos             PhotoFile[]
+  reflectionFields   DailyReflectionFields?
+
+  @@index([type, dayEntryId])
 }
 
-model DayNotePhoto {
-  id        String  @id @default(uuid())
-  dayNoteId String
-  note      DayNote @relation(fields: [dayNoteId], references: [id])
-  url       String
+model AudioFile {
+  id           String    @id @default(uuid())
+  filePath     String    @unique
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  durationSec  Float?
+  uploadedAt   DateTime  @default(now())
+  dayNote      DayNote?
+
+  @@index([filePath])
 }
 
-model ReflectionFields {
+model PhotoFile {
+  id           String       @id @default(uuid())
+  filePath     String       @unique
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  widthPx      Int?
+  heightPx     Int?
+  uploadedAt   DateTime     @default(now())
+  dayNoteId    String?
+  dayNote      DayNote?     @relation(fields: [dayNoteId], references: [id], onDelete: Cascade)
+  reflectionId String?
+  reflection   Reflection?  @relation(fields: [reflectionId], references: [id], onDelete: Cascade)
+
+  @@index([filePath])
+}
+
+model DailyReflectionFields {
   id        String  @id @default(uuid())
   dayNoteId String  @unique
-  note      DayNote @relation(fields: [dayNoteId], references: [id])
+  note      DayNote @relation(fields: [dayNoteId], references: [id], onDelete: Cascade)
   changed   String?
   gratitude String?
   vows      String?
@@ -169,30 +196,25 @@ model ReflectionFields {
 model Reflection {
   id        String         @id @default(uuid())
   userId    String
-  user      User           @relation(fields: [userId], references: [id])
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   kind      ReflectionKind
   createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
   changed   String?
   gratitude String?
   vows      String?
   remarks   String?
   weightKg  Float?
-  photos    ReflectionPhoto[]
+  photos    PhotoFile[]
 
   @@index([userId, createdAt])
 }
 
-model ReflectionPhoto {
-  id           String      @id @default(uuid())
-  reflectionId String
-  reflection   Reflection  @relation(fields: [reflectionId], references: [id])
-  url          String
-}
 
 model UserLink {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   url       String
   createdAt DateTime @default(now())
@@ -203,7 +225,7 @@ model UserLink {
 model UserSymptom {
   id         String   @id @default(uuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title      String
   icon       String?
   sortIndex  Int      @default(0)
@@ -216,7 +238,7 @@ model UserSymptom {
 model SymptomIcon {
   id      String      @id @default(uuid())
   userId  String
-  user    User        @relation(fields: [userId], references: [id])
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   type    SymptomType
   icon    String?
 
@@ -226,9 +248,9 @@ model SymptomIcon {
 model UserSymptomScore {
   id             String       @id @default(uuid())
   dayEntryId     String
-  day            DayEntry     @relation(fields: [dayEntryId], references: [id])
+  day            DayEntry     @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
   userSymptomId  String
-  userSymptom    UserSymptom  @relation(fields: [userSymptomId], references: [id])
+  userSymptom    UserSymptom  @relation(fields: [userSymptomId], references: [id], onDelete: Cascade)
   score          Int
 
   @@unique([dayEntryId, userSymptomId])

@@ -1,27 +1,35 @@
 "use client"
 import React, { useEffect, useRef, useState } from 'react'
+import { TablerIcon } from './TablerIcon'
+import fixWebmDuration from 'fix-webm-duration'
 
 /**
  * MicrophoneButton
  * - Records audio with MediaRecorder
- * - Sends audio to /api/transcribe with selected model
- * - Calls onText with the transcribed text
+ * - Sends audio to /api/diary/upload-audio (if keepAudio/date provided) or /api/transcribe
+ * - Calls onAudioData with transcribed text and optional audio file ID
  */
 export function MicrophoneButton(props: {
-  onText: (text: string) => void
+  onAudioData?: (result: { text: string; audioFileId?: string | null; audioFilePath?: string | null }) => void
+  onText?: (text: string) => void
   title?: string
   className?: string
   compact?: boolean
   initialModel?: string
   modelOptions?: string[]
+  keepAudio?: boolean
+  date?: string // ISO date string YYYY-MM-DD
 }) {
   const {
+    onAudioData,
     onText,
     title = 'Spracheingabe starten/stoppen',
     className,
     compact = true,
     initialModel,
     modelOptions,
+    keepAudio = false,
+    date,
   } = props
 
   const defaultModels = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_TRANSCRIBE_MODELS)
@@ -74,7 +82,16 @@ export function MicrophoneButton(props: {
       }
       rec.onstop = async () => {
         try {
-          const blob = new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' })
+          let blob = new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' })
+          
+          // Fix WebM duration/seeking if it's a WebM file
+          if (blob.type.includes('webm') && recordingStartTimeRef.current) {
+            const duration = Date.now() - recordingStartTimeRef.current.getTime()
+            console.log('Fixing WebM duration/seeking...', duration, 'ms')
+            blob = await fixWebmDuration(blob, duration, { logger: false })
+            console.log('WebM fixed for seeking')
+          }
+          
           await sendForTranscription(blob)
         } catch (e: unknown) {
           setError(e instanceof Error ? e.message : 'Transkription fehlgeschlagen')
@@ -142,13 +159,40 @@ export function MicrophoneButton(props: {
       fd.append('file', new File([blob], filename, { type: blob.type || 'audio/webm' }))
       fd.append('model', selectedModel)
 
-      const res = await fetch('/api/transcribe', { method: 'POST', body: fd, credentials: 'same-origin' })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || 'Transkription fehlgeschlagen')
+      // Use /api/diary/upload-audio if we have date and want to save audio
+      if (keepAudio && date) {
+        fd.append('date', date)
+        fd.append('keepAudio', String(keepAudio))
+        
+        const res = await fetch('/api/diary/upload-audio', { method: 'POST', body: fd, credentials: 'same-origin' })
+        if (!res.ok) {
+          const errorData = await res.json()
+          throw new Error(errorData.error || 'Upload fehlgeschlagen')
+        }
+        const data = await res.json()
+        if (onAudioData) {
+          onAudioData({ 
+            text: data.text, 
+            audioFileId: data.audioFileId,
+            audioFilePath: data.audioFilePath 
+          })
+        } else if (onText) {
+          onText(data.text)
+        }
+      } else {
+        // Use /api/transcribe for transcription only
+        const res = await fetch('/api/transcribe', { method: 'POST', body: fd, credentials: 'same-origin' })
+        if (!res.ok) {
+          const text = await res.text()
+          throw new Error(text || 'Transkription fehlgeschlagen')
+        }
+        const data = await res.json()
+        if (onAudioData) {
+          onAudioData({ text: data.text, audioFileId: null, audioFilePath: null })
+        } else if (onText) {
+          onText(data.text)
+        }
       }
-      const data = await res.json()
-      if (data?.text) onText(data.text)
     } finally {
       setUploading(false)
     }
@@ -179,7 +223,7 @@ export function MicrophoneButton(props: {
           }
         }}
       >
-        {recording ? '⏹️' : '🎙️'}
+        {recording ? <TablerIcon name="player-stop" size={16} /> : <TablerIcon name="microphone" size={16} />}
       </span>
       {!compact && (
         <select
@@ -192,7 +236,9 @@ export function MicrophoneButton(props: {
         </select>
       )}
       {compact && (
-        <button type="button" title="Modell wählen" aria-label="Modell wählen" className="text-xs text-gray-400 hover:text-gray-200" onClick={() => setShowCfg(v => !v)}>⚙️</button>
+        <button type="button" title="Modell wählen" aria-label="Modell wählen" className="text-xs text-gray-400 hover:text-gray-200" onClick={() => setShowCfg(v => !v)}>
+          <TablerIcon name="settings" size={16} />
+        </button>
       )}
       {compact && showCfg && (
         <div className="absolute z-20 top-full mt-1 right-0 bg-surface border border-slate-800 rounded p-2 shadow">

@@ -4,6 +4,7 @@ import { TablerIcon } from './TablerIcon'
 import { MicrophoneButton } from './MicrophoneButton'
 import { ImproveTextButton } from './ImproveTextButton'
 import { CameraPicker } from './CameraPicker'
+import { AudioPlayerH5 } from './AudioPlayerH5'
 
 type Note = {
   id: string
@@ -153,6 +154,16 @@ export function MealNotesAccordion({
                 </div>
               ) : (
                 <div className="whitespace-pre-wrap text-xs leading-5">{n.text}</div>
+              )}
+              
+              {/* Audio section */}
+              {n.audioFilePath && (
+                <div className="mt-2">
+                  <AudioPlayerH5 
+                    audioFilePath={n.audioFilePath} 
+                    compact
+                  />
+                </div>
               )}
               
               {n.photos && n.photos.length > 0 && (

@@ -19,7 +19,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   const text = String(body?.text || '').trim()
   const time = body?.time ? String(body.time) : undefined
   const tzOffsetMinutes = Number.isFinite(Number(body?.tzOffsetMinutes)) ? Number(body.tzOffsetMinutes) : null
-  const audioFilePath = body?.audioFilePath ?? null
+  const audioFileId = body?.audioFileId ?? null
   const keepAudio = body?.keepAudio ?? true
   const originalTranscript = body?.originalTranscript ?? null
   if (!NoteTypes.includes(type)) return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       type,
       text,
       occurredAt,
-      audioFilePath,
+      audioFileId,
       keepAudio,
       originalTranscript,
     },
@@ -57,7 +57,10 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   const noteRows = await prisma.dayNote.findMany({
     where: { dayEntryId: day.id },
     orderBy: { occurredAt: 'asc' },
-    include: { photos: true },
+    include: { 
+      photos: true,
+      audioFile: true,
+    },
   })
   const notes = noteRows.map((n: any) => ({
     id: n.id,
@@ -69,9 +72,9 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     createdAtIso: n.createdAt?.toISOString(),
     text: n.text ?? '',
     originalTranscript: n.originalTranscript ?? null,
-    audioFilePath: n.audioFilePath ?? null,
+    audioFilePath: n.audioFile?.filePath ?? null,
     keepAudio: n.keepAudio ?? true,
-    photos: (n.photos || []).map((p: any) => ({ id: p.id, url: p.url })),
+    photos: (n.photos || []).map((p: any) => ({ id: p.id, url: p.filePath })),
   }))
   return NextResponse.json({ ok: true, note: { id: note.id }, notes })
 }

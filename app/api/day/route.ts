@@ -88,7 +88,10 @@ export async function GET(req: NextRequest) {
   const noteRows = await prisma.dayNote.findMany({
     where: { dayEntryId: day.id },
     orderBy: { occurredAt: 'asc' },
-    include: { photos: true },
+    include: { 
+      photos: true,
+      audioFile: true,
+    },
   })
   const notes = noteRows.map((n: any) => ({
     id: n.id,
@@ -100,9 +103,9 @@ export async function GET(req: NextRequest) {
     createdAtIso: n.createdAt?.toISOString(),
     text: n.text ?? '',
     originalTranscript: n.originalTranscript ?? null,
-    audioFilePath: n.audioFilePath ?? null,
+    audioFilePath: n.audioFile?.filePath ?? null,
     keepAudio: n.keepAudio ?? true,
-    photos: (n.photos || []).map((p: any) => ({ id: p.id, url: p.url })),
+    photos: (n.photos || []).map((p: any) => ({ id: p.id, url: p.filePath })),
   }))
   // Load user-defined symptoms and their scores for this day
   const userSyms = await (prisma as any).userSymptom.findMany({ where: { userId: user.id, isActive: true }, orderBy: { sortIndex: 'asc' } })

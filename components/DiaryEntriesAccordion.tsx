@@ -4,6 +4,7 @@ import { TablerIcon } from './TablerIcon'
 import { MicrophoneButton } from './MicrophoneButton'
 import { ImproveTextButton } from './ImproveTextButton'
 import { CameraPicker } from './CameraPicker'
+import { AudioPlayerH5 } from './AudioPlayerH5'
 
 type DayNote = {
   id: string
@@ -174,10 +175,9 @@ export function DiaryEntriesAccordion({
                       Audio löschen
                     </button>
                   </div>
-                  <audio 
-                    src={`/uploads/${n.audioFilePath}`} 
-                    controls 
-                    className="w-full h-8"
+                  <AudioPlayerH5 
+                    audioFilePath={n.audioFilePath} 
+                    compact
                   />
                 </div>
               )}

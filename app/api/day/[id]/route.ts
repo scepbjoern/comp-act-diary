@@ -55,8 +55,7 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
   await prisma.stoolScore.deleteMany({ where: { dayEntryId: day.id } })
   await (prisma as any).userSymptomScore.deleteMany({ where: { dayEntryId: day.id } })
 
-  // Reset free-text notes
-  await prisma.dayEntry.update({ where: { id: day.id }, data: { notes: null } })
+  // Notes are now stored as DayNote records, no need to reset day.notes
 
   const payload = await buildDayPayload(day.id)
   return NextResponse.json({ day: payload })
@@ -80,7 +79,7 @@ async function buildDayPayload(dayId: string) {
   for (const s of scores) scoreById.set(s.userSymptomId, s.score)
   const userSymptomsOut = (userSymptoms as any[]).map((u: any) => ({ id: u.id, title: u.title, score: scoreById.get(u.id) }))
   const dateStr = toYmd(day.date)
-  return { id: day.id, date: dateStr, phase: day.phase, careCategory: day.careCategory, notes: day.notes ?? '', symptoms, stool: stoolRow?.bristol ?? undefined, habitTicks: ticks, userSymptoms: userSymptomsOut }
+  return { id: day.id, date: dateStr, phase: day.phase, careCategory: day.careCategory, symptoms, stool: stoolRow?.bristol ?? undefined, habitTicks: ticks, userSymptoms: userSymptomsOut }
 }
 
 function toYmd(d: Date) {

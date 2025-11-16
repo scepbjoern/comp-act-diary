@@ -1,6 +1,6 @@
 "use client"
 import React, { useState } from 'react'
-import { Icon } from '@/components/Icon'
+import { TablerIcon } from '@/components/TablerIcon'
 
 export default function ExportPage() {
   const [from, setFrom] = useState<string>('')
@@ -32,7 +32,7 @@ export default function ExportPage() {
     <div className="space-y-6">
       <h1 className="text-xl font-semibold">
         <span className="inline-flex items-center gap-1">
-          <Icon name="share" />
+          <TablerIcon name="share" />
           <span>Export</span>
         </span>
       </h1>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Icon } from '@/components/Icon'
+import { TablerIcon } from '@/components/TablerIcon'
 import {
   ResponsiveContainer,
   LineChart,
@@ -475,7 +475,7 @@ export default function AnalyticsPage() {
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">
         <span className="inline-flex items-center gap-1">
-          <Icon name="bar_chart" />
+          <TablerIcon name="bar_chart" />
           <span>Auswertungen</span>
         </span>
       </h1>

@@ -46,7 +46,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
   if (!note) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (note.day.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const data: { text?: string | null; type?: NoteType; occurredAt?: Date } = {}
+  const data: { text?: string | null; type?: NoteType; occurredAt?: Date; audioFileId?: string | null; keepAudio?: boolean } = {}
   if (typeof body.text === 'string') data.text = String(body.text).trim()
   if (typeof body.type === 'string' && (NoteTypes as readonly string[]).includes(body.type)) {
     data.type = body.type as NoteType
@@ -61,13 +61,38 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
     occurredAt.setHours(hh, mm, 0, 0)
     data.occurredAt = occurredAt
   }
+  
+  // Handle audio file deletion
+  if (body.audioFilePath === null || body.audioFileId === null) {
+    // Delete the physical audio file if it exists
+    const audioPath = resolveAudioPath(note.audioFilePath)
+    if (audioPath) {
+      try {
+        await fs.unlink(audioPath)
+      } catch (err: any) {
+        if (err && err.code !== 'ENOENT') {
+          console.warn('Failed to delete audio file', { audioPath, err })
+        }
+      }
+    }
+    data.audioFileId = null
+    data.keepAudio = false
+  }
+  
+  // Handle keepAudio flag
+  if (typeof body.keepAudio === 'boolean') {
+    data.keepAudio = body.keepAudio
+  }
 
   const updated = await prisma.dayNote.update({ where: { id: noteId }, data })
 
   const noteRows = await prisma.dayNote.findMany({
     where: { dayEntryId: note.dayEntryId },
     orderBy: { occurredAt: 'asc' },
-    include: { photos: true },
+    include: { 
+      photos: true,
+      audioFile: true,
+    },
   })
   const notes = noteRows.map((n: any) => ({
     id: n.id,
@@ -79,9 +104,9 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
     createdAtIso: n.createdAt?.toISOString(),
     text: n.text ?? '',
     originalTranscript: n.originalTranscript ?? null,
-    audioFilePath: n.audioFilePath ?? null,
+    audioFilePath: n.audioFile?.filePath ?? null,
     keepAudio: n.keepAudio ?? true,
-    photos: (n.photos || []).map((p: any) => ({ id: p.id, url: p.url })),
+    photos: (n.photos || []).map((p: any) => ({ id: p.id, url: p.filePath })),
   }))
   return NextResponse.json({ ok: true, note: { id: updated.id }, notes })
 }
@@ -101,7 +126,7 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ note
 
   // Try to remove physical photo files
   for (const ph of note.photos) {
-    const filePath = resolveUploadPathFromUrl(ph.url)
+    const filePath = resolveUploadPathFromUrl(ph.filePath || ph.url)
     if (filePath) {
       try { await fs.unlink(filePath) } catch (err: any) {
         // Ignore if missing
@@ -118,14 +143,17 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ note
     }
   }
 
-  await prisma.dayNotePhoto.deleteMany({ where: { dayNoteId: noteId } })
+  // Cascade delete will handle photos and audioFile automatically
   await prisma.dayNote.delete({ where: { id: noteId } })
 
   // Return refreshed notes list for the same day
   const noteRows = await prisma.dayNote.findMany({
     where: { dayEntryId: note.dayEntryId },
     orderBy: { occurredAt: 'asc' },
-    include: { photos: true },
+    include: { 
+      photos: true,
+      audioFile: true,
+    },
   })
   const notes = noteRows.map((n: any) => ({
     id: n.id,
@@ -137,9 +165,9 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ note
     createdAtIso: n.createdAt?.toISOString(),
     text: n.text ?? '',
     originalTranscript: n.originalTranscript ?? null,
-    audioFilePath: n.audioFilePath ?? null,
+    audioFilePath: n.audioFile?.filePath ?? null,
     keepAudio: n.keepAudio ?? true,
-    photos: (n.photos || []).map((p: any) => ({ id: p.id, url: p.url })),
+    photos: (n.photos || []).map((p: any) => ({ id: p.id, url: p.filePath })),
   }))
   return NextResponse.json({ ok: true, deleted: noteId, notes })
 }

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir } from 'fs/promises'
+import { writeFile, mkdir, stat } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import Together from 'together-ai'
+import { getPrisma } from '@/lib/prisma'
 
 const whisperModels = ['openai/whisper-large-v3'] as const
 type WhisperModel = (typeof whisperModels)[number]
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
     }
 
     const date = new Date(dateStr)
+    const now = new Date() // Use current time for filename
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
@@ -74,9 +76,9 @@ export async function POST(req: NextRequest) {
     if (file.name.endsWith('.m4a')) extension = 'm4a'
     if (file.type.includes('webm') || file.name.endsWith('.webm')) extension = 'webm'
 
-    // Create folder structure and save file
+    // Create folder structure and save file (use date for folder, now for filename)
     const { folderPath, relativePath } = getAudioFolder(date)
-    const filename = generateAudioFilename(date, extension)
+    const filename = generateAudioFilename(now, extension)
     const fullPath = path.join(folderPath, filename)
     const relativeFilePath = path.join(relativePath, filename).replace(/\\/g, '/')
 
@@ -85,8 +87,13 @@ export async function POST(req: NextRequest) {
       await mkdir(folderPath, { recursive: true })
     }
 
-    // Save audio file
+    // Save audio file (WebM seeking is fixed client-side with fix-webm-duration)
     await writeFile(fullPath, buffer)
+    const finalBuffer = buffer
+    
+    // Get file stats for metadata
+    const fileStats = await stat(fullPath)
+    const fileSizeBytes = fileStats.size
 
     // Transcribe audio
     let transcribedText = ''
@@ -101,7 +108,7 @@ export async function POST(req: NextRequest) {
       const response = await together.audio.transcriptions.create({
         model,
         language: 'de',
-        file: new File([buffer], filename, { type: file.type || 'audio/webm' }),
+        file: new File([new Uint8Array(finalBuffer)], filename, { type: file.type || 'audio/webm' }),
       })
 
       transcribedText = response?.text || ''
@@ -113,7 +120,7 @@ export async function POST(req: NextRequest) {
       }
 
       const ofd = new FormData()
-      const blob = new Blob([buffer], { type: file.type || 'audio/webm' })
+      const blob = new Blob([new Uint8Array(finalBuffer)], { type: file.type || 'audio/webm' })
       ofd.append('file', blob, filename)
       ofd.append('model', model)
 
@@ -134,14 +141,25 @@ export async function POST(req: NextRequest) {
       transcribedText = data?.text || ''
     }
 
-    // If keepAudio is false, we could delete the file here
-    // For now, we'll keep it and let the client decide via the DB flag
+    // Create AudioFile record in database
+    const prisma = getPrisma()
+    const mimeType = file.type || (extension === 'webm' ? 'audio/webm' : extension === 'm4a' ? 'audio/m4a' : 'audio/mpeg')
+    
+    const audioFile = await prisma.audioFile.create({
+      data: {
+        filePath: relativeFilePath,
+        fileName: filename,
+        mimeType,
+        sizeBytes: fileSizeBytes,
+      }
+    })
     
     return NextResponse.json({
       text: transcribedText,
-      audioFilePath: relativeFilePath,
+      audioFileId: audioFile.id,
+      audioFilePath: relativeFilePath, // Keep for backward compatibility
       keepAudio,
-      fileSize: file.size,
+      fileSize: fileSizeBytes,
       filename,
     })
   } catch (err) {

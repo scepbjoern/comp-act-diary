@@ -23,17 +23,17 @@ export function useToasts() {
 
 export function Toasts({ toasts, dismiss }: { toasts: ToastItem[]; dismiss: (id: number) => void }) {
   return (
-    <div className="fixed right-4 bottom-20 z-50 flex flex-col gap-2">
+    <div className="toast toast-end toast-bottom z-50">
       {toasts.map(t => {
-        const color =
-          t.kind === 'success' ? 'bg-emerald-600/90 border-emerald-400 text-white' :
-          t.kind === 'error' ? 'bg-red-700/90 border-red-400 text-white' :
-          'bg-slate-800/90 border-slate-600 text-gray-100'
+        const alertClass =
+          t.kind === 'success' ? 'alert-success' :
+          t.kind === 'error' ? 'alert-error' :
+          'alert-info'
         return (
-          <div key={t.id} className={`min-w-[200px] max-w-[320px] px-3 py-2 rounded-md border shadow ${color}`}>
-            <div className="text-xs flex items-start justify-between gap-2">
-              <span>{t.text}</span>
-              <button className="text-xs opacity-80 hover:opacity-100" onClick={() => dismiss(t.id)}>×</button>
+          <div key={t.id} className={`alert ${alertClass} shadow-lg min-w-[200px] max-w-[320px]`}>
+            <div className="flex items-start justify-between w-full gap-2">
+              <span className="text-xs">{t.text}</span>
+              <button className="btn btn-ghost btn-xs" onClick={() => dismiss(t.id)}>×</button>
             </div>
           </div>
         )

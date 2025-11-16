@@ -1,10 +1,10 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { Icon } from './Icon'
+import { TablerIcon } from './TablerIcon'
 
 interface AudioUploadButtonProps {
-  onAudioUploaded: (result: { text: string; audioFilePath: string; keepAudio: boolean }) => void
+  onAudioUploaded: (result: { text: string; audioFileId: string; audioFilePath: string; keepAudio: boolean }) => void
   date: string // ISO date string YYYY-MM-DD
   keepAudio?: boolean
   className?: string
@@ -84,6 +84,7 @@ export default function AudioUploadButton({
       const result = await response.json()
       onAudioUploaded({
         text: result.text,
+        audioFileId: result.audioFileId,
         audioFilePath: result.audioFilePath,
         keepAudio: result.keepAudio,
       })
@@ -118,9 +119,9 @@ export default function AudioUploadButton({
           title="Audio-Datei hochladen"
         >
           {uploading ? (
-            <Icon name="hourglass_empty" className="animate-spin" />
+            <TablerIcon name="hourglass_empty" className="animate-spin" />
           ) : (
-            <Icon name="upload_file" />
+            <TablerIcon name="upload_file" />
           )}
         </button>
         {error && <span className="text-xs text-red-400 ml-2">{error}</span>}
@@ -145,12 +146,12 @@ export default function AudioUploadButton({
       >
         {uploading ? (
           <>
-            <Icon name="hourglass_empty" className="animate-spin" />
+            <TablerIcon name="hourglass_empty" className="animate-spin" />
             <span>Wird hochgeladen...</span>
           </>
         ) : (
           <>
-            <Icon name="upload_file" />
+            <TablerIcon name="upload_file" />
             <span>Audio hochladen</span>
           </>
         )}

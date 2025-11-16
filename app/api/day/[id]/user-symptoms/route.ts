@@ -89,7 +89,7 @@ async function buildDayPayload(dayId: string) {
   for (const s of scores) scoreById.set(s.userSymptomId, s.score)
   const userSymptomsOut = (userSymptoms as any[]).map((u: any) => ({ id: u.id, title: u.title, score: scoreById.get(u.id) }))
   const dateStr = toYmd(day.date)
-  return { id: day.id, date: dateStr, phase: day.phase, careCategory: day.careCategory, notes: day.notes ?? '', symptoms, stool: stoolRow?.bristol ?? undefined, habitTicks: ticks, userSymptoms: userSymptomsOut }
+  return { id: day.id, date: dateStr, phase: day.phase, careCategory: day.careCategory, symptoms, stool: stoolRow?.bristol ?? undefined, habitTicks: ticks, userSymptoms: userSymptomsOut }
 }
 
 function toYmd(d: Date) {

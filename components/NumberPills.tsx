@@ -36,7 +36,7 @@ export function NumberPills({
       {includeDashFirst && typeof dashValue === 'number' && (
         <button
           key="dash"
-          className={`relative rounded-full bg-pill text-gray-200 inline-flex items-center justify-center border border-slate-700 ${sizeClass} ${value === dashValue ? `${unsaved ? 'bg-primary/80' : 'bg-primary'} text-black ${unsaved ? 'border-blue-400' : 'border-transparent'}` : ''} ${previousValue === dashValue && value !== dashValue ? 'ring-2 ring-sky-400/60' : ''}`}
+          className={`relative rounded-full bg-base-300 inline-flex items-center justify-center border border-base-300 ${sizeClass} ${value === dashValue ? `${unsaved ? 'bg-primary opacity-80' : 'bg-primary'} text-primary-content ${unsaved ? 'border-blue-400' : 'border-transparent'}` : ''} ${previousValue === dashValue && value !== dashValue ? 'ring-2 ring-sky-400/60' : ''}`}
           aria-label={ariaLabel ? `${ariaLabel} —` : '—'}
           onClick={() => {
             if (value === dashValue) {
@@ -56,7 +56,7 @@ export function NumberPills({
         <button
           key={n}
           // Avoid the shared .pill padding (px/py) to prevent ellipses; construct styles directly
-          className={`relative rounded-full bg-pill text-gray-200 inline-flex items-center justify-center border border-slate-700 ${sizeClass} ${value === n ? `${unsaved ? 'bg-primary/80' : 'bg-primary'} text-black ${unsaved ? 'border-blue-400' : 'border-transparent'}` : ''} ${previousValue === n && value !== n ? 'ring-2 ring-sky-400/60' : ''}`}
+          className={`relative rounded-full bg-base-300 inline-flex items-center justify-center border border-base-300 ${sizeClass} ${value === n ? `${unsaved ? 'bg-primary opacity-80' : 'bg-primary'} text-primary-content ${unsaved ? 'border-blue-400' : 'border-transparent'}` : ''} ${previousValue === n && value !== n ? 'ring-2 ring-sky-400/60' : ''}`}
           aria-label={ariaLabel ? `${ariaLabel} ${n}` : undefined}
           onClick={() => {
             if (value === n) {

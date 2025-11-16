@@ -115,7 +115,7 @@ export function CameraPicker({
     <>
       <button className={buttonClassName} onClick={handleOpen}>{label}</button>
       {open && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4">
           <div className="bg-surface border border-slate-700 rounded-xl w-full max-w-md p-3 flex flex-col gap-3">
             <div className="aspect-video bg-black rounded overflow-hidden">
               <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline muted />

@@ -56,9 +56,9 @@ export function TextImprovementDialog(props: {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onCancel}>
-      <div className="bg-surface border border-slate-700 rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold mb-4">Text verbessern</h2>
+    <div className="modal modal-open" onClick={onCancel}>
+      <div className="modal-box max-w-2xl" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-lg font-bold mb-4">Text verbessern</h2>
 
         <div className="space-y-4">
           {/* Prompt input */}
@@ -75,7 +75,7 @@ export function TextImprovementDialog(props: {
               type="text"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="w-full bg-background border border-slate-700 rounded px-3 py-2"
+              className="input input-bordered w-full"
               placeholder="z.B. Verbessere diesen Text"
             />
           </div>
@@ -86,7 +86,7 @@ export function TextImprovementDialog(props: {
             <select
               value={model}
               onChange={(e) => setModel(e.target.value)}
-              className="w-full bg-background border border-slate-700 rounded px-3 py-2"
+              className="select select-bordered w-full"
             >
               {defaultModels.map((m) => (
                 <option key={m} value={m}>
@@ -100,22 +100,22 @@ export function TextImprovementDialog(props: {
           <button
             onClick={improveText}
             disabled={loading}
-            className="pill active w-full"
+            className="btn btn-primary w-full"
           >
             {loading ? 'Wird verbessert...' : 'Neu generieren'}
           </button>
 
           {/* Error message */}
           {error && (
-            <div className="p-3 rounded border border-red-500/60 bg-red-900/20 text-sm text-red-300">
-              {error}
+            <div className="alert alert-error">
+              <span className="text-sm">{error}</span>
             </div>
           )}
 
           {/* Preview */}
           <div>
             <div className="text-sm text-gray-400 mb-1">Vorschau</div>
-            <div className="bg-background border border-slate-700 rounded p-3 min-h-[120px] max-h-[300px] overflow-y-auto whitespace-pre-wrap">
+            <div className="textarea textarea-bordered min-h-[120px] max-h-[300px] overflow-y-auto whitespace-pre-wrap">
               {loading ? (
                 <span className="text-gray-500 italic">Wird geladen...</span>
               ) : (
@@ -129,13 +129,13 @@ export function TextImprovementDialog(props: {
             <button
               onClick={() => onAccept(improvedText)}
               disabled={loading || !improvedText}
-              className="pill active flex-1"
+              className="btn btn-primary flex-1"
             >
               Übernehmen
             </button>
             <button
               onClick={onCancel}
-              className="pill flex-1"
+              className="btn btn-ghost flex-1"
             >
               Abbrechen
             </button>

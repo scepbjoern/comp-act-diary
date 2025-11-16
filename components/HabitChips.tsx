@@ -1,6 +1,6 @@
 "use client"
 import React from 'react'
-import { Icon } from '@/components/Icon'
+import { Icon } from './Icon' // Keep for Darmkur symptom icons
 
 export type Habit = { id: string; title: string; userId?: string | null; icon?: string | null }
 

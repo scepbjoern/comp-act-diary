@@ -50,6 +50,33 @@ const config: Config = {
       borderColor: ['dark'],
     },
   },
-  plugins: [],
+  plugins: [
+    require('daisyui'),
+  ],
+  daisyui: {
+    themes: [
+      'light',
+      'dark',
+      {
+        custom: {
+          'primary': '#7dd3fc',
+          'primary-focus': '#38bdf8',
+          'primary-content': '#0b0f14',
+          'base-100': '#0b0f14',
+          'base-200': '#121821',
+          'base-300': '#334155',
+          'base-content': '#f1f5f9',
+          'info': '#38bdf8',
+          'success': '#10b981',
+          'warning': '#f59e0b',
+          'error': '#ef4444',
+        },
+      },
+    ],
+    darkTheme: 'dark',
+    base: true,
+    styled: true,
+    utils: true,
+  },
 }
 export default config
