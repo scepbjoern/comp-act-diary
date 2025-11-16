@@ -41,12 +41,7 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
   const day = await prisma.dayEntry.findUnique({ where: { id } })
   if (!day) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // Delete notes and their photos
-  const notes = await prisma.dayNote.findMany({ where: { dayEntryId: day.id }, select: { id: true } })
-  const noteIds = notes.map(n => n.id)
-  if (noteIds.length > 0) {
-    await prisma.dayNotePhoto.deleteMany({ where: { dayNoteId: { in: noteIds } } })
-  }
+  // Delete notes and their photos (photos are cascade deleted)
   await prisma.dayNote.deleteMany({ where: { dayEntryId: day.id } })
 
   // Delete habit ticks, symptoms, stool, custom user symptom scores

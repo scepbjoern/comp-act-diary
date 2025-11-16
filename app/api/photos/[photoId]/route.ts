@@ -30,15 +30,15 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ phot
   if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
   if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
-  const photo = await prisma.dayNotePhoto.findUnique({
+  const photo = await prisma.photoFile.findUnique({
     where: { id: photoId },
-    include: { note: { include: { day: true } } },
+    include: { dayNote: { include: { day: true } } },
   })
   if (!photo) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (photo.note.day.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!photo.dayNote || photo.dayNote.day.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   // Try to remove the physical file as well
-  const filePath = resolveUploadPathFromUrl(photo.url)
+  const filePath = resolveUploadPathFromUrl(photo.filePath)
   let fileDeleted = false
   if (filePath) {
     try {
@@ -52,6 +52,6 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ phot
     }
   }
 
-  await prisma.dayNotePhoto.delete({ where: { id: photoId } })
+  await prisma.photoFile.delete({ where: { id: photoId } })
   return NextResponse.json({ ok: true, deleted: photoId, fileDeleted })
 }

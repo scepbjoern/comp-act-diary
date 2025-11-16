@@ -122,6 +122,7 @@ export function SiteNav({ user }: { user: UserLite }) {
         <Link href="/" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Tagebuch</Link>
         <Link href="/reflections" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Reflexionen</Link>
         <Link href="/analytics" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Auswertungen</Link>
+        <Link href="/coach" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Coach</Link>
         {/* Links submenu (desktop) */}
         <div className="relative" ref={linksRef}>
           <button type="button" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onMouseEnter={() => setLinksOpen(true)} onClick={() => setLinksOpen(v => !v)} aria-expanded={linksOpen} aria-haspopup="menu">
@@ -285,6 +286,7 @@ export function SiteNav({ user }: { user: UserLite }) {
             <Link href="/" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Tagebuch</Link>
             <Link href="/analytics" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Auswertungen</Link>
             <Link href="/reflections" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Reflexionen</Link>
+            <Link href="/coach" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Coach</Link>
             <Link href="/export" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Export</Link>
             {/* Links submenu (mobile): collapsible */}
             <button

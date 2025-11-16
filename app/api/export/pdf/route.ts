@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
         habitTicks: { where: { checked: true }, select: { id: true } },
         notesList: {
           orderBy: { occurredAt: 'asc' },
-          include: { photos: true, reflection: true },
+          include: { photos: true },
         },
       },
     })
@@ -242,11 +242,6 @@ export async function GET(req: NextRequest) {
           const hh = String(time.getHours()).padStart(2, '0')
           const mm = String(time.getMinutes()).padStart(2, '0')
           drawParagraph(`• [${hh}:${mm}] ${note.type}`, note.text || '—')
-          if (note.reflection && (note.reflection.changed || note.reflection.gratitude || note.reflection.vows)) {
-            if (note.reflection.changed) drawParagraph('Reflexion – Veränderung', note.reflection.changed)
-            if (note.reflection.gratitude) drawParagraph('Reflexion – Dankbarkeit', note.reflection.gratitude)
-            if (note.reflection.vows) drawParagraph('Reflexion – Vorsätze', note.reflection.vows)
-          }
           if (includePhotos && note.photos && note.photos.length) {
             // Thumbnails
             const origin = req.nextUrl.origin
@@ -254,7 +249,7 @@ export async function GET(req: NextRequest) {
             let x = margin
             let rowMaxH = 0
             for (const ph of note.photos) {
-              const localPath = resolveUploadPathFromUrl(ph.url)
+              const localPath = resolveUploadPathFromUrl(ph.filePath)
               try {
                 let img
                 if (localPath) {
@@ -265,7 +260,7 @@ export async function GET(req: NextRequest) {
                   img = await pdf.embedPng(resized)
                 } else {
                   // Fallback: fetch via HTTP (useful for absolute URLs)
-                  const src = ph.url.startsWith('http') ? ph.url : origin + ph.url
+                  const src = ph.filePath.startsWith('http') ? ph.filePath : origin + ph.filePath
                   const r = await fetch(src)
                   const arr = await r.arrayBuffer()
                   const buf = Buffer.from(arr)
@@ -289,7 +284,7 @@ export async function GET(req: NextRequest) {
                 if (iH > rowMaxH) rowMaxH = iH
               } catch {
                 // show URL placeholder
-                const fallbackText = ph.url.startsWith('http') ? ph.url : origin + ph.url
+                const fallbackText = ph.filePath.startsWith('http') ? ph.filePath : origin + ph.filePath
                 const lines = wrapLines(fallbackText, contentWidth, 8, font)
                 for (const line of lines) {
                   if (y < margin + 20) { page = addPage(); y = pageHeight - margin }

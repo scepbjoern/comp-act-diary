@@ -44,8 +44,16 @@ export async function POST(req: NextRequest, context: { params: Promise<{ noteId
       const body = await req.json().catch(() => ({} as any))
       const url = String(body?.url || '').trim()
       if (!url) return NextResponse.json({ error: 'No url provided' }, { status: 400 })
-      const photo = await prisma.dayNotePhoto.create({ data: { dayNoteId: noteId, url } })
-      createdPhotos.push({ id: photo.id, url: photo.url })
+      const photo = await prisma.photoFile.create({ 
+        data: { 
+          dayNoteId: noteId, 
+          filePath: url, 
+          fileName: url.split('/').pop() || 'file',
+          mimeType: 'image/jpeg', // Default for URL uploads
+          sizeBytes: 0, // Unknown for URL uploads
+        }
+      })
+      createdPhotos.push({ id: photo.id, url: photo.filePath })
     } else if (contentType.includes('multipart/form-data')) {
       const form = await req.formData().catch(err => {
         console.error('formData parse failed', err)
@@ -88,9 +96,17 @@ export async function POST(req: NextRequest, context: { params: Promise<{ noteId
 
           const outPath = path.join(uploadDir, fileName)
           await pipeline.toFile(outPath)
-          const url = `/uploads/${user.id}/${fileName}`
-          const photo = await prisma.dayNotePhoto.create({ data: { dayNoteId: noteId, url } })
-          createdPhotos.push({ id: photo.id, url })
+          const filePath = `/uploads/${user.id}/${fileName}`
+          const photo = await prisma.photoFile.create({ 
+            data: { 
+              dayNoteId: noteId, 
+              filePath, 
+              fileName,
+              mimeType: file.type,
+              sizeBytes: file.size,
+            }
+          })
+          createdPhotos.push({ id: photo.id, url: photo.filePath })
         } catch (err) {
           console.error('Failed to process/upload file', err)
           return NextResponse.json({ error: 'Failed to process file' }, { status: 500 })
@@ -115,7 +131,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ noteId
       occurredAtIso: n.occurredAt?.toISOString(),
       createdAtIso: n.createdAt?.toISOString(),
       text: n.text ?? '',
-      photos: (n.photos || []).map((p: any) => ({ id: p.id, url: p.url })),
+      photos: (n.photos || []).map((p: any) => ({ id: p.id, url: p.filePath })),
     }))
     return NextResponse.json({ ok: true, photos: createdPhotos, notes })
   } catch (err) {

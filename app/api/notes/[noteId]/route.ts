@@ -65,7 +65,12 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
   // Handle audio file deletion
   if (body.audioFilePath === null || body.audioFileId === null) {
     // Delete the physical audio file if it exists
-    const audioPath = resolveAudioPath(note.audioFilePath)
+    // Note: We need to fetch the audioFile separately since we can't include it in the query
+    let audioPath = null
+    if (note.audioFileId) {
+      const audioFile = await prisma.audioFile.findUnique({ where: { id: note.audioFileId } })
+      audioPath = resolveAudioPath(audioFile?.filePath)
+    }
     if (audioPath) {
       try {
         await fs.unlink(audioPath)
@@ -91,7 +96,6 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
     orderBy: { occurredAt: 'asc' },
     include: { 
       photos: true,
-      audioFile: true,
     },
   })
   const notes = noteRows.map((n: any) => ({
@@ -126,7 +130,7 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ note
 
   // Try to remove physical photo files
   for (const ph of note.photos) {
-    const filePath = resolveUploadPathFromUrl(ph.filePath || ph.url)
+    const filePath = resolveUploadPathFromUrl(ph.filePath)
     if (filePath) {
       try { await fs.unlink(filePath) } catch (err: any) {
         // Ignore if missing
@@ -136,7 +140,11 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ note
   }
 
   // Remove audio file if present
-  const audioPath = resolveAudioPath(note.audioFilePath)
+  let audioPath = null
+  if (note.audioFileId) {
+    const audioFile = await prisma.audioFile.findUnique({ where: { id: note.audioFileId } })
+    audioPath = resolveAudioPath(audioFile?.filePath)
+  }
   if (audioPath) {
     try { await fs.unlink(audioPath) } catch (err: any) {
       if (err && err.code !== 'ENOENT') console.warn('Failed to delete note audio file', { audioPath, err })
@@ -152,7 +160,6 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ note
     orderBy: { occurredAt: 'asc' },
     include: { 
       photos: true,
-      audioFile: true,
     },
   })
   const notes = noteRows.map((n: any) => ({

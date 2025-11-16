@@ -1,22 +1,241 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model HabitIcon {
-  id       String  @id @default(uuid())
-  userId   String
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  habitId  String
-  habit    Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)
-  icon     String?
+  id      String  @id @default(uuid())
+  userId  String
+  habitId String
+  icon    String?
+  habit   Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, habitId])
 }
 
-generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
+model User {
+  id              String        @id @default(uuid())
+  username        String        @unique
+  displayName     String?
+  passwordHash    String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  profileImageUrl String?
+  chatMethods     ChatMethod[]
+  days            DayEntry[]
+  habits          Habit[]
+  habitIcons      HabitIcon[]
+  reflections     Reflection[]
+  symptomIcons    SymptomIcon[]
+  links           UserLink[]
+  settings        UserSettings?
+  userSymptoms    UserSymptom[]
+}
+
+model UserSettings {
+  userId              String  @id
+  theme               String  @default("dark")
+  timeFormat24h       Boolean @default(true)
+  weekStart           String  @default("mon")
+  autosaveEnabled     Boolean @default(true)
+  autosaveIntervalSec Int     @default(5)
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Habit {
+  id            String      @id @default(uuid())
+  userId        String?
+  title         String
+  isActive      Boolean     @default(true)
+  sortIndex     Int         @default(0)
+  icon          String?
+  user          User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  iconOverrides HabitIcon[]
+  ticks         HabitTick[]
+}
+
+model DayEntry {
+  id                String             @id @default(uuid())
+  userId            String
+  date              DateTime
+  phase             Phase
+  careCategory      CareCategory
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notesList         DayNote[]
+  habitTicks        HabitTick[]
+  stool             StoolScore?
+  symptoms          SymptomScore[]
+  userSymptomScores UserSymptomScore[]
+
+  @@unique([userId, date])
+}
+
+model SymptomScore {
+  id         String      @id @default(uuid())
+  dayEntryId String
+  type       SymptomType
+  score      Int
+  day        DayEntry    @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
+
+  @@unique([dayEntryId, type])
+}
+
+model StoolScore {
+  id         String   @id @default(uuid())
+  dayEntryId String   @unique
+  bristol    Int
+  day        DayEntry @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
+}
+
+model HabitTick {
+  id         String   @id @default(uuid())
+  dayEntryId String
+  habitId    String
+  checked    Boolean  @default(false)
+  day        DayEntry @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
+  habit      Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([dayEntryId, habitId])
+}
+
+model DayNote {
+  id                 String                 @id @default(uuid())
+  dayEntryId         String
+  type               NoteType
+  text               String?
+  occurredAt         DateTime
+  createdAt          DateTime               @default(now())
+  keepAudio          Boolean                @default(true)
+  originalTranscript String?
+  updatedAt          DateTime               @updatedAt
+  audioFileId        String?                @unique
+  reflectionFields   DailyReflectionFields?
+  audioFile          AudioFile?             @relation(fields: [audioFileId], references: [id])
+  day                DayEntry               @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
+  photos             PhotoFile[]
+
+  @@index([type, dayEntryId])
+}
+
+model AudioFile {
+  id          String   @id @default(uuid())
+  filePath    String   @unique
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  durationSec Float?
+  uploadedAt  DateTime @default(now())
+  dayNote     DayNote?
+
+  @@index([filePath])
+}
+
+model PhotoFile {
+  id           String      @id @default(uuid())
+  filePath     String      @unique
+  fileName     String
+  mimeType     String
+  sizeBytes    Int
+  widthPx      Int?
+  heightPx     Int?
+  uploadedAt   DateTime    @default(now())
+  dayNoteId    String?
+  reflectionId String?
+  dayNote      DayNote?    @relation(fields: [dayNoteId], references: [id], onDelete: Cascade)
+  reflection   Reflection? @relation(fields: [reflectionId], references: [id], onDelete: Cascade)
+
+  @@index([filePath])
+}
+
+model DailyReflectionFields {
+  id        String  @id @default(uuid())
+  dayNoteId String  @unique
+  changed   String?
+  gratitude String?
+  vows      String?
+  note      DayNote @relation(fields: [dayNoteId], references: [id], onDelete: Cascade)
+}
+
+model Reflection {
+  id        String         @id @default(uuid())
+  userId    String
+  kind      ReflectionKind
+  createdAt DateTime       @default(now())
+  changed   String?
+  gratitude String?
+  vows      String?
+  remarks   String?
+  weightKg  Float?
+  updatedAt DateTime       @updatedAt
+  photos    PhotoFile[]
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model UserLink {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  url       String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model UserSymptom {
+  id        String             @id @default(uuid())
+  userId    String
+  title     String
+  sortIndex Int                @default(0)
+  isActive  Boolean            @default(true)
+  icon      String?
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scores    UserSymptomScore[]
+
+  @@index([userId, sortIndex])
+}
+
+model SymptomIcon {
+  id     String      @id @default(uuid())
+  userId String
+  type   SymptomType
+  icon   String?
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+}
+
+model UserSymptomScore {
+  id            String      @id @default(uuid())
+  dayEntryId    String
+  userSymptomId String
+  score         Int
+  day           DayEntry    @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
+  userSymptom   UserSymptom @relation(fields: [userSymptomId], references: [id], onDelete: Cascade)
+
+  @@unique([dayEntryId, userSymptomId])
+}
+
+model ChatMethod {
+  id           String   @id @default(uuid())
+  userId       String
+  name         String
+  systemPrompt String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 enum Phase {
@@ -24,11 +243,13 @@ enum Phase {
   PHASE_2
   PHASE_3
 }
+
 enum CareCategory {
   SANFT
   MEDIUM
   INTENSIV
 }
+
 enum SymptomType {
   BESCHWERDEFREIHEIT
   ENERGIE
@@ -38,6 +259,7 @@ enum SymptomType {
   HEISSHUNGERFREIHEIT
   BEWEGUNG
 }
+
 enum NoteType {
   MEAL
   REFLECTION
@@ -47,211 +269,4 @@ enum NoteType {
 enum ReflectionKind {
   WEEK
   MONTH
-}
-
-model User {
-  id           String        @id @default(uuid())
-  username     String        @unique
-  displayName  String?
-  profileImageUrl String?
-  passwordHash String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  settings     UserSettings?
-  habits       Habit[]
-  days         DayEntry[]
-  reflections  Reflection[]
-  links        UserLink[]
-  userSymptoms UserSymptom[]
-  habitIcons   HabitIcon[]
-  symptomIcons SymptomIcon[]
-}
-
-model UserSettings {
-  userId              String  @id
-  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  theme               String  @default("dark")
-  timeFormat24h       Boolean @default(true)
-  weekStart           String  @default("mon")
-  autosaveEnabled     Boolean @default(true)
-  autosaveIntervalSec Int     @default(5)
-}
-
-model Habit {
-  id        String   @id @default(uuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String
-  icon      String?
-  isActive  Boolean  @default(true)
-  sortIndex Int      @default(0)
-  ticks     HabitTick[]
-  iconOverrides HabitIcon[]
-}
-
-model DayEntry {
-  id           String         @id @default(uuid())
-  userId       String
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date         DateTime
-  phase        Phase
-  careCategory CareCategory
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  symptoms     SymptomScore[]
-  stool        StoolScore?
-  habitTicks   HabitTick[]
-  notesList    DayNote[]
-  userSymptomScores UserSymptomScore[]
-
-  @@unique([userId, date])
-}
-
-model SymptomScore {
-  id         String      @id @default(uuid())
-  dayEntryId String
-  day        DayEntry    @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
-  type       SymptomType
-  score      Int
-
-  @@unique([dayEntryId, type])
-}
-
-model StoolScore {
-  id         String   @id @default(uuid())
-  dayEntryId String   @unique
-  day        DayEntry @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
-  bristol    Int
-}
-
-model HabitTick {
-  id         String   @id @default(uuid())
-  dayEntryId String
-  day        DayEntry @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
-  habitId    String
-  habit      Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
-  checked    Boolean  @default(false)
-
-  @@unique([dayEntryId, habitId])
-}
-
-model DayNote {
-  id                 String     @id @default(uuid())
-  dayEntryId         String
-  day                DayEntry   @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
-  type               NoteType
-  text               String?
-  originalTranscript String?
-  audioFileId        String?    @unique
-  audioFile          AudioFile? @relation(fields: [audioFileId], references: [id])
-  keepAudio          Boolean    @default(true)
-  occurredAt         DateTime
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
-  photos             PhotoFile[]
-  reflectionFields   DailyReflectionFields?
-
-  @@index([type, dayEntryId])
-}
-
-model AudioFile {
-  id           String    @id @default(uuid())
-  filePath     String    @unique
-  fileName     String
-  mimeType     String
-  sizeBytes    Int
-  durationSec  Float?
-  uploadedAt   DateTime  @default(now())
-  dayNote      DayNote?
-
-  @@index([filePath])
-}
-
-model PhotoFile {
-  id           String       @id @default(uuid())
-  filePath     String       @unique
-  fileName     String
-  mimeType     String
-  sizeBytes    Int
-  widthPx      Int?
-  heightPx     Int?
-  uploadedAt   DateTime     @default(now())
-  dayNoteId    String?
-  dayNote      DayNote?     @relation(fields: [dayNoteId], references: [id], onDelete: Cascade)
-  reflectionId String?
-  reflection   Reflection?  @relation(fields: [reflectionId], references: [id], onDelete: Cascade)
-
-  @@index([filePath])
-}
-
-model DailyReflectionFields {
-  id        String  @id @default(uuid())
-  dayNoteId String  @unique
-  note      DayNote @relation(fields: [dayNoteId], references: [id], onDelete: Cascade)
-  changed   String?
-  gratitude String?
-  vows      String?
-}
-
-model Reflection {
-  id        String         @id @default(uuid())
-  userId    String
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kind      ReflectionKind
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  changed   String?
-  gratitude String?
-  vows      String?
-  remarks   String?
-  weightKg  Float?
-  photos    PhotoFile[]
-
-  @@index([userId, createdAt])
-}
-
-
-model UserLink {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name      String
-  url       String
-  createdAt DateTime @default(now())
-
-  @@index([userId, createdAt])
-}
-
-model UserSymptom {
-  id         String   @id @default(uuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title      String
-  icon       String?
-  sortIndex  Int      @default(0)
-  isActive   Boolean  @default(true)
-  scores     UserSymptomScore[]
-
-  @@index([userId, sortIndex])
-}
-
-model SymptomIcon {
-  id      String      @id @default(uuid())
-  userId  String
-  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type    SymptomType
-  icon    String?
-
-  @@unique([userId, type])
-}
-
-model UserSymptomScore {
-  id             String       @id @default(uuid())
-  dayEntryId     String
-  day            DayEntry     @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
-  userSymptomId  String
-  userSymptom    UserSymptom  @relation(fields: [userSymptomId], references: [id], onDelete: Cascade)
-  score          Int
-
-  @@unique([dayEntryId, userSymptomId])
 }
