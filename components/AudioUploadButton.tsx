@@ -1,0 +1,161 @@
+'use client'
+
+import { useRef, useState } from 'react'
+import { Icon } from './Icon'
+
+interface AudioUploadButtonProps {
+  onAudioUploaded: (result: { text: string; audioFilePath: string; keepAudio: boolean }) => void
+  date: string // ISO date string YYYY-MM-DD
+  keepAudio?: boolean
+  className?: string
+  compact?: boolean
+  disabled?: boolean
+  model?: string
+}
+
+export default function AudioUploadButton({
+  onAudioUploaded,
+  date,
+  keepAudio = true,
+  className = '',
+  compact = false,
+  disabled = false,
+  model,
+}: AudioUploadButtonProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const validTypes = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/mp3']
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|m4a)$/i)) {
+      setError('Bitte nur .mp3 oder .m4a Dateien hochladen')
+      return
+    }
+
+    // Check file size (max from env or 50MB)
+    const maxSizeMB = parseInt(process.env.NEXT_PUBLIC_MAX_AUDIO_FILE_SIZE_MB || '50', 10)
+    const maxSizeBytes = maxSizeMB * 1024 * 1024
+    if (file.size > maxSizeBytes) {
+      setError(`Datei zu groß. Maximum ${maxSizeMB}MB`)
+      return
+    }
+
+    setUploading(true)
+    setError(null)
+
+    try {
+      // Resolve transcription model (prop -> localStorage -> env -> fallback)
+      let selectedModel = model
+      if (!selectedModel && typeof window !== 'undefined') {
+        try {
+          const stored = window.localStorage.getItem('transcribe:model')
+          if (stored) selectedModel = stored
+        } catch {/* ignore localStorage errors */}
+      }
+      if (!selectedModel) {
+        selectedModel = process.env.NEXT_PUBLIC_TOGETHERAI_TRANSCRIBE_MODEL
+          || process.env.NEXT_PUBLIC_OPENAI_TRANSCRIBE_MODEL
+          || process.env.TOGETHERAI_TRANSCRIBE_MODEL
+          || process.env.OPENAI_TRANSCRIBE_MODEL
+          || 'openai/whisper-large-v3'
+      }
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('date', date)
+      formData.append('model', selectedModel)
+      formData.append('keepAudio', String(keepAudio))
+
+      const response = await fetch('/api/diary/upload-audio', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Upload fehlgeschlagen')
+      }
+
+      const result = await response.json()
+      onAudioUploaded({
+        text: result.text,
+        audioFilePath: result.audioFilePath,
+        keepAudio: result.keepAudio,
+      })
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    } catch (err) {
+      console.error('Audio upload error:', err)
+      setError(err instanceof Error ? err.message : 'Upload fehlgeschlagen')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  if (compact) {
+    return (
+      <div className={`inline-flex items-center ${className}`}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/x-m4a"
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={disabled || uploading}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={disabled || uploading}
+          className="text-gray-300 hover:text-gray-100 disabled:opacity-50"
+          title="Audio-Datei hochladen"
+        >
+          {uploading ? (
+            <Icon name="hourglass_empty" className="animate-spin" />
+          ) : (
+            <Icon name="upload_file" />
+          )}
+        </button>
+        {error && <span className="text-xs text-red-400 ml-2">{error}</span>}
+      </div>
+    )
+  }
+
+  return (
+    <div className={className}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/x-m4a"
+        onChange={handleFileSelect}
+        className="hidden"
+        disabled={disabled || uploading}
+      />
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={disabled || uploading}
+        className="pill flex items-center gap-2"
+      >
+        {uploading ? (
+          <>
+            <Icon name="hourglass_empty" className="animate-spin" />
+            <span>Wird hochgeladen...</span>
+          </>
+        ) : (
+          <>
+            <Icon name="upload_file" />
+            <span>Audio hochladen</span>
+          </>
+        )}
+      </button>
+      {error && <div className="text-sm text-red-400 mt-1">{error}</div>}
+    </div>
+  )
+}

@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  @apply bg-background-light text-gray-900 dark:bg-background dark:text-gray-100;
+}
+
+/* Bright overrides for utility classes used widely in components */
+.bright .bg-background { background-color: #f8fafc; }
+.bright .bg-surface { background-color: #ffffff; }
+.bright .bg-surface\/60 { background-color: rgb(255 255 255 / 0.6); }
+.bright .bg-surface\/80 { background-color: rgb(255 255 255 / 0.8); }
+.bright .border-slate-800, 
+.bright .border-slate-700 { border-color: #e2e8f0; }
+.bright .text-gray-100 { color: #0f172a; }
+.bright .text-gray-200 { color: #1f2937; }
+.bright .text-gray-300 { color: #334155; }
+.bright .text-gray-400 { color: #64748b; }
+.bright .text-white { color: #0f172a; }
+
+/* Container */
+.container {
+  @apply mx-auto px-4;
+}
+
+/* Card styles */
+.card {
+  @apply bg-surface-light/80 dark:bg-surface/80 rounded-xl border border-border-light dark:border-border shadow-sm;
+}
+
+/* Pill styles */
+.pill {
+  @apply rounded-full bg-pill-light dark:bg-pill text-gray-900 dark:text-gray-100 px-3 py-1.5 text-sm font-medium transition-colors border border-border-light dark:border-border inline-flex items-center justify-center;
+}
+
+.pill:hover {
+  @apply bg-pill-light/80 dark:bg-pill/80;
+}
+
+.pill.active {
+  @apply bg-primary text-primary-foreground border-transparent hover:bg-primary/90;
+}
+
+/* Form elements */
+input,
+textarea,
+select {
+  @apply bg-surface-light dark:bg-surface text-gray-900 dark:text-gray-100 border border-border-light dark:border-border rounded px-3 py-2 text-sm;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  @apply ring-2 ring-primary/50 border-primary outline-none;
+}
+
+/* Date picker */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.bright input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0);
+}
+
+/* Material Symbols font tuning */
+.material-symbols-rounded {
+  font-variation-settings:
+    'FILL' var(--msr-fill, 0),
+    'wght' var(--msr-wght, 400),
+    'GRAD' var(--msr-grad, 0),
+    'opsz' var(--msr-opsz, 24);
+  font-size: 1.1em;
+  line-height: 1;
+  vertical-align: -0.125em;
+}

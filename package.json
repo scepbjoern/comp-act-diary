@@ -1,0 +1,59 @@
+{
+  "name": "compact-diary",
+  "version": "1.4.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:push": "prisma db push",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:reset": "prisma db push --force-reset && npm run db:seed",
+    "db:studio": "prisma studio",
+    "icons:convert": "tsx scripts/convert-icons.ts",
+    "release": "commit-and-tag-version",
+    "release:as": "commit-and-tag-version --release-as",
+    "postrelease": "node scripts/postrelease.mjs",
+    "postrelease:as": "node scripts/postrelease.mjs"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.16.1",
+    "autoprefixer": "^10.4.19",
+    "bcryptjs": "^2.4.3",
+    "date-fns": "^3.6.0",
+    "dotenv": "^17.2.2",
+    "next": "^15.5.2",
+    "pdf-lib": "^1.17.1",
+    "postcss": "^8.4.41",
+    "prisma": "^6.16.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^3.2.0",
+    "sharp": "^0.33.4",
+    "tailwindcss": "^3.4.9",
+    "together-ai": "^0.30.0",
+    "tsx": "^4.16.2",
+    "uuid": "^13.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@next/eslint-plugin-next": "^15.5.3",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.14.15",
+    "@types/react": "^18.3.3",
+    "@types/uuid": "^10.0.0",
+    "commit-and-tag-version": "^12.4.0",
+    "eslint": "^9.35.0",
+    "eslint-config-next": "^15.5.3",
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.43.0"
+  },
+  "commit-and-tag-version": {
+    "preset": "conventionalcommits",
+    "releaseCommitMessageFormat": "chore(release): {{currentTag}}"
+  }
+}

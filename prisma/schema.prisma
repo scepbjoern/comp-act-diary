@@ -1,0 +1,235 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model HabitIcon {
+  id       String  @id @default(uuid())
+  userId   String
+  user     User    @relation(fields: [userId], references: [id])
+  habitId  String
+  habit    Habit   @relation(fields: [habitId], references: [id])
+  icon     String?
+
+  @@unique([userId, habitId])
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+enum Phase {
+  PHASE_1
+  PHASE_2
+  PHASE_3
+}
+enum CareCategory {
+  SANFT
+  MEDIUM
+  INTENSIV
+}
+enum SymptomType {
+  BESCHWERDEFREIHEIT
+  ENERGIE
+  STIMMUNG
+  SCHLAF
+  ENTSPANNUNG
+  HEISSHUNGERFREIHEIT
+  BEWEGUNG
+}
+enum NoteType {
+  MEAL
+  REFLECTION
+  DIARY
+}
+
+enum ReflectionKind {
+  WEEK
+  MONTH
+}
+
+model User {
+  id           String        @id @default(uuid())
+  username     String        @unique
+  displayName  String?
+  profileImageUrl String?
+  passwordHash String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  settings     UserSettings?
+  habits       Habit[]
+  days         DayEntry[]
+  reflections  Reflection[]
+  links        UserLink[]
+  userSymptoms UserSymptom[]
+  habitIcons   HabitIcon[]
+  symptomIcons SymptomIcon[]
+}
+
+model UserSettings {
+  userId              String  @id
+  user                User    @relation(fields: [userId], references: [id])
+  theme               String  @default("dark")
+  timeFormat24h       Boolean @default(true)
+  weekStart           String  @default("mon")
+  autosaveEnabled     Boolean @default(true)
+  autosaveIntervalSec Int     @default(5)
+}
+
+model Habit {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  title     String
+  icon      String?
+  isActive  Boolean  @default(true)
+  sortIndex Int      @default(0)
+  ticks     HabitTick[]
+  iconOverrides HabitIcon[]
+}
+
+model DayEntry {
+  id           String         @id @default(uuid())
+  userId       String
+  user         User           @relation(fields: [userId], references: [id])
+  date         DateTime
+  phase        Phase
+  careCategory CareCategory
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  symptoms     SymptomScore[]
+  stool        StoolScore?
+  habitTicks   HabitTick[]
+  notesList    DayNote[]
+  userSymptomScores UserSymptomScore[]
+
+  @@unique([userId, date])
+}
+
+model SymptomScore {
+  id         String      @id @default(uuid())
+  dayEntryId String
+  day        DayEntry    @relation(fields: [dayEntryId], references: [id])
+  type       SymptomType
+  score      Int
+
+  @@unique([dayEntryId, type])
+}
+
+model StoolScore {
+  id         String   @id @default(uuid())
+  dayEntryId String   @unique
+  day        DayEntry @relation(fields: [dayEntryId], references: [id])
+  bristol    Int
+}
+
+model HabitTick {
+  id         String   @id @default(uuid())
+  dayEntryId String
+  day        DayEntry @relation(fields: [dayEntryId], references: [id])
+  habitId    String
+  habit      Habit    @relation(fields: [habitId], references: [id])
+  checked    Boolean  @default(false)
+
+  @@unique([dayEntryId, habitId])
+}
+
+model DayNote {
+  id                 String     @id @default(uuid())
+  dayEntryId         String
+  day                DayEntry   @relation(fields: [dayEntryId], references: [id])
+  type               NoteType
+  text               String?
+  originalTranscript String?
+  audioFilePath      String?
+  keepAudio          Boolean    @default(true)
+  occurredAt         DateTime
+  createdAt          DateTime   @default(now())
+  photos             DayNotePhoto[]
+  reflection         ReflectionFields?
+}
+
+model DayNotePhoto {
+  id        String  @id @default(uuid())
+  dayNoteId String
+  note      DayNote @relation(fields: [dayNoteId], references: [id])
+  url       String
+}
+
+model ReflectionFields {
+  id        String  @id @default(uuid())
+  dayNoteId String  @unique
+  note      DayNote @relation(fields: [dayNoteId], references: [id])
+  changed   String?
+  gratitude String?
+  vows      String?
+}
+
+model Reflection {
+  id        String         @id @default(uuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id])
+  kind      ReflectionKind
+  createdAt DateTime       @default(now())
+  changed   String?
+  gratitude String?
+  vows      String?
+  remarks   String?
+  weightKg  Float?
+  photos    ReflectionPhoto[]
+
+  @@index([userId, createdAt])
+}
+
+model ReflectionPhoto {
+  id           String      @id @default(uuid())
+  reflectionId String
+  reflection   Reflection  @relation(fields: [reflectionId], references: [id])
+  url          String
+}
+
+model UserLink {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  url       String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model UserSymptom {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  title      String
+  icon       String?
+  sortIndex  Int      @default(0)
+  isActive   Boolean  @default(true)
+  scores     UserSymptomScore[]
+
+  @@index([userId, sortIndex])
+}
+
+model SymptomIcon {
+  id      String      @id @default(uuid())
+  userId  String
+  user    User        @relation(fields: [userId], references: [id])
+  type    SymptomType
+  icon    String?
+
+  @@unique([userId, type])
+}
+
+model UserSymptomScore {
+  id             String       @id @default(uuid())
+  dayEntryId     String
+  day            DayEntry     @relation(fields: [dayEntryId], references: [id])
+  userSymptomId  String
+  userSymptom    UserSymptom  @relation(fields: [userSymptomId], references: [id])
+  score          Int
+
+  @@unique([dayEntryId, userSymptomId])
+}
