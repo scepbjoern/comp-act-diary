@@ -78,7 +78,10 @@ export default function AudioUploadButton({
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Upload fehlgeschlagen')
+        console.error('Server error response:', errorData)
+        const errorMessage = errorData.error || 'Upload fehlgeschlagen'
+        const details = errorData.details ? ` (${errorData.details})` : ''
+        throw new Error(errorMessage + details)
       }
 
       const result = await response.json()

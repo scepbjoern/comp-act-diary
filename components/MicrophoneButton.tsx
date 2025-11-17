@@ -167,7 +167,10 @@ export function MicrophoneButton(props: {
         const res = await fetch('/api/diary/upload-audio', { method: 'POST', body: fd, credentials: 'same-origin' })
         if (!res.ok) {
           const errorData = await res.json()
-          throw new Error(errorData.error || 'Upload fehlgeschlagen')
+          console.error('Server error response:', errorData)
+          const errorMessage = errorData.error || 'Upload fehlgeschlagen'
+          const details = errorData.details ? ` (${errorData.details})` : ''
+          throw new Error(errorMessage + details)
         }
         const data = await res.json()
         if (onAudioData) {

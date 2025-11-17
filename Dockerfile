@@ -68,10 +68,19 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/package*.json ./
 COPY --from=build /app/deploy/entrypoint.sh ./entrypoint.sh
 
-# Ensure entrypoint is executable and create writable uploads directory before switching to non-root user
+# Ensure entrypoint is executable and create writable uploads directory
 RUN chmod +x ./entrypoint.sh \
  && mkdir -p /app/uploads \
  && chown -R node:node /app
+
+# Set user UID/GID dynamically if provided (for host permissions)
+ARG UID=1000
+ARG GID=1000
+RUN if [ "$UID" != "1000" ] || [ "$GID" != "1000" ]; then \
+    groupmod -g $GID node && \
+    usermod -u $UID -g $GID node; \
+  fi
+
 USER node
 EXPOSE 3000
 CMD ["./entrypoint.sh"]

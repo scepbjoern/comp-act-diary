@@ -27,6 +27,8 @@ services:
         HTTP_PROXY: ${HTTP_PROXY}
         HTTPS_PROXY: ${HTTPS_PROXY}
         NO_PROXY: ${NO_PROXY}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
       network: host
     restart: unless-stopped
     environment:
