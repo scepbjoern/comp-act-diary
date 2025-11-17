@@ -15,6 +15,7 @@ import { DiaryEntriesAccordion } from '@/components/DiaryEntriesAccordion'
 import { DEFAULT_STOOL_ICON } from '@/lib/default-icons'
 import { AudioPlayerH5 } from '@/components/AudioPlayerH5'
 import AudioUploadButton from '@/components/AudioUploadButton'
+import { RichTextEditor } from '@/components/RichTextEditor'
 
 const SYMPTOM_LABELS: Record<string, string> = {
   BESCHWERDEFREIHEIT: 'Beschwerdefreiheit',
@@ -43,6 +44,7 @@ type DayNote = {
   id: string
   dayId: string
   type: 'MEAL' | 'REFLECTION' | 'DIARY'
+  title?: string | null
   time?: string
   techTime?: string
   text: string
@@ -153,13 +155,16 @@ export default function HeutePage() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [editingTime, setEditingTime] = useState<string>('')
   const [editingText, setEditingText] = useState<string>('')
+  const [editingTitle, setEditingTitle] = useState<string>('')
   const [darmkurCollapsed, setDarmkurCollapsed] = useState(true)
   // Diary entries state
   const [newDiaryText, setNewDiaryText] = useState('')
+  const [newDiaryTitle, setNewDiaryTitle] = useState('')
   const [newDiaryAudio, setNewDiaryAudio] = useState<string | null>(null)
   const [newDiaryAudioFileId, setNewDiaryAudioFileId] = useState<string | null>(null)
   const [newDiaryOriginalTranscript, setNewDiaryOriginalTranscript] = useState<string | null>(null)
   const [newDiaryTime, setNewDiaryTime] = useState('')
+  const [editorKey, setEditorKey] = useState(0) // Force editor remount
   const [keepAudio, setKeepAudio] = useState(true)
   const [showRetranscribeOptions, setShowRetranscribeOptions] = useState(false)
   const [isRetranscribing, setIsRetranscribing] = useState(false)
@@ -450,6 +455,13 @@ export default function HeutePage() {
       } else {
         (files as File[]).forEach(f => formData.append('files', f))
       }
+      
+      // Find the note and pass its time for proper file naming
+      const note = notes.find(n => n.id === noteId)
+      if (note?.time) {
+        formData.append('time', note.time)
+      }
+      
       // Optional image settings from localStorage for server-side processing
       try {
         const raw = localStorage.getItem('imageSettings')
@@ -719,6 +731,7 @@ export default function HeutePage() {
       setNewDiaryTime(`${hh}:${mm}`)
       setShowRetranscribeOptions(false)
       setIsRetranscribing(false)
+      setEditorKey(prev => prev + 1) // Force editor remount
       
       push('Tagebucheintrag gespeichert', 'success')
     } catch (e) {
@@ -829,13 +842,62 @@ export default function HeutePage() {
                 />
               </div>
               
-              <textarea
-                value={newDiaryText}
-                onChange={e => setNewDiaryText(e.target.value)}
-                className="w-full bg-background border border-slate-700 rounded p-2"
-                rows={4}
+              <RichTextEditor
+                key={editorKey}
+                markdown={newDiaryText}
+                onChange={setNewDiaryText}
                 placeholder="Neuer Tagebucheintrag..."
+                time={newDiaryTime}
               />
+              
+              {/* Direct re-transcribe button for newly uploaded audio */}
+              {newDiaryAudioFileId && (
+                <div className="flex items-center gap-2 p-2 bg-slate-700/30 rounded">
+                  <span className="text-xs text-gray-400">
+                    Audio bereit {isRetranscribing && '(transkribiere...)'}
+                  </span>
+                  <div className="relative">
+                    <button
+                      className="btn btn-ghost btn-xs text-gray-300 hover:text-gray-100"
+                      onClick={() => setShowRetranscribeOptions(!showRetranscribeOptions)}
+                      disabled={isRetranscribing}
+                      title="Audio mit anderem Modell erneut transkribieren"
+                    >
+                      {isRetranscribing ? '⏳' : '🔄'} Neu transkribieren
+                    </button>
+                    
+                    {showRetranscribeOptions && (
+                      <div className="absolute top-full left-0 mt-1 bg-surface border border-slate-700 rounded shadow-lg z-50 p-2 min-w-[200px]">
+                        <div className="text-xs text-gray-400 mb-2">Modell auswählen:</div>
+                        <button
+                          className="btn btn-ghost btn-xs w-full justify-start text-left mb-1"
+                          onClick={async () => {
+                            await retranscribeAudio('openai/whisper-large-v3')
+                          }}
+                        >
+                          openai/whisper-large-v3
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-xs w-full justify-start text-left mb-1"
+                          onClick={async () => {
+                            await retranscribeAudio('gpt-4o-mini-transcribe')
+                          }}
+                        >
+                          gpt-4o-mini-transcribe
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-xs w-full justify-start text-left"
+                          onClick={async () => {
+                            await retranscribeAudio('gpt-4o-transcribe')
+                          }}
+                        >
+                          gpt-4o-transcribe
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               
               <div className="flex items-center gap-2 flex-wrap">
                 <MicrophoneButton
@@ -852,58 +914,6 @@ export default function HeutePage() {
                   className="text-gray-300 hover:text-gray-100"
                   compact
                 />
-                
-                {/* Direct re-transcribe button for newly uploaded audio */}
-                {newDiaryAudioFileId && (
-                  <div className="flex items-center gap-2 mt-2 p-2 bg-slate-700/30 rounded">
-                    <span className="text-xs text-gray-400">
-                      Audio bereit: {isRetranscribing ? 'transkribiere...' : ''}
-                    </span>
-                    <div className="relative">
-                      <button
-                        className="btn btn-ghost btn-xs text-gray-300 hover:text-gray-100"
-                        onClick={() => setShowRetranscribeOptions(!showRetranscribeOptions)}
-                        disabled={isRetranscribing}
-                        title="Audio mit anderem Modell erneut transkribieren"
-                      >
-                        {isRetranscribing ? '⏳ ' : '🔄'} Neu transkribieren
-                      </button>
-                      
-                      {showRetranscribeOptions && (
-                        <div className="absolute top-full left-0 mt-1 bg-surface border border-slate-700 rounded shadow-lg z-10 p-2 min-w-[200px]">
-                          <div className="text-xs text-gray-400 mb-2">Modell auswählen:</div>
-                          <button
-                            className="btn btn-ghost btn-xs w-full justify-start text-left mb-1"
-                            onClick={async () => {
-                              setShowRetranscribeOptions(false)
-                              await retranscribeAudio('openai/whisper-large-v3')
-                            }}
-                          >
-                            openai/whisper-large-v3
-                          </button>
-                          <button
-                            className="btn btn-ghost btn-xs w-full justify-start text-left mb-1"
-                            onClick={async () => {
-                              setShowRetranscribeOptions(false)
-                              await retranscribeAudio('gpt-4o-mini-transcribe')
-                            }}
-                          >
-                            gpt-4o-mini-transcribe
-                          </button>
-                          <button
-                            className="btn btn-ghost btn-xs w-full justify-start text-left"
-                            onClick={async () => {
-                              setShowRetranscribeOptions(false)
-                              await retranscribeAudio('gpt-4o-transcribe')
-                            }}
-                          >
-                            gpt-4o-transcribe
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
                 
                 <AudioUploadButton
                   date={date}

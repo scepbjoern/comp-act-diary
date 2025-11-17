@@ -6,6 +6,8 @@ import { ImproveTextButton } from './ImproveTextButton'
 import { CameraPicker } from './CameraPicker'
 import { AudioPlayerH5 } from './AudioPlayerH5'
 import { RetranscribeButton } from './RetranscribeButton'
+import { RichTextEditor } from './RichTextEditor'
+import { MarkdownRenderer } from './MarkdownRenderer'
 
 type DayNote = {
   id: string
@@ -151,11 +153,10 @@ export function DiaryEntriesAccordion({
                     />
                   </div>
                   <div className="space-y-1">
-                    <textarea 
-                      value={editingText} 
-                      onChange={e => onTextChange(e.target.value)} 
-                      className="w-full bg-background border border-slate-700 rounded p-2 text-xs leading-5" 
-                      rows={4} 
+                    <RichTextEditor
+                      markdown={editingText}
+                      onChange={onTextChange}
+                      placeholder="Tagebucheintrag bearbeiten..."
                     />
                     <div className="flex items-center gap-2">
                       <MicrophoneButton
@@ -172,7 +173,7 @@ export function DiaryEntriesAccordion({
                   </div>
                 </div>
               ) : (
-                <div className="whitespace-pre-wrap text-xs leading-5">{n.text}</div>
+                <MarkdownRenderer markdown={n.text} />
               )}
               
               {/* Audio section */}

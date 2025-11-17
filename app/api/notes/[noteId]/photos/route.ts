@@ -4,6 +4,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import { constants as fsConstants } from 'fs'
 import sharp from 'sharp'
+import { v4 as uuidv4 } from 'uuid'
 
 const IMAGE_MAX_WIDTH = parseInt(process.env.IMAGE_MAX_WIDTH || '1600', 10)
 const IMAGE_MAX_HEIGHT = parseInt(process.env.IMAGE_MAX_HEIGHT || '1600', 10)
@@ -13,14 +14,27 @@ const IMAGE_QUALITY = parseInt(process.env.IMAGE_QUALITY || '80', 10)
 // Base directory for persisted uploads (mounted in Docker to survive restarts)
 const UPLOADS_BASE = process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads')
 
-async function ensureUploadDirForUser(userId: string) {
-  const dir = path.join(UPLOADS_BASE, userId)
-  await fs.mkdir(dir, { recursive: true })
-  return dir
+function getImageFolder(targetDate: Date): { folderPath: string; relativePath: string } {
+  const year = targetDate.getFullYear()
+  const month = String(targetDate.getMonth() + 1).padStart(2, '0')
+  const day = String(targetDate.getDate()).padStart(2, '0')
+  const decade = `${Math.floor(year / 10) * 10}s`
+  
+  const relativePath = path.join('images', decade, String(year), month, day)
+  const folderPath = path.join(UPLOADS_BASE, relativePath)
+  
+  return { folderPath, relativePath }
 }
 
-function nowIsoTime() {
-  return new Date().toISOString().replace(/[:.]/g, '-')
+function generateImageFilename(targetDate: Date, extension: string = 'webp'): string {
+  const year = targetDate.getFullYear()
+  const month = String(targetDate.getMonth() + 1).padStart(2, '0')
+  const day = String(targetDate.getDate()).padStart(2, '0')
+  const hours = String(targetDate.getHours()).padStart(2, '0')
+  const minutes = String(targetDate.getMinutes()).padStart(2, '0')
+  const guid = uuidv4()
+  
+  return `${year}-${month}-${day}_${hours}-${minutes}_${guid}.${extension}`
 }
 
 export async function POST(req: NextRequest, context: { params: Promise<{ noteId: string }> }) {
@@ -61,42 +75,61 @@ export async function POST(req: NextRequest, context: { params: Promise<{ noteId
       })
       if (!form) return NextResponse.json({ error: 'Invalid form data' }, { status: 400 })
       const files = form.getAll('files') as unknown as File[]
+      const timeStr = form.get('time') as string | null // Optional HH:MM from diary entry
       if (!files || files.length === 0) return NextResponse.json({ error: 'No files' }, { status: 400 })
 
-      const uploadDir = await ensureUploadDirForUser(user.id)
-      try {
-        await fs.access(uploadDir, fsConstants.W_OK)
-      } catch {
-        console.error('Upload dir not writable', { uploadDir })
-        return NextResponse.json({ error: 'Upload directory is not writable', uploadDir }, { status: 500 })
+      // Determine target date for folder and filename
+      let targetDate: Date
+      if (timeStr) {
+        // Use the diary entry time
+        const now = new Date()
+        const [hours, minutes] = timeStr.split(':').map(Number)
+        targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes)
+      } else {
+        // Use current time or file's timestamp
+        targetDate = new Date()
       }
-      const ts = nowIsoTime()
-      let seq = 0
+
+      const { folderPath, relativePath } = getImageFolder(targetDate)
+      
+      // Create directory if it doesn't exist
+      await fs.mkdir(folderPath, { recursive: true })
+      
+      try {
+        await fs.access(folderPath, fsConstants.W_OK)
+      } catch {
+        console.error('Upload dir not writable', { folderPath })
+        return NextResponse.json({ error: 'Upload directory is not writable', folderPath }, { status: 500 })
+      }
+
       for (const file of files) {
         if (!(file instanceof File)) continue
         try {
           const arrayBuffer = await file.arrayBuffer()
           const input = Buffer.from(arrayBuffer)
 
+          // Use file's lastModified if available and no timeStr provided
+          const fileDate = !timeStr && file.lastModified ? new Date(file.lastModified) : targetDate
+
           let pipeline = sharp(input).rotate()
           pipeline = pipeline.resize({ width: IMAGE_MAX_WIDTH, height: IMAGE_MAX_HEIGHT, fit: 'inside', withoutEnlargement: true })
 
-          const base = `${noteId}_${ts}_${seq++}`
-          let fileName: string
+          let extension: string
           if (IMAGE_FORMAT === 'png') {
             pipeline = pipeline.png({ quality: IMAGE_QUALITY })
-            fileName = `${base}.png`
+            extension = 'png'
           } else if (IMAGE_FORMAT === 'jpeg') {
             pipeline = pipeline.jpeg({ quality: IMAGE_QUALITY })
-            fileName = `${base}.jpg`
+            extension = 'jpg'
           } else {
             pipeline = pipeline.webp({ quality: IMAGE_QUALITY })
-            fileName = `${base}.webp`
+            extension = 'webp'
           }
 
-          const outPath = path.join(uploadDir, fileName)
+          const fileName = generateImageFilename(fileDate, extension)
+          const outPath = path.join(folderPath, fileName)
           await pipeline.toFile(outPath)
-          const filePath = `/uploads/${user.id}/${fileName}`
+          const filePath = `/uploads/${relativePath.replace(/\\/g, '/')}/${fileName}`
           const photo = await prisma.photoFile.create({ 
             data: { 
               dayNoteId: noteId, 

@@ -18,14 +18,15 @@ function getUploadsDir(): string {
   return process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads')
 }
 
-// Helper to create folder structure: uploads/Jahrzehnt/Jahr/Monat/
+// Helper to create folder structure: uploads/audio/Jahrzehnt/Jahr/Monat/Tag/
 function getAudioFolder(date: Date): { folderPath: string; relativePath: string } {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
   const decade = `${Math.floor(year / 10) * 10}s` // e.g., "2020s"
   
   const uploadsDir = getUploadsDir()
-  const relativePath = path.join(decade, String(year), month)
+  const relativePath = path.join('audio', decade, String(year), month, day)
   const folderPath = path.join(uploadsDir, relativePath)
   
   return { folderPath, relativePath }

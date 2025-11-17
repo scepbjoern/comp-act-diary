@@ -95,3 +95,47 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   line-height: 1;
   vertical-align: -0.125em;
 }
+
+/* MDX Editor Styling */
+.mdxeditor {
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+}
+
+.mdxeditor-root-contenteditable {
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+}
+
+.mdxeditor h1 {
+  font-size: 1.5rem !important;
+  margin-top: 1rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.mdxeditor h2 {
+  font-size: 1.25rem !important;
+  margin-top: 0.875rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.mdxeditor h3 {
+  font-size: 1.125rem !important;
+  margin-top: 0.75rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.mdxeditor p {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.mdxeditor-toolbar {
+  background-color: rgb(51, 65, 85) !important;
+  border-color: rgb(71, 85, 105) !important;
+}
+
+.mdxeditor-popup-container {
+  background-color: rgb(51, 65, 85) !important;
+  border-color: rgb(71, 85, 105) !important;
+}
