@@ -43,6 +43,23 @@ services:
       TOGETHERAI_API_KEY: ${TOGETHERAI_API_KEY}
       # Optional server default model (fallback if client doesn't send one)
       TOGETHERAI_TRANSCRIBE_MODEL: ${TOGETHERAI_TRANSCRIBE_MODEL:-openai/whisper-large-v3}
+      # TogetherAI LLM for text improvement
+      TOGETHERAI_LLM_MODEL: ${TOGETHERAI_LLM_MODEL:-openai/gpt-oss-20b}
+      # Image processing settings
+      IMAGE_MAX_WIDTH: ${IMAGE_MAX_WIDTH:-1600}
+      IMAGE_MAX_HEIGHT: ${IMAGE_MAX_HEIGHT:-1600}
+      IMAGE_FORMAT: ${IMAGE_FORMAT:-webp}
+      IMAGE_QUALITY: ${IMAGE_QUALITY:-80}
+      # Audio handling settings
+      MAX_AUDIO_FILE_SIZE_MB: ${MAX_AUDIO_FILE_SIZE_MB:-50}
+      AUDIO_RETENTION_DAYS: ${AUDIO_RETENTION_DAYS:-365}
+      AUDIO_COMPRESSION_BITRATE: ${AUDIO_COMPRESSION_BITRATE:-64}
+      # Client-side variables (exposed to browser)
+      NEXT_PUBLIC_OPENAI_TRANSCRIBE_MODEL: ${NEXT_PUBLIC_OPENAI_TRANSCRIBE_MODEL:-gpt-4o-mini-transcribe}
+      NEXT_PUBLIC_TOGETHERAI_TRANSCRIBE_MODEL: ${NEXT_PUBLIC_TOGETHERAI_TRANSCRIBE_MODEL:-openai/whisper-large-v3}
+      NEXT_PUBLIC_TRANSCRIBE_MODELS: ${NEXT_PUBLIC_TRANSCRIBE_MODELS:-openai/whisper-large-v3,gpt-4o-mini-transcribe,gpt-4o-transcribe}
+      NEXT_PUBLIC_TOGETHERAI_LLM_MODEL: ${NEXT_PUBLIC_TOGETHERAI_LLM_MODEL:-openai/gpt-oss-20b}
+      NEXT_PUBLIC_LLM_MODELS: ${NEXT_PUBLIC_LLM_MODELS:-openai/gpt-oss-20b,openai/gpt-oss-120b,mistralai/Mistral-7B-Instruct-v0.3,meta-llama/Llama-4-Scout-17B-16E-Instruct}
       # optional: NEXT_TELEMETRY_DISABLED: "1"
     depends_on:
       - db
@@ -55,7 +72,7 @@ services:
       - ${PUBLIC_UPLOADS_PATH:-../uploads}:/app/uploads
 
   backup_db:
-    container_name: db-backup
+    container_name: db-backup-compactdiary
     image: postgres:16
     restart: unless-stopped
     volumes:
