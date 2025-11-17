@@ -6,6 +6,7 @@ import { TablerIcon } from './TablerIcon'
 interface AudioUploadButtonProps {
   onAudioUploaded: (result: { text: string; audioFileId: string; audioFilePath: string; keepAudio: boolean }) => void
   date: string // ISO date string YYYY-MM-DD
+  time: string // HH:MM time string
   keepAudio?: boolean
   className?: string
   compact?: boolean
@@ -16,6 +17,7 @@ interface AudioUploadButtonProps {
 export default function AudioUploadButton({
   onAudioUploaded,
   date,
+  time,
   keepAudio = true,
   className = '',
   compact = false,
@@ -68,6 +70,7 @@ export default function AudioUploadButton({
       const formData = new FormData()
       formData.append('file', file)
       formData.append('date', date)
+      formData.append('time', time)
       formData.append('model', selectedModel)
       formData.append('keepAudio', String(keepAudio))
 

@@ -19,6 +19,7 @@ export function MicrophoneButton(props: {
   modelOptions?: string[]
   keepAudio?: boolean
   date?: string // ISO date string YYYY-MM-DD
+  time?: string // HH:MM time string
 }) {
   const {
     onAudioData,
@@ -30,6 +31,7 @@ export function MicrophoneButton(props: {
     modelOptions,
     keepAudio = false,
     date,
+    time,
   } = props
 
   const defaultModels = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_TRANSCRIBE_MODELS)
@@ -162,6 +164,7 @@ export function MicrophoneButton(props: {
       // Use /api/diary/upload-audio if we have date and want to save audio
       if (keepAudio && date) {
         fd.append('date', date)
+        fd.append('time', time || '')
         fd.append('keepAudio', String(keepAudio))
         
         const res = await fetch('/api/diary/upload-audio', { method: 'POST', body: fd, credentials: 'same-origin' })
@@ -249,7 +252,10 @@ export function MicrophoneButton(props: {
           <select
             className="bg-background border border-slate-700 rounded px-2 py-1 text-xs"
             value={selectedModel}
-            onChange={e => setSelectedModel(e.target.value)}
+            onChange={e => {
+              setSelectedModel(e.target.value)
+              setShowCfg(false)
+            }}
           >
             {models.map(m => <option key={m} value={m}>{m}</option>)}
           </select>

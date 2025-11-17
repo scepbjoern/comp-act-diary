@@ -5,6 +5,7 @@ import { MicrophoneButton } from './MicrophoneButton'
 import { ImproveTextButton } from './ImproveTextButton'
 import { CameraPicker } from './CameraPicker'
 import { AudioPlayerH5 } from './AudioPlayerH5'
+import { RetranscribeButton } from './RetranscribeButton'
 
 type DayNote = {
   id: string
@@ -15,6 +16,7 @@ type DayNote = {
   text: string
   originalTranscript?: string | null
   audioFilePath?: string | null
+  audioFileId?: string | null
   keepAudio?: boolean
   photos?: { id: string; url: string }[]
   occurredAtIso?: string
@@ -36,6 +38,7 @@ interface DiaryEntriesAccordionProps {
   onDeletePhoto: (id: string) => void
   onViewPhoto: (noteId: string, index: number) => void
   onDeleteAudio?: (id: string) => void
+  onRetranscribe?: (noteId: string, newText: string) => void
 }
 
 export function DiaryEntriesAccordion({
@@ -52,7 +55,8 @@ export function DiaryEntriesAccordion({
   onUploadPhotos,
   onDeletePhoto,
   onViewPhoto,
-  onDeleteAudio
+  onDeleteAudio,
+  onRetranscribe
 }: DiaryEntriesAccordionProps) {
   const fmtHMLocal = (iso?: string) => {
     if (!iso) return ''
@@ -118,6 +122,19 @@ export function DiaryEntriesAccordion({
                       <TablerIcon name="delete" size={14} />
                       <span className="ml-1">Löschen</span>
                     </button>
+                  </>
+                )}
+                
+                {/* Re-transcribe button for audio entries */}
+                {n.audioFileId && onRetranscribe && (
+                  <>
+                    {/* Debug: Show audioFileId */}
+                    <div className="text-xs text-gray-500">Audio: {n.audioFileId.substring(0, 8)}...</div>
+                    <RetranscribeButton
+                      audioFileId={n.audioFileId}
+                      onRetranscribed={(newText) => onRetranscribe(n.id, newText)}
+                      disabled={editingNoteId === n.id}
+                    />
                   </>
                 )}
               </div>

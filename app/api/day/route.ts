@@ -104,6 +104,7 @@ export async function GET(req: NextRequest) {
     text: n.text ?? '',
     originalTranscript: n.originalTranscript ?? null,
     audioFilePath: n.audioFile?.filePath ?? null,
+    audioFileId: n.audioFile?.id ?? null,
     keepAudio: n.keepAudio ?? true,
     photos: (n.photos || []).map((p: any) => ({ id: p.id, url: p.filePath })),
   }))

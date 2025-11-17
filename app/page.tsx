@@ -48,6 +48,7 @@ type DayNote = {
   text: string
   originalTranscript?: string | null
   audioFilePath?: string | null
+  audioFileId?: string | null
   keepAudio?: boolean
   photos?: { id: string; url: string }[]
   occurredAtIso?: string
@@ -158,7 +159,10 @@ export default function HeutePage() {
   const [newDiaryAudio, setNewDiaryAudio] = useState<string | null>(null)
   const [newDiaryAudioFileId, setNewDiaryAudioFileId] = useState<string | null>(null)
   const [newDiaryOriginalTranscript, setNewDiaryOriginalTranscript] = useState<string | null>(null)
+  const [newDiaryTime, setNewDiaryTime] = useState('')
   const [keepAudio, setKeepAudio] = useState(true)
+  const [showRetranscribeOptions, setShowRetranscribeOptions] = useState(false)
+  const [isRetranscribing, setIsRetranscribing] = useState(false)
   const [notesLoading, setNotesLoading] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const [pendingAudioDelete, setPendingAudioDelete] = useState<string | null>(null)
@@ -247,6 +251,103 @@ export default function HeutePage() {
     }
   }
 
+  async function retranscribeAudio(model: string) {
+    if (!newDiaryAudioFileId) return
+    
+    setIsRetranscribing(true)
+    setShowRetranscribeOptions(false)
+    
+    try {
+      console.log('Starting re-transcription with model:', model)
+      
+      const formData = new FormData()
+      formData.append('audioFileId', newDiaryAudioFileId)
+      formData.append('model', model)
+      
+      const response = await fetch('/api/diary/retranscribe', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Re-transcription failed:', errorData)
+        push(`Re-Transkription fehlgeschlagen: ${errorData.error || 'Unbekannter Fehler'}`, 'error')
+        return
+      }
+      
+      const data = await response.json()
+      console.log('Re-transcription successful:', data)
+      
+      // Update both the text and original transcript
+      setNewDiaryText(data.text)
+      setNewDiaryOriginalTranscript(data.text)
+      
+      push(`Re-Transkription mit ${model} erfolgreich!`, 'success')
+    } catch (error) {
+      console.error('Re-transcription error:', error)
+      push('Re-Transkription fehlgeschlagen: Netzwerkfehler', 'error')
+    } finally {
+      setIsRetranscribing(false)
+    }
+  }
+
+  async function handleRetranscribe(noteId: string, newText: string) {
+    // Update the local state to reflect the new transcription
+    setNotes(prev => prev.map(note => 
+      note.id === noteId 
+        ? { ...note, text: newText, originalTranscript: newText }
+        : note
+    ))
+    push('Transkription aktualisiert', 'success')
+  }
+
+  async function cleanupAudioFile(audioFileId: string) {
+    try {
+      const res = await fetch('/api/diary/cleanup-audio', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioFileId }),
+        credentials: 'same-origin'
+      })
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        console.error('Cleanup audio failed:', errorData)
+        // Don't show error to user if it's just that the file is still in use
+        if (errorData.error !== 'Audio file is still in use') {
+          push('Audio-Cleanup fehlgeschlagen', 'error')
+        }
+      } else {
+        console.log('Audio file cleaned up successfully:', audioFileId)
+      }
+    } catch (e) {
+      console.error('Cleanup audio error:', e)
+      // Don't show error to user for cleanup failures
+    }
+  }
+
+  function clearDiaryForm() {
+    // Clean up audio file ONLY if it exists and wasn't saved
+    if (newDiaryAudioFileId) {
+      // Check if this audio file is referenced by any existing notes
+      const isReferenced = notes.some(note => note.audioFileId === newDiaryAudioFileId)
+      if (!isReferenced) {
+        cleanupAudioFile(newDiaryAudioFileId)
+      }
+    }
+    
+    // Reset form state
+    setNewDiaryText('')
+    setNewDiaryAudio(null)
+    setNewDiaryAudioFileId(null)
+    setNewDiaryOriginalTranscript(null)
+    setNewDiaryTime('')
+    setShowRetranscribeOptions(false)
+    setIsRetranscribing(false)
+  }
+
   const goViewer = (delta: number) => {
     setViewer(v => {
       if (!v) return null
@@ -273,6 +374,7 @@ export default function HeutePage() {
         const hh = String(now.getHours()).padStart(2, '0')
         const mm = String(now.getMinutes()).padStart(2, '0')
         setMealTime(`${hh}:${mm}`)
+        setNewDiaryTime(`${hh}:${mm}`)
       } finally {
         setNotesLoading(false)
       }
@@ -598,18 +700,26 @@ export default function HeutePage() {
           audioFileId: newDiaryAudioFileId,
           keepAudio,
           originalTranscript: newDiaryOriginalTranscript,
-          time: new Date().toISOString().slice(11, 16),
+          time: newDiaryTime || new Date().toISOString().slice(11, 16),
           tzOffsetMinutes: new Date().getTimezoneOffset(),
         }),
         credentials: 'same-origin',
       })
       const data = await res.json()
       if (data?.notes) setNotes(data.notes)
-      // Reset form
+      // Reset form WITHOUT cleanup (audio was saved successfully)
       setNewDiaryText('')
       setNewDiaryAudio(null)
       setNewDiaryAudioFileId(null)
       setNewDiaryOriginalTranscript(null)
+      // Reset time to current time for next entry
+      const now = new Date()
+      const hh = String(now.getHours()).padStart(2, '0')
+      const mm = String(now.getMinutes()).padStart(2, '0')
+      setNewDiaryTime(`${hh}:${mm}`)
+      setShowRetranscribeOptions(false)
+      setIsRetranscribing(false)
+      
       push('Tagebucheintrag gespeichert', 'success')
     } catch (e) {
       console.error('Save diary entry failed', e)
@@ -709,6 +819,16 @@ export default function HeutePage() {
 
             {/* New diary entry form */}
             <div className="space-y-2 p-3 rounded border border-slate-700 bg-slate-800/30">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs text-gray-400">Uhrzeit</span>
+                <input 
+                  type="time" 
+                  value={newDiaryTime}
+                  onChange={e => setNewDiaryTime(e.target.value)}
+                  className="bg-background border border-slate-700 rounded px-2 py-1 text-sm"
+                />
+              </div>
+              
               <textarea
                 value={newDiaryText}
                 onChange={e => setNewDiaryText(e.target.value)}
@@ -720,6 +840,7 @@ export default function HeutePage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <MicrophoneButton
                   date={date}
+                  time={newDiaryTime}
                   keepAudio={keepAudio}
                   onAudioData={({ text, audioFileId, audioFilePath }) => {
                     setNewDiaryText(prev => prev ? (prev + ' ' + text) : text)
@@ -732,8 +853,61 @@ export default function HeutePage() {
                   compact
                 />
                 
+                {/* Direct re-transcribe button for newly uploaded audio */}
+                {newDiaryAudioFileId && (
+                  <div className="flex items-center gap-2 mt-2 p-2 bg-slate-700/30 rounded">
+                    <span className="text-xs text-gray-400">
+                      Audio bereit: {isRetranscribing ? 'transkribiere...' : ''}
+                    </span>
+                    <div className="relative">
+                      <button
+                        className="btn btn-ghost btn-xs text-gray-300 hover:text-gray-100"
+                        onClick={() => setShowRetranscribeOptions(!showRetranscribeOptions)}
+                        disabled={isRetranscribing}
+                        title="Audio mit anderem Modell erneut transkribieren"
+                      >
+                        {isRetranscribing ? '⏳ ' : '🔄'} Neu transkribieren
+                      </button>
+                      
+                      {showRetranscribeOptions && (
+                        <div className="absolute top-full left-0 mt-1 bg-surface border border-slate-700 rounded shadow-lg z-10 p-2 min-w-[200px]">
+                          <div className="text-xs text-gray-400 mb-2">Modell auswählen:</div>
+                          <button
+                            className="btn btn-ghost btn-xs w-full justify-start text-left mb-1"
+                            onClick={async () => {
+                              setShowRetranscribeOptions(false)
+                              await retranscribeAudio('openai/whisper-large-v3')
+                            }}
+                          >
+                            openai/whisper-large-v3
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-xs w-full justify-start text-left mb-1"
+                            onClick={async () => {
+                              setShowRetranscribeOptions(false)
+                              await retranscribeAudio('gpt-4o-mini-transcribe')
+                            }}
+                          >
+                            gpt-4o-mini-transcribe
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-xs w-full justify-start text-left"
+                            onClick={async () => {
+                              setShowRetranscribeOptions(false)
+                              await retranscribeAudio('gpt-4o-transcribe')
+                            }}
+                          >
+                            gpt-4o-transcribe
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
                 <AudioUploadButton
                   date={date}
+                  time={newDiaryTime}
                   keepAudio={keepAudio}
                   onAudioUploaded={({ text, audioFileId, audioFilePath }) => {
                     setNewDiaryText(prev => prev ? (prev + ' ' + text) : text)
@@ -769,6 +943,15 @@ export default function HeutePage() {
                 >
                   Speichern
                 </button>
+                
+                {(newDiaryText.trim() || newDiaryAudioFileId || newDiaryTime) && (
+                  <button 
+                    className="pill !bg-gray-600 !text-white hover:!bg-gray-500"
+                    onClick={clearDiaryForm}
+                  >
+                    Abbrechen
+                  </button>
+                )}
               </div>
             </div>
 
@@ -788,6 +971,7 @@ export default function HeutePage() {
               onDeletePhoto={deletePhoto}
               onViewPhoto={(noteId, index) => setViewer({ noteId, index })}
               onDeleteAudio={deleteAudio}
+              onRetranscribe={handleRetranscribe}
             />
             
             <SaveIndicator saving={saving} savedAt={savedAt} />

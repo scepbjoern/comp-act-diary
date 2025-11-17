@@ -13,7 +13,7 @@ export function TextImprovementDialog(props: {
     ? String(process.env.NEXT_PUBLIC_LLM_MODELS).split(',').map(s => s.trim()).filter(Boolean)
     : ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'mistralai/Mistral-7B-Instruct-v0.3', 'meta-llama/Llama-4-Scout-17B-16E-Instruct']
 
-  const [prompt, setPrompt] = useState('Verbessere diesen Text')
+  const [prompt, setPrompt] = useState('Verbessere diesen Text grammatikalisch. Bilde Abschnitte mit Überschriften. Gib alles formatiert als Markdown zurück.')
   const [model, setModel] = useState<string>(
     (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_TOGETHERAI_LLM_MODEL)
       || (typeof process !== 'undefined' && process.env?.TOGETHERAI_LLM_MODEL)

@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { writeFile, mkdir, stat, unlink } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
-import { v4 as uuidv4 } from 'uuid'
-import Together from 'together-ai'
 import { getPrisma } from '@/lib/prisma'
+import { Together } from 'together-ai'
+import { v4 as uuidv4 } from 'uuid'
 
 const whisperModels = ['openai/whisper-large-v3'] as const
 type WhisperModel = (typeof whisperModels)[number]
@@ -43,8 +43,22 @@ function generateAudioFilename(date: Date, extension: string = 'm4a'): string {
   return `${year}-${month}-${day}_${hours}-${minutes}_${guid}.${extension}`
 }
 
+// Helper to get creation date from file metadata
+async function getBestCreationDate(file: File): Promise<Date> {
+  // Use file.lastModified (browser provides modification time)
+  if (file.lastModified) {
+    const lastModifiedDate = new Date(file.lastModified)
+    console.log('Using file.lastModified:', lastModifiedDate.toISOString())
+    return lastModifiedDate
+  }
+  
+  // Fallback to current time
+  console.log('No date found, using current date')
+  return new Date()
+}
+
 // POST /api/diary/upload-audio
-// FormData: file (audio/*), date (ISO string), model (string), keepAudio (boolean)
+// FormData: file (audio/*), date (ISO string), time (HH:MM string), model (string), keepAudio (boolean)
 export async function POST(req: NextRequest) {
   let tempFilePath: string | null = null
   
@@ -57,6 +71,7 @@ export async function POST(req: NextRequest) {
     
     const file = form.get('file') as File | null
     const dateStr = form.get('date') as string | null
+    const timeStr = form.get('time') as string | null
     const model = (form.get('model') as string | null) || whisperModels[0]
     const keepAudio = form.get('keepAudio') === 'true'
 
@@ -66,6 +81,7 @@ export async function POST(req: NextRequest) {
       fileSize: file?.size, 
       fileType: file?.type,
       dateStr, 
+      timeStr,
       model, 
       keepAudio 
     })
@@ -90,7 +106,6 @@ export async function POST(req: NextRequest) {
     }
 
     const date = new Date(dateStr)
-    const now = new Date() // Use current time for filename
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
@@ -104,9 +119,21 @@ export async function POST(req: NextRequest) {
 
     console.log('Determined extension:', extension)
 
-    // Create folder structure and save file (use date for folder, now for filename)
+    // Create datetime from date and time string for filename
+    let fileDateTime = date
+    if (timeStr) {
+      const [hours, minutes] = timeStr.split(':').map(Number)
+      if (!isNaN(hours) && !isNaN(minutes)) {
+        fileDateTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, minutes)
+        console.log('Using provided time for filename:', fileDateTime.toISOString())
+      }
+    } else {
+      console.log('No time provided, using date only:', fileDateTime.toISOString())
+    }
+
+    // Create folder structure and save file
     const { folderPath, relativePath } = getAudioFolder(date)
-    const filename = generateAudioFilename(now, extension)
+    const filename = generateAudioFilename(fileDateTime, extension)
     const fullPath = path.join(folderPath, filename)
     const relativeFilePath = path.join(relativePath, filename).replace(/\\/g, '/')
 
@@ -118,7 +145,7 @@ export async function POST(req: NextRequest) {
       await mkdir(folderPath, { recursive: true })
     }
 
-    // Save audio file (WebM seeking is fixed client-side with fix-webm-duration)
+    // Save audio file
     console.log('Saving file to:', fullPath)
     await writeFile(fullPath, buffer)
     tempFilePath = fullPath
