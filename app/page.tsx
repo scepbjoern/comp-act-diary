@@ -6,27 +6,22 @@ import { useUIState } from '@/hooks/useUIState'
 import { useSymptomManagement } from '@/hooks/useSymptomManagement'
 import { useHabitManagement } from '@/hooks/useHabitManagement'
 import { useDiaryManagement } from '@/hooks/useDiaryManagement'
-import { NumberPills } from '@/components/NumberPills'
-import { Sparkline } from '@/components/Sparkline'
-import { HabitChips } from '@/components/HabitChips'
 import { SaveIndicator, useSaveIndicator } from '@/components/SaveIndicator'
 import { MicrophoneButton } from '@/components/MicrophoneButton'
 import { ImproveTextButton } from '@/components/ImproveTextButton'
 import { SaveBar } from '@/components/SaveBar'
 import { Toasts, useToasts } from '@/components/Toast'
 import { Icon } from '@/components/Icon'
-import { DEFAULT_STOOL_ICON } from '@/lib/default-icons'
 import AudioUploadButton from '@/components/AudioUploadButton'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { Calendar } from '@/components/Calendar'
-import { ymd, fmtHMLocal, fmtDmyFromYmd, shiftDate } from '@/lib/date-utils'
-import { SYMPTOM_LABELS } from '@/lib/constants'
-import type { Day, Habit, DayNote, InlineData } from '@/types/day'
-
-// Lazy load heavy components for better initial page load
-const MealNotesAccordion = dynamic(() => import('@/components/MealNotesAccordion').then(mod => ({ default: mod.MealNotesAccordion })), {
-  loading: () => <div className="text-sm text-gray-400">Lädt...</div>
-})
+import { DaySettings } from '@/components/DaySettings'
+import { SymptomsSection } from '@/components/SymptomsSection'
+import { StoolSection } from '@/components/StoolSection'
+import { HabitsSection } from '@/components/HabitsSection'
+import { MealNotesSection } from '@/components/MealNotesSection'
+import { ymd, fmtDmyFromYmd, shiftDate } from '@/lib/date-utils'
+import type { Day, InlineData } from '@/types/day'
 
 const DiaryEntriesAccordion = dynamic(() => import('@/components/DiaryEntriesAccordion').then(mod => ({ default: mod.DiaryEntriesAccordion })), {
   loading: () => <div className="text-sm text-gray-400">Lädt...</div>
@@ -331,12 +326,7 @@ export default function HeutePage() {
     doneSaving()
   }
 
-  const symptoms = useMemo(() => Object.keys(SYMPTOM_LABELS), [])
-  const collator = useMemo(() => new Intl.Collator('de-DE', { sensitivity: 'base' }), [])
-  const sortedUserSymptoms = useMemo(() => {
-    const arr = day?.userSymptoms ? [...day.userSymptoms] : []
-    return arr.sort((a, b) => collator.compare(a.title, b.title))
-  }, [day?.userSymptoms, collator])
+  // Symptoms sorting is now handled by SymptomsSection component
 
 
   return (
@@ -604,210 +594,62 @@ export default function HeutePage() {
             
             {!darmkurCollapsed && (
               <div className="space-y-6 pt-3">
-                {/* Tages-Einstellungen */}
-                <div className="space-y-3">
-                  <h3 className="font-medium text-sm">
-                    <span className="inline-flex items-center gap-1">
-                      <Icon name="settings" />
-                      <span>Tages-Einstellungen</span>
-                    </span>
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-400 inline-flex items-center gap-1"><Icon name="cycle" /><span>Phase</span></span>
-                    {[1, 2, 3].map(p => {
-                      const key = `PHASE_${p}` as Day['phase']
-                      return (
-                        <button key={key} className={`pill ${day.phase === key ? 'active' : ''}`} onClick={() => updateDayMeta({ phase: key })}>
-                          {p}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-400 inline-flex items-center gap-1"><Icon name="stairs_2" /><span>Kategorie</span></span>
-                    {(['SANFT', 'MEDIUM', 'INTENSIV'] as const).map(c => (
-                      <button key={c} className={`pill ${day.careCategory === c ? 'active' : ''}`} onClick={() => updateDayMeta({ careCategory: c })}>
-                        {c.charAt(0) + c.slice(1).toLowerCase()}
-                      </button>
-                    ))}
-                  </div>
-                  <SaveIndicator saving={saving} savedAt={savedAt} />
-                </div>
+                <DaySettings 
+                  day={day} 
+                  onUpdateMeta={updateDayMeta} 
+                  saving={saving} 
+                  savedAt={savedAt} 
+                />
 
-                {/* Symptome */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-sm">
-                    <span className="inline-flex items-center gap-1">
-                      <Icon name="stethoscope" />
-                      <span>Symptome</span>
-                    </span>
-                  </h3>
-                  <div className="space-y-0">
-                    {symptoms.map(type => {
-                      const series = inlineData?.symptoms?.[type]
-                      const prev = inlineData?.yesterday?.standard?.[type] ?? null
-                      return (
-                        <div key={type} className="space-y-1 !mb-[30px]">
-                          <div className="text-sm text-gray-400">
-                            <span className="inline-flex items-center gap-2">
-                              {symptomIcons?.[type] ? <Icon name={symptomIcons[type]} /> : null}
-                              <span>{SYMPTOM_LABELS[type]}</span>
-                              {series && (
-                                <span className="inline-flex items-center gap-2 ml-2">
-                                  <Sparkline data={series} width={72} height={24} colorByValue midValue={5} />
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                          <NumberPills
-                            min={1}
-                            max={10}
-                            value={clearedSymptoms.has(type) ? undefined : (draftSymptoms[type] ?? day.symptoms[type])}
-                            onChange={n => setDraftSymptom(type, n)}
-                            onClear={() => clearDraftSymptom(type)}
-                            ariaLabel={SYMPTOM_LABELS[type]}
-                            unsaved={draftSymptoms[type] !== undefined || clearedSymptoms.has(type)}
-                            previousValue={typeof prev === 'number' ? prev : null}
-                          />
-                        </div>
-                      )
-                    })}
-                  </div>
-                  {/* Divider and heading for user-defined symptoms */}
-                  {(day.userSymptoms && day.userSymptoms.length > 0) && (
-                    <>
-                      <div className="border-t border-slate-700/60 my-1" />
-                      <div className="text-sm text-gray-400">Eigene Symptome</div>
-                    </>
-                  )}
-                  {/* Custom user-defined symptoms */}
-                  <div className="space-y-0">
-                    {(sortedUserSymptoms && sortedUserSymptoms.length > 0) ? (
-                      sortedUserSymptoms.map(us => {
-                        const series = inlineData?.customSymptoms?.series?.[us.id]
-                        const prev = inlineData?.yesterday?.custom?.[us.id] ?? null
-                        return (
-                          <div key={us.id} className="space-y-1 !mb-[30px]">
-                            <div className="text-sm text-gray-400">
-                              <span className="inline-flex items-center gap-2">
-                                {us.icon ? <Icon name={us.icon} /> : null}
-                                <span>{us.title}</span>
-                                {series && (
-                                  <span className="inline-flex items-center gap-2 ml-2">
-                                    <Sparkline data={series} width={72} height={24} colorByValue midValue={5} />
-                                  </span>
-                                )}
-                              </span>
-                            </div>
-                            <NumberPills
-                              min={1}
-                              max={10}
-                              value={clearedUserSymptoms.has(us.id) ? undefined : (draftUserSymptoms[us.id] ?? us.score)}
-                              onChange={n => setDraftUserSymptom(us.id, n)}
-                              onClear={() => clearDraftUserSymptom(us.id)}
-                              ariaLabel={us.title}
-                              unsaved={draftUserSymptoms[us.id] !== undefined || clearedUserSymptoms.has(us.id)}
-                              previousValue={typeof prev === 'number' ? prev : null}
-                            />
-                          </div>
-                        )
-                      })
-                    ) : (
-                      <div className="text-sm text-gray-500">Noch keine eigenen Symptome. Lege welche in den Einstellungen an.</div>
-                    )}
-                  </div>
-                </div>
+                <SymptomsSection
+                  day={day}
+                  symptomIcons={symptomIcons}
+                  draftSymptoms={draftSymptoms}
+                  draftUserSymptoms={draftUserSymptoms}
+                  clearedSymptoms={clearedSymptoms}
+                  clearedUserSymptoms={clearedUserSymptoms}
+                  inlineData={inlineData}
+                  onSetDraftSymptom={setDraftSymptom}
+                  onSetDraftUserSymptom={setDraftUserSymptom}
+                  onClearDraftSymptom={clearDraftSymptom}
+                  onClearDraftUserSymptom={clearDraftUserSymptom}
+                />
 
-                {/* Stuhl */}
-                <div className="space-y-3">
-                  <h3 className="font-medium text-sm">
-                    <span className="inline-flex items-center gap-1">
-                      <Icon name={DEFAULT_STOOL_ICON} />
-                      <span>Stuhl (Bristol 1–7)</span>
-                      {inlineData?.stool && (
-                        <span className="inline-flex items-center gap-2 ml-2">
-                          <Sparkline data={inlineData.stool} width={72} height={24} yMin={1} yMax={7} colorByValue midValue={4} scheme="stool" />
-                        </span>
-                      )}
-                    </span>
-                  </h3>
-                  <div className="text-xs text-gray-400">
-                    {' '}
-                    <a
-                      href="/docs/Darmkur-Guide_Auszug.pdf"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline text-blue-400 hover:text-blue-300"
-                    >
-                      Darmkur‑Guide (Auszug)
-                    </a>
-                    .
-                  </div>
-                  <NumberPills
-                    min={1}
-                    max={7}
-                    value={day.stool}
-                    onChange={updateStool}
-                    ariaLabel="Bristol"
-                    previousValue={typeof inlineData?.yesterday?.stool === 'number' ? inlineData!.yesterday.stool : null}
-                    includeDashFirst
-                    dashValue={99}
-                  />
-                </div>
+                <StoolSection 
+                  day={day} 
+                  inlineData={inlineData} 
+                  onUpdateStool={updateStool} 
+                />
 
-                {/* Gewohnheiten */}
-                <div className="space-y-3">
-                  <h3 className="font-medium text-sm">
-                    <span className="inline-flex items-center gap-1">
-                      <Icon name="checklist" />
-                      <span>Gewohnheiten</span>
-                    </span>
-                  </h3>
-                  <HabitChips habits={habits} ticks={day.habitTicks} onToggle={toggleHabit} yesterdaySelectedIds={inlineData?.yesterday?.habits || []} />
-                </div>
+                <HabitsSection 
+                  day={day} 
+                  habits={habits} 
+                  inlineData={inlineData} 
+                  onToggleHabit={toggleHabit} 
+                />
 
-                {/* Ernährungsnotizen */}
-                <div className="space-y-3">
-                  <h3 className="font-medium text-sm">
-                    <span className="inline-flex items-center gap-1">
-                      <Icon name="menu_book_2" />
-                      <span>Ernährungsnotizen</span>
-                    </span>
-                  </h3>
-                  <MealNotesAccordion
-                    notes={notes}
-                    editingNoteId={editingNoteId}
-                    editingText={editingText}
-                    editingTime={editingTime}
-                    onEdit={startEditNote}
-                    onSave={saveEditNote}
-                    onCancel={cancelEditNote}
-                    onDelete={deleteNote}
-                    onTextChange={setEditingText}
-                    onTimeChange={setEditingTime}
-                    onUploadPhotos={uploadPhotos}
-                    onDeletePhoto={deletePhoto}
-                    onViewPhoto={(noteId, index) => setViewer({ noteId, index })}
-                  />
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-2">
-                    <input type="time" value={mealTime} onChange={e => setMealTime(e.target.value)} className="bg-background border border-slate-700 rounded px-2 py-1 text-sm w-full sm:w-auto" />
-                    <textarea value={mealText} onChange={e => setMealText(e.target.value)} placeholder="Beschreibung…" className="flex-1 bg-background border border-slate-700 rounded px-2 py-1 text-sm w-full" rows={3} />
-                    <div className="flex items-center gap-2">
-                      <MicrophoneButton
-                        onText={(t) => setMealText(prev => prev ? (prev + ' ' + t) : t)}
-                        className="text-gray-300 hover:text-gray-100 text-xs"
-                        compact
-                      />
-                      <ImproveTextButton
-                        text={mealText}
-                        onImprovedText={(t) => setMealText(t)}
-                        className="text-gray-300 hover:text-gray-100 text-xs"
-                      />
-                      <button className="pill w-full sm:w-auto" onClick={addMealNote} disabled={!mealText.trim()}>Hinzufügen</button>
-                    </div>
-                  </div>
-                  <SaveIndicator saving={saving} savedAt={savedAt} />
-                </div>
+                <MealNotesSection
+                  notes={notes}
+                  editingNoteId={editingNoteId}
+                  editingText={editingText}
+                  editingTime={editingTime}
+                  mealTime={mealTime}
+                  mealText={mealText}
+                  saving={saving}
+                  savedAt={savedAt}
+                  onEdit={startEditNote}
+                  onSave={saveEditNote}
+                  onCancel={cancelEditNote}
+                  onDelete={deleteNote}
+                  onTextChange={setEditingText}
+                  onTimeChange={setEditingTime}
+                  onUploadPhotos={uploadPhotos}
+                  onDeletePhoto={deletePhoto}
+                  onViewPhoto={(noteId, index) => setViewer({ noteId, index })}
+                  onMealTimeChange={setMealTime}
+                  onMealTextChange={setMealText}
+                  onAddMealNote={addMealNote}
+                />
               </div>
             )}
           </div>
