@@ -115,11 +115,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <header className="sticky top-0 z-10 bg-surface/80 backdrop-blur border-b border-slate-800 dark:border-slate-200">
           <div className="container h-14 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 font-semibold">
-              <Image
+              <img
                 src="/icons/logo_32.png"
                 alt="App Icon"
-                width={28}
-                height={28}
                 className="h-7 w-7 rounded-full border border-slate-700 dark:border-slate-200 bg-surface object-cover"
               />
               <span>CompACT Diary</span>
