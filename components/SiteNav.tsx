@@ -1,6 +1,7 @@
 "use client"
 import React, { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { AuthNav } from '@/components/AuthNav'
 
 type UserLite = { id: string; username: string; displayName: string | null; profileImageUrl?: string | null } | null
@@ -191,7 +192,13 @@ export function SiteNav({ user }: { user: UserLite }) {
           {user ? (
             <button className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden border border-slate-600" onClick={() => setUserMenuOpen(v => !v)} aria-haspopup="menu" aria-expanded={userMenuOpen}>
               {user.profileImageUrl ? (
-                <img src={user.profileImageUrl} alt="Avatar" className="h-full w-full object-cover" />
+                <Image 
+                  src={user.profileImageUrl} 
+                  alt="Avatar" 
+                  width={32}
+                  height={32}
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <span className="text-xs text-gray-200 font-semibold">{(user.displayName || user.username || '?').slice(0,1).toUpperCase()}</span>
               )}
@@ -204,7 +211,13 @@ export function SiteNav({ user }: { user: UserLite }) {
               <div className="flex items-center gap-3 pb-2 border-b border-slate-800">
                 <div className="h-10 w-10 rounded-full bg-slate-700 overflow-hidden border border-slate-600">
                   {user.profileImageUrl ? (
-                    <img src={user.profileImageUrl} alt="Avatar" className="h-full w-full object-cover" />
+                    <Image 
+                  src={user.profileImageUrl} 
+                  alt="Avatar" 
+                  width={32}
+                  height={32}
+                  className="h-full w-full object-cover"
+                />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-sm text-gray-200 font-semibold">
                       {(user.displayName || user.username || '?').slice(0,1).toUpperCase()}
@@ -242,7 +255,13 @@ export function SiteNav({ user }: { user: UserLite }) {
           {user ? (
             <button className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden border border-slate-600" onClick={() => setUserMenuOpen(v => !v)} aria-haspopup="menu" aria-expanded={userMenuOpen}>
               {user.profileImageUrl ? (
-                <img src={user.profileImageUrl} alt="Avatar" className="h-full w-full object-cover" />
+                <Image 
+                  src={user.profileImageUrl} 
+                  alt="Avatar" 
+                  width={32}
+                  height={32}
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <span className="text-xs text-gray-200 font-semibold">{(user.displayName || user.username || '?').slice(0,1).toUpperCase()}</span>
               )}
@@ -255,7 +274,13 @@ export function SiteNav({ user }: { user: UserLite }) {
               <div className="flex items-center gap-3 pb-2 border-b border-slate-800">
                 <div className="h-10 w-10 rounded-full bg-slate-700 overflow-hidden border border-slate-600">
                   {user.profileImageUrl ? (
-                    <img src={user.profileImageUrl} alt="Avatar" className="h-full w-full object-cover" />
+                    <Image 
+                  src={user.profileImageUrl} 
+                  alt="Avatar" 
+                  width={32}
+                  height={32}
+                  className="h-full w-full object-cover"
+                />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-sm text-gray-200 font-semibold">
                       {(user.displayName || user.username || '?').slice(0,1).toUpperCase()}

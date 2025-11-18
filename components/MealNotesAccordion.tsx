@@ -1,5 +1,6 @@
 "use client"
 import React from 'react'
+import Image from 'next/image'
 import { TablerIcon } from './TablerIcon'
 import { MicrophoneButton } from './MicrophoneButton'
 import { ImproveTextButton } from './ImproveTextButton'
@@ -170,9 +171,11 @@ export function MealNotesAccordion({
                 <div className="flex flex-wrap gap-2">
                   {n.photos.map((p, idx) => (
                     <div key={p.id} className="relative group">
-                      <img 
+                      <Image 
                         src={`${p.url}?v=${p.id}`} 
                         alt="Foto" 
+                        width={64}
+                        height={64}
                         className="w-16 h-16 object-cover rounded border border-slate-700 cursor-zoom-in" 
                         onClick={() => onViewPhoto(n.id, idx)} 
                       />

@@ -1,24 +1,22 @@
 // eslint.config.mjs
-import tseslint from 'typescript-eslint'
-import nextPlugin from '@next/eslint-plugin-next'
+import { FlatCompat } from '@eslint/eslintrc'
+import js from '@eslint/js'
+import typescriptEslint from 'typescript-eslint'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+  recommendedConfig: js.configs.recommended,
+  allConfig: js.configs.all,
+})
 
 export default [
-  // Ignore build output and vendor dirs
-  { ignores: ['.next/', 'node_modules/', 'dist/', 'next-env.d.ts'] },
-
-  // TypeScript + JS recommended (flat) rules
-  ...tseslint.configs.recommended,
-
-  // Next.js rules (core-web-vitals + typescript)
-  {
-    files: ['**/*.{js,jsx,ts,tsx}'],
-    plugins: { '@next/next': nextPlugin },
-    rules: {
-      ...nextPlugin.configs['core-web-vitals'].rules,
-      ...nextPlugin.configs.recommended.rules,
-    },
-    settings: { next: { rootDir: ['./'] } },
-  },
+  ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  ...typescriptEslint.configs.recommended,
 
   // Global rule adjustments
   {
@@ -31,14 +29,6 @@ export default [
         varsIgnorePattern: '^_',
         caughtErrorsIgnorePattern: '^_',
       }],
-    },
-  },
-
-  // JS-only overrides: disable TS-specific unused-vars on plain JS
-  {
-    files: ['**/*.js'],
-    rules: {
-      '@typescript-eslint/no-unused-vars': 'off',
     },
   },
 
@@ -55,6 +45,14 @@ export default [
     files: ['components/MarkdownRenderer.tsx', 'components/RichTextEditor.tsx'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
+
+  // External fonts: Material Symbols needs external loading for custom icon variants
+  {
+    files: ['app/layout.tsx'],
+    rules: {
+      '@next/next/no-page-custom-font': 'off',
     },
   },
 ]

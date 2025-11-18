@@ -1,4 +1,5 @@
 import './globals.css'
+import Image from 'next/image'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
@@ -19,6 +20,25 @@ export const metadata = {
     apple: [
       { url: '/icons/logo_180.png', sizes: '180x180' },
     ],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'CompACT Diary',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'CompACT Diary',
+    title: 'CompACT Diary',
+    description: 'ACT-inspired diary and reflection app - Set. Track. Reflect. Act.',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'CompACT Diary',
+    description: 'ACT-inspired diary and reflection app - Set. Track. Reflect. Act.',
   },
 }
 
@@ -66,7 +86,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link rel="manifest" href="/manifest.webmanifest" crossOrigin="use-credentials" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0..200"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0..200&display=optional"
           rel="stylesheet"
         />
         <meta name="theme-color" content="#0b0f14" />
@@ -95,7 +115,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <header className="sticky top-0 z-10 bg-surface/80 backdrop-blur border-b border-slate-800 dark:border-slate-200">
           <div className="container h-14 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 font-semibold">
-              <img
+              <Image
                 src="/icons/logo_32.png"
                 alt="App Icon"
                 width={28}

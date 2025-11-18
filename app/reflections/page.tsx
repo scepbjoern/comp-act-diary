@@ -1,5 +1,6 @@
 "use client"
 import React, { useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
 import { TablerIcon } from '@/components/TablerIcon'
 import { CameraPicker } from '@/components/CameraPicker'
 import { MicrophoneButton } from '@/components/MicrophoneButton'
@@ -363,7 +364,7 @@ export default function ReflectionsPage() {
                   {r.photos && r.photos.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {r.photos.map(p => (
-                        <img key={p.id} src={`${p.url}?v=${p.id}`} alt="Foto" className="w-16 h-16 object-cover rounded border border-slate-700" />
+                        <Image key={p.id} src={`${p.url}?v=${p.id}`} alt="Foto" width={64} height={64} className="w-16 h-16 object-cover rounded border border-slate-700" />
                       ))}
                     </div>
                   )}

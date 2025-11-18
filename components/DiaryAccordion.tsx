@@ -1,5 +1,6 @@
 "use client"
 import React, { useState } from 'react'
+import Image from 'next/image'
 import { TablerIcon } from './TablerIcon'
 import { Icon } from './Icon'
 
@@ -148,10 +149,12 @@ export function DiaryAccordion({ entries, symptomIcons, habits, userSymptoms }: 
                         {note.photos && note.photos.length > 0 && (
                           <div className="flex gap-2 mt-2">
                             {note.photos.map(photo => (
-                              <img 
+                              <Image 
                                 key={photo.id} 
                                 src={`${photo.url}?v=${photo.id}`} 
                                 alt="Foto" 
+                                width={48}
+                                height={48}
                                 className="w-12 h-12 object-cover rounded"
                               />
                             ))}

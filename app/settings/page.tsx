@@ -1,5 +1,6 @@
 "use client"
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import NextImage from 'next/image'
 import { SaveIndicator, useSaveIndicator } from '@/components/SaveIndicator'
 import { Icon } from '@/components/Icon'
 import { TablerIcon } from '@/components/TablerIcon'
@@ -499,7 +500,7 @@ export default function SettingsPage() {
         <div className="flex items-center gap-3 pt-2">
           <div className="h-12 w-12 rounded-full overflow-hidden border border-slate-700 bg-surface flex items-center justify-center">
             {me?.profileImageUrl ? (
-              <img src={me.profileImageUrl} alt="Avatar" className="h-full w-full object-cover" />
+              <NextImage src={me.profileImageUrl} alt="Avatar" width={48} height={48} className="h-full w-full object-cover" />
             ) : (
               <span className="text-sm text-gray-300 font-semibold">{(displayName || username || '?').slice(0,1).toUpperCase()}</span>
             )}

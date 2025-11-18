@@ -1,4 +1,5 @@
 "use client"
+import React, { useCallback } from 'react'
 
 /**
  * Coach Page - ACT Coach Chat Interface
@@ -114,12 +115,7 @@ export default function CoachPage() {
   
   const isLoading = status !== 'ready'
 
-  // Load chat methods on mount
-  useEffect(() => {
-    loadChatMethods()
-  }, [])
-
-  async function loadChatMethods() {
+  const loadChatMethods = useCallback(async () => {
     try {
       setLoading(true)
       const res = await fetch('/api/coach/methods')
@@ -135,7 +131,12 @@ export default function CoachPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedMethodId])
+
+  // Load chat methods on mount
+  useEffect(() => {
+    loadChatMethods()
+  }, [loadChatMethods])
 
   async function saveMethod() {
     try {

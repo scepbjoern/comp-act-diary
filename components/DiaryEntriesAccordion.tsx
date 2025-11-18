@@ -1,5 +1,6 @@
 "use client"
 import React from 'react'
+import Image from 'next/image'
 import { TablerIcon } from './TablerIcon'
 import { MicrophoneButton } from './MicrophoneButton'
 import { ImproveTextButton } from './ImproveTextButton'
@@ -276,9 +277,11 @@ export function DiaryEntriesAccordion({
                       <div key={idx} className="relative group">
                         {img.type === 'uploaded' ? (
                           <>
-                            <img 
+                            <Image 
                               src={`${img.data.url}?v=${img.data.id}`} 
                               alt="Foto" 
+                              width={64}
+                              height={64}
                               className="w-16 h-16 object-cover rounded border border-slate-700 cursor-zoom-in" 
                               onClick={() => onViewPhoto(n.id, img.index)} 
                             />
@@ -291,9 +294,11 @@ export function DiaryEntriesAccordion({
                             </button>
                           </>
                         ) : (
-                          <img 
+                          <Image 
                             src={img.url} 
                             alt="Markdown Bild" 
+                            width={64}
+                            height={64}
                             className="w-16 h-16 object-cover rounded border border-blue-500/50 cursor-zoom-in" 
                             onClick={() => onViewPhoto(n.id, img.index)}
                             title="Aus Markdown"

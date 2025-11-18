@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { MicrophoneButton } from './MicrophoneButton'
 
 export function TextImprovementDialog(props: {
@@ -23,12 +23,7 @@ export function TextImprovementDialog(props: {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Auto-trigger improvement when dialog opens
-  useEffect(() => {
-    improveText()
-  }, [])
-
-  async function improveText() {
+  const improveText = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -38,21 +33,24 @@ export function TextImprovementDialog(props: {
         body: JSON.stringify({ text: originalText, prompt, model }),
         credentials: 'same-origin',
       })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data?.error || 'Verbesserung fehlgeschlagen')
-      }
-
       const data = await res.json()
-      setImprovedText(data?.improvedText || originalText)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ein Fehler ist aufgetreten')
-      setImprovedText(originalText)
+      if (data?.improved) {
+        setImprovedText(data.improved)
+      } else {
+        setError('Keine Verbesserung möglich')
+      }
+    } catch (error) {
+      console.error('Failed to improve text:', error)
+      setError('Fehler bei der Textverbesserung')
     } finally {
       setLoading(false)
     }
-  }
+  }, [originalText, prompt, model])
+
+  // Auto-trigger improvement when dialog opens
+  useEffect(() => {
+    improveText()
+  }, [improveText])
 
   return (
     <div className="modal modal-open" onClick={onCancel}>
