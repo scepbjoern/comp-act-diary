@@ -97,6 +97,7 @@ export async function GET(req: NextRequest) {
     id: n.id,
     dayId: n.dayEntryId,
     type: (n.type as unknown as NoteType),
+    title: n.title ?? null,
     time: n.occurredAt?.toISOString().slice(11, 16),
     techTime: n.createdAt?.toISOString().slice(11, 16),
     occurredAtIso: n.occurredAt?.toISOString(),

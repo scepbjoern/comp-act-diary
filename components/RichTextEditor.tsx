@@ -98,8 +98,19 @@ const Editor = dynamic(
           insertDirective({
             name: 'spoiler',
             type: 'containerDirective',
-            attributes: { title }
-          })
+            attributes: { title },
+            children: [
+              {
+                type: 'paragraph',
+                children: [
+                  {
+                    type: 'text',
+                    value: ''
+                  }
+                ]
+              }
+            ]
+          } as any)
         }
         setShowMenu(false)
       }
@@ -245,14 +256,14 @@ const Editor = dynamic(
       },
       attributes: ['title'],
       hasChildren: true,
-      Editor: ({ mdastNode, lexicalNode, parentEditor }: any) => {
+      Editor: ({ mdastNode, children, parentEditor }: any) => {
         return (
           <details style={{ padding: '10px', border: '1px solid #64748b', borderRadius: '4px', backgroundColor: 'rgb(30, 41, 59)' }}>
             <summary style={{ cursor: 'pointer', color: '#94a3b8' }}>
               {mdastNode.attributes?.title || 'Spoiler'}
             </summary>
             <div style={{ marginTop: '8px' }}>
-              {lexicalNode.getChildren()}
+              {children}
             </div>
           </details>
         )
