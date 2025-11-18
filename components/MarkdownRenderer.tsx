@@ -18,7 +18,7 @@ interface MarkdownRendererProps {
 // Plugin to handle custom directives
 function remarkCustomDirectives() {
   return (tree: any) => {
-    visit(tree, (node) => {
+    visit(tree, (node: any) => {
       if (
         node.type === 'textDirective' ||
         node.type === 'leafDirective' ||

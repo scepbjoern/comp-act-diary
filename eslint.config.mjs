@@ -48,4 +48,12 @@ export default [
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },
+
+  // Markdown/MDX processing: complex unist types make 'any' pragmatic
+  {
+    files: ['components/MarkdownRenderer.tsx', 'components/RichTextEditor.tsx'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
 ];

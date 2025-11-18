@@ -45,12 +45,12 @@ export function AudioSeekTest() {
     }
 
     Object.entries(handlers).forEach(([event, handler]) => {
-      audio.addEventListener(event, handler as any)
+      audio.addEventListener(event, handler as EventListener)
     })
 
     return () => {
       Object.entries(handlers).forEach(([event, handler]) => {
-        audio.removeEventListener(event, handler as any)
+        audio.removeEventListener(event, handler as EventListener)
       })
     }
   }, [testUrl])
