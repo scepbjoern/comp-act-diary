@@ -26,16 +26,12 @@ ARG TOGETHERAI_API_KEY
 ARG DATABASE_URL
 ARG NEXTAUTH_URL
 ARG NEXTAUTH_SECRET
-# Prisma engine mirror to avoid upstream outages
-ARG PRISMA_ENGINES_MIRROR=https://prisma-builds.s3-eu-west-1.amazonaws.com
 
 ENV OPENAI_API_KEY=${OPENAI_API_KEY} \
     TOGETHERAI_API_KEY=${TOGETHERAI_API_KEY} \
     DATABASE_URL=${DATABASE_URL} \
     NEXTAUTH_URL=${NEXTAUTH_URL} \
-    NEXTAUTH_SECRET=${NEXTAUTH_SECRET} \
-    PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 \
-    PRISMA_ENGINES_MIRROR=${PRISMA_ENGINES_MIRROR}
+    NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 
 # Phase 9: Copy only package files for better layer caching
 COPY package*.json ./
@@ -66,9 +62,9 @@ RUN npm ci --no-audit --no-fund --ignore-scripts --verbose --legacy-peer-deps \
 # Ensure native modules like sharp are properly built
 RUN npm rebuild sharp --verbose || true
 
-# Phase 9: Generate Prisma client in deps stage (with checksum ignore)
+# Phase 9: Generate Prisma client in deps stage
 COPY prisma ./prisma
-RUN npx prisma generate --skip-download || npx prisma generate
+RUN npx prisma generate
 
 # ---- Build stage ----
 FROM node:22-bookworm AS build
@@ -80,15 +76,12 @@ ARG TOGETHERAI_API_KEY
 ARG DATABASE_URL
 ARG NEXTAUTH_URL
 ARG NEXTAUTH_SECRET
-ARG PRISMA_ENGINES_MIRROR=https://prisma-builds.s3-eu-west-1.amazonaws.com
 
 ENV OPENAI_API_KEY=${OPENAI_API_KEY} \
     TOGETHERAI_API_KEY=${TOGETHERAI_API_KEY} \
     DATABASE_URL=${DATABASE_URL} \
     NEXTAUTH_URL=${NEXTAUTH_URL} \
-    NEXTAUTH_SECRET=${NEXTAUTH_SECRET} \
-    PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 \
-    PRISMA_ENGINES_MIRROR=${PRISMA_ENGINES_MIRROR}
+    NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 
 # Copy dependencies from deps stage (including generated Prisma client)
 COPY --from=deps /app/node_modules ./node_modules
