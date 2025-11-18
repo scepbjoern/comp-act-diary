@@ -1,6 +1,6 @@
 // eslint.config.mjs
-import tseslint from 'typescript-eslint';
-import nextPlugin from '@next/eslint-plugin-next';
+import tseslint from 'typescript-eslint'
+import nextPlugin from '@next/eslint-plugin-next'
 
 export default [
   // Ignore build output and vendor dirs
@@ -9,7 +9,18 @@ export default [
   // TypeScript + JS recommended (flat) rules
   ...tseslint.configs.recommended,
 
-  // Global rule adjustments to reduce noise while we migrate
+  // Next.js rules (core-web-vitals + typescript)
+  {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    plugins: { '@next/next': nextPlugin },
+    rules: {
+      ...nextPlugin.configs['core-web-vitals'].rules,
+      ...nextPlugin.configs.recommended.rules,
+    },
+    settings: { next: { rootDir: ['./'] } },
+  },
+
+  // Global rule adjustments
   {
     rules: {
       // Allow gradual typing; surface as warnings for now
@@ -23,17 +34,7 @@ export default [
     },
   },
 
-  // Next.js rules (choose 'core-web-vitals' for stricter a11y/perf)
-  {
-    files: ['**/*.{js,jsx,ts,tsx}'],
-    plugins: { '@next/next': nextPlugin },
-    rules: {
-      ...nextPlugin.configs['core-web-vitals'].rules,
-    },
-    settings: { next: { rootDir: ['./'] } },
-  },
-
-  // JS-only overrides: disable TS-specific unused-vars on plain JS, use base rule if needed
+  // JS-only overrides: disable TS-specific unused-vars on plain JS
   {
     files: ['**/*.js'],
     rules: {
@@ -56,4 +57,4 @@ export default [
       '@typescript-eslint/no-explicit-any': 'off',
     },
   },
-];
+]
