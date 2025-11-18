@@ -38,14 +38,17 @@ run_with_retry \
   "npx prisma migrate deploy --schema=\"$SCHEMA_PATH\"" \
   "migrate deploy fehlgeschlagen oder DB nicht bereit."
 
-# 2) Nur wenn KEINE Migrationen existieren, Schema direkt pushen
-if [ ! -d "$MIGRATIONS_DIR" ] || [ -z "$(ls -A "$MIGRATIONS_DIR" 2>/dev/null)" ]; then
-  run_with_retry \
-    "npx prisma db push --skip-generate --schema=\"$SCHEMA_PATH\"" \
-    "db push fehlgeschlagen oder DB nicht bereit."
-else
-  log "Migrationen vorhanden – ueberspringe db push."
-fi
+# 2) Schema-Sync mit db push (ergänzt fehlende Spalten, die nicht in Migrationen sind)
+log "Synchronisiere Schema mit db push (für Spalten außerhalb der Migration History)..."
+run_with_retry \
+  "npx prisma db push --skip-generate --accept-data-loss --schema=\"$SCHEMA_PATH\"" \
+  "db push fehlgeschlagen oder DB nicht bereit."
 
 log "DB-Schema sichergestellt. Starte App..."
-exec npm run start
+if [ "$#" -gt 0 ]; then
+  log "Starte Kommando: $*"
+  exec "$@"
+else
+  log "Kein Kommando angegeben – fallback auf npm run start"
+  exec npm run start
+fi

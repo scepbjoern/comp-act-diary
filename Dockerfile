@@ -134,4 +134,5 @@ USER node
 EXPOSE 3000
 
 # Phase 9: Use Node.js standalone server instead of npm start
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["node", "server.js"]
