@@ -38,11 +38,16 @@ run_with_retry \
   "npx prisma migrate deploy --schema=\"$SCHEMA_PATH\"" \
   "migrate deploy fehlgeschlagen oder DB nicht bereit."
 
-# 2) Schema-Sync mit db push (ergänzt fehlende Spalten, die nicht in Migrationen sind)
-log "Synchronisiere Schema mit db push (für Spalten außerhalb der Migration History)..."
-run_with_retry \
-  "npx prisma db push --skip-generate --accept-data-loss --schema=\"$SCHEMA_PATH\"" \
-  "db push fehlgeschlagen oder DB nicht bereit."
+# 2) Schema-Sync mit db push (nur für Development, nie in Production!)
+# Setze ENABLE_DB_PUSH=true nur lokal, wenn du Schema-Änderungen ohne Migration testen willst
+if [ "${ENABLE_DB_PUSH:-false}" = "true" ]; then
+  log "WARNUNG: db push aktiviert (Development-Modus) – kann Daten löschen!"
+  run_with_retry \
+    "npx prisma db push --skip-generate --accept-data-loss --schema=\"$SCHEMA_PATH\"" \
+    "db push fehlgeschlagen oder DB nicht bereit."
+else
+  log "db push übersprungen (Production-Modus) – nur Migrationen werden angewendet."
+fi
 
 log "DB-Schema sichergestellt. Starte App..."
 if [ "$#" -gt 0 ]; then

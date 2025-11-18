@@ -133,6 +133,7 @@ model DayNote {
   originalTranscript String?
   updatedAt          DateTime               @updatedAt
   audioFileId        String?                @unique
+  testField          String?                // Test-Spalte für sichere Migration
   reflectionFields   DailyReflectionFields?
   audioFile          AudioFile?             @relation(fields: [audioFileId], references: [id])
   day                DayEntry               @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
