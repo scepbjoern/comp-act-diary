@@ -18,6 +18,10 @@ import { Icon } from '@/components/Icon'
 import { DEFAULT_STOOL_ICON } from '@/lib/default-icons'
 import AudioUploadButton from '@/components/AudioUploadButton'
 import { RichTextEditor } from '@/components/RichTextEditor'
+import { Calendar } from '@/components/Calendar'
+import { ymd, fmtHMLocal, fmtDmyFromYmd, shiftDate } from '@/lib/date-utils'
+import { SYMPTOM_LABELS } from '@/lib/constants'
+import type { Day, Habit, DayNote, InlineData } from '@/types/day'
 
 // Lazy load heavy components for better initial page load
 const MealNotesAccordion = dynamic(() => import('@/components/MealNotesAccordion').then(mod => ({ default: mod.MealNotesAccordion })), {
@@ -28,126 +32,6 @@ const DiaryEntriesAccordion = dynamic(() => import('@/components/DiaryEntriesAcc
   loading: () => <div className="text-sm text-gray-400">Lädt...</div>
 })
 
-const SYMPTOM_LABELS: Record<string, string> = {
-  BESCHWERDEFREIHEIT: 'Beschwerdefreiheit',
-  ENERGIE: 'Energielevel',
-  STIMMUNG: 'Stimmung',
-  SCHLAF: 'Schlaf',
-  ENTSPANNUNG: 'Zeit für Entspannung',
-  HEISSHUNGERFREIHEIT: 'Heißhungerfreiheit',
-  BEWEGUNG: 'Bewegungslevel',
-}
-
-type Day = {
-  id: string
-  date: string
-  phase: 'PHASE_1' | 'PHASE_2' | 'PHASE_3'
-  careCategory: 'SANFT' | 'MEDIUM' | 'INTENSIV'
-  symptoms: Record<string, number | undefined>
-  stool?: number
-  habitTicks: { habitId: string; checked: boolean }[]
-  userSymptoms?: { id: string; title: string; icon?: string | null; score?: number }[]
-}
-
-type Habit = { id: string; title: string; userId?: string | null; icon?: string | null }
-
-type DayNote = {
-  id: string
-  dayId: string
-  type: 'MEAL' | 'REFLECTION' | 'DIARY'
-  title?: string | null
-  time?: string
-  techTime?: string
-  text: string
-  originalTranscript?: string | null
-  audioFilePath?: string | null
-  audioFileId?: string | null
-  keepAudio?: boolean
-  photos?: { id: string; url: string }[]
-  occurredAtIso?: string
-  createdAtIso?: string
-}
-
-function ymd(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function fmtHMLocal(iso?: string) {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mm = String(d.getMinutes()).padStart(2, '0')
-  return `${hh}:${mm}`
-}
-
-function fmtDmyFromYmd(ymdStr: string) {
-  const [y, m, d] = (ymdStr || '').split('-')
-  if (!y || !m || !d) return ymdStr
-  const dd = String(parseInt(d, 10))
-  const mm = String(parseInt(m, 10))
-  return `${dd}.${mm}.${y}`
-}
-
-// Simple calendar that shows current month and highlights days with data
-function Calendar(props: { date: string; daysWithData: Set<string>; reflectionDays: Set<string>; onSelect: (d: string) => void }) {
-  const { date, daysWithData, reflectionDays, onSelect } = props
-  const [y, m, _d] = date.split('-').map(n => parseInt(n, 10))
-  const firstOfMonth = new Date(y, (m || 1) - 1, 1)
-  const startWeekDay = (firstOfMonth.getDay() + 6) % 7 // 0=Mon
-  const daysInMonth = new Date(y, (m || 1), 0).getDate()
-  const cells: { ymd: string | null; inMonth: boolean }[] = []
-  // leading blanks
-  for (let i = 0; i < startWeekDay; i++) cells.push({ ymd: null, inMonth: false })
-  // month days
-  for (let day = 1; day <= daysInMonth; day++) {
-    const ymdStr = `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    cells.push({ ymd: ymdStr, inMonth: true })
-  }
-
-  // pad to complete weeks
-  while (cells.length % 7 !== 0) cells.push({ ymd: null, inMonth: false })
-
-  const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
-
-  return (
-    <div className="w-full">
-      <div className="grid grid-cols-7 gap-1 mb-2 text-xs text-gray-400">
-        {weekDays.map(wd => (
-          <div key={wd} className="text-center">{wd}</div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {cells.map((c, idx) => {
-          if (!c.ymd) return <div key={idx} className="h-8 rounded bg-transparent" />
-          const isSelected = c.ymd === date
-          const hasData = daysWithData.has(c.ymd)
-          const hasReflection = reflectionDays.has(c.ymd)
-          return (
-            <button
-              key={c.ymd}
-              className={`h-8 rounded border text-xs flex items-center justify-center ${
-                isSelected ? 'bg-blue-600 text-white border-blue-600' : 'bg-surface border-slate-700 hover:border-slate-500'
-              }`}
-              onClick={() => onSelect(c.ymd!)}
-              title={c.ymd}
-            >
-              <span className="relative">
-                {parseInt(c.ymd.split('-')[2], 10)}
-                {(hasData || hasReflection) && (
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-0.5">
-                    {hasData && <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />}
-                    {hasReflection && <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />}
-                  </span>
-                )}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 export default function HeutePage() {
   const [date, setDate] = useState(() => ymd(new Date()))
   const [day, setDay] = useState<Day | null>(null)
@@ -157,7 +41,6 @@ export default function HeutePage() {
   const [mealText, setMealText] = useState('')
   const { saving, savedAt, startSaving, doneSaving} = useSaveIndicator()
   const [reflectionDue, setReflectionDue] = useState<{ due: boolean; daysSince: number } | null>(null)
-  const [_notesLoading, setNotesLoading] = useState(false)
   const { toasts, push, dismiss } = useToasts()
   
   // UI State Hook
@@ -233,14 +116,7 @@ export default function HeutePage() {
     else doneSaving()
   }, push)
 
-  // Inline analytics (7-day series + yesterday values)
-  type InlineData = {
-    days: string[]
-    symptoms: Record<string, (number | null)[]>
-    stool: (number | null)[]
-    customSymptoms?: { defs: { id: string; title: string }[]; series: Record<string, (number | null)[]> }
-    yesterday: { standard: Record<string, number | null>; custom: Record<string, number | null>; stool: number | null; habits: string[] }
-  }
+  // Inline analytics
   const [inlineData, setInlineData] = useState<InlineData | null>(null)
 
   // Diary functions are now handled by useDiaryManagement hook
@@ -258,35 +134,30 @@ export default function HeutePage() {
 
   useEffect(() => {
     async function load() {
-      setNotesLoading(true)
-      try {
-        const res = await fetch(`/api/day?date=${date}`, { credentials: 'same-origin' })
-        const data = await res.json()
-        setDay(data.day)
-        setHabits(data.habits)
-        setNotes(data.notes ?? [])
-        setSymptomIcons(data.symptomIcons || {})
-        // Prefill current time (HH:MM) when date changes or page loads
-        const now = new Date()
-        const hh = String(now.getHours()).padStart(2, '0')
-        const mm = String(now.getMinutes()).padStart(2, '0')
-        setMealTime(`${hh}:${mm}`)
-        setNewDiaryTime(`${hh}:${mm}`)
-        // Set default title based on date and time
-        setNewDiaryTitle(`${date} ${hh}:${mm}`)
-      } finally {
-        setNotesLoading(false)
-      }
+      const res = await fetch(`/api/day?date=${date}`, { credentials: 'same-origin' })
+      const data = await res.json()
+      setDay(data.day)
+      setHabits(data.habits)
+      setNotes(data.notes ?? [])
+      setSymptomIcons(data.symptomIcons || {})
+      // Prefill current time (HH:MM) when date changes or page loads
+      const now = new Date()
+      const hh = String(now.getHours()).padStart(2, '0')
+      const mm = String(now.getMinutes()).padStart(2, '0')
+      setMealTime(`${hh}:${mm}`)
+      setNewDiaryTime(`${hh}:${mm}`)
+      // Set default title based on date and time
+      setNewDiaryTitle(`${date} ${hh}:${mm}`)
     }
     load()
-  }, [date])
+  }, [date, setHabits, setNewDiaryTime, setNewDiaryTitle, setNotes, setSymptomIcons])
 
   // Update diary title when time changes
   useEffect(() => {
     if (newDiaryTime && date) {
       setNewDiaryTitle(`${date} ${newDiaryTime}`)
     }
-  }, [newDiaryTime, date])
+  }, [newDiaryTime, date, setNewDiaryTitle])
 
   // Load inline analytics with small debounce and abort on date change
   useEffect(() => {
@@ -433,14 +304,7 @@ export default function HeutePage() {
     if (updatedDay) setDay(updatedDay)
   }
 
-  // saveDiaryEntry is now handled by useDiaryManagement hook
-
-  function shiftDate(cur: string, delta: number) {
-    const [y, m, d] = cur.split('-').map(Number)
-    const dt = new Date(y, (m || 1) - 1, d || 1)
-    dt.setDate(dt.getDate() + delta)
-    return ymd(dt)
-  }
+  // saveDiaryEntry and shiftDate are now handled by useDiaryManagement and lib/date-utils
 
   async function addMealNote() {
     if (!day || !mealText.trim()) return
