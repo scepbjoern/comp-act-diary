@@ -14,8 +14,8 @@ function nowIsoTime() {
   return new Date().toISOString().replace(/[:.]/g, '-')
 }
 
-async function ensureUploadDirForUser(userId: string) {
-  const dir = path.join(UPLOADS_BASE, userId)
+async function ensureAvatarDir() {
+  const dir = path.join(UPLOADS_BASE, 'avatars')
   await fs.mkdir(dir, { recursive: true })
   return dir
 }
@@ -40,13 +40,13 @@ export async function POST(req: NextRequest) {
 
     const buf = Buffer.from(await file.arrayBuffer())
 
-    const dir = await ensureUploadDirForUser(user.id)
+    const dir = await ensureAvatarDir()
     try { await fs.access(dir, fsConstants.W_OK) } catch {
       return NextResponse.json({ error: 'Upload directory is not writable' }, { status: 500 })
     }
 
     const ts = nowIsoTime()
-    const fileName = `avatar_${ts}.webp`
+    const fileName = `${user.id}_avatar_${ts}.webp`
     const outPath = path.join(dir, fileName)
 
     // Square crop to 512x512 and convert to webp
@@ -56,15 +56,15 @@ export async function POST(req: NextRequest) {
       .webp({ quality: 85 })
       .toFile(outPath)
 
-    const url = `/uploads/${user.id}/${fileName}`
+    const url = `/uploads/avatars/${fileName}`
 
-    // Optionally remove previous avatar if within uploads dir
+    // Remove previous avatar if it exists
     if ((user as any).profileImageUrl && typeof (user as any).profileImageUrl === 'string') {
       const prevUrl = (user as any).profileImageUrl as string
-      const prefix = `/uploads/${user.id}/`
+      const prefix = `/uploads/avatars/`
       if (prevUrl.startsWith(prefix)) {
         const rel = prevUrl.slice(prefix.length)
-        const prevPath = path.join(UPLOADS_BASE, user.id, rel)
+        const prevPath = path.join(UPLOADS_BASE, 'avatars', rel)
         try { await fs.unlink(prevPath) } catch {}
       }
     }
@@ -88,10 +88,10 @@ export async function DELETE(req: NextRequest) {
 
     const url = (user as any).profileImageUrl as string | null | undefined
     if (url && typeof url === 'string') {
-      const prefix = `/uploads/${user.id}/`
+      const prefix = `/uploads/avatars/`
       if (url.startsWith(prefix)) {
         const rel = url.slice(prefix.length)
-        const p = path.join(UPLOADS_BASE, user.id, rel)
+        const p = path.join(UPLOADS_BASE, 'avatars', rel)
         try { await fs.unlink(p) } catch {}
       }
     }
