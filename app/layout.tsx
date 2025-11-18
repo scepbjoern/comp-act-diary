@@ -1,5 +1,4 @@
 import './globals.css'
-import Image from 'next/image'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { cookies } from 'next/headers'

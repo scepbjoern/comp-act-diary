@@ -1,5 +1,6 @@
 "use client"
 import React, { useEffect, useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { NumberPills } from '@/components/NumberPills'
 import { Sparkline } from '@/components/Sparkline'
@@ -10,11 +11,18 @@ import { ImproveTextButton } from '@/components/ImproveTextButton'
 import { SaveBar } from '@/components/SaveBar'
 import { Toasts, useToasts } from '@/components/Toast'
 import { Icon } from '@/components/Icon'
-import { MealNotesAccordion } from '@/components/MealNotesAccordion'
-import { DiaryEntriesAccordion } from '@/components/DiaryEntriesAccordion'
 import { DEFAULT_STOOL_ICON } from '@/lib/default-icons'
 import AudioUploadButton from '@/components/AudioUploadButton'
 import { RichTextEditor } from '@/components/RichTextEditor'
+
+// Lazy load heavy components for better initial page load
+const MealNotesAccordion = dynamic(() => import('@/components/MealNotesAccordion').then(mod => ({ default: mod.MealNotesAccordion })), {
+  loading: () => <div className="text-sm text-gray-400">Lädt...</div>
+})
+
+const DiaryEntriesAccordion = dynamic(() => import('@/components/DiaryEntriesAccordion').then(mod => ({ default: mod.DiaryEntriesAccordion })), {
+  loading: () => <div className="text-sm text-gray-400">Lädt...</div>
+})
 
 const SYMPTOM_LABELS: Record<string, string> = {
   BESCHWERDEFREIHEIT: 'Beschwerdefreiheit',
