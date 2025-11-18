@@ -35,7 +35,6 @@ const Editor = dynamic(
       Separator,
       InsertCodeBlock,
       InsertAdmonition,
-      Select,
       usePublisher,
       insertDirective$,
     } = await import('@mdxeditor/editor')
@@ -216,7 +215,7 @@ const Editor = dynamic(
       },
       attributes: ['id'],
       hasChildren: false,
-      Editor: ({ mdastNode, lexicalNode, parentEditor }: any) => {
+      Editor: ({ mdastNode }: any) => {
         return (
           <div style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}>
             <p>YouTube Video: {mdastNode.attributes?.id || 'No ID'}</p>
@@ -256,7 +255,7 @@ const Editor = dynamic(
       },
       attributes: ['title'],
       hasChildren: true,
-      Editor: ({ mdastNode, children, parentEditor }: any) => {
+      Editor: ({ mdastNode, children }: any) => {
         return (
           <details style={{ padding: '10px', border: '1px solid #64748b', borderRadius: '4px', backgroundColor: 'rgb(30, 41, 59)' }}>
             <summary style={{ cursor: 'pointer', color: '#94a3b8' }}>

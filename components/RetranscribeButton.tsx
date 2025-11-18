@@ -1,6 +1,5 @@
 "use client"
 import React, { useState } from 'react'
-import { TablerIcon } from './TablerIcon'
 
 interface RetranscribeButtonProps {
   audioFileId: string | null

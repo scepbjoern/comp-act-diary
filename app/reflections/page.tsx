@@ -1,6 +1,5 @@
 "use client"
 import React, { useEffect, useMemo, useState } from 'react'
-import { Icon } from '@/components/Icon' // Keep for symptom/habit icons
 import { TablerIcon } from '@/components/TablerIcon'
 import { CameraPicker } from '@/components/CameraPicker'
 import { MicrophoneButton } from '@/components/MicrophoneButton'

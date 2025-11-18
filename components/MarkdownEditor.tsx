@@ -2,7 +2,7 @@
 
 import { forwardRef } from 'react'
 import dynamic from 'next/dynamic'
-import type { MDXEditorMethods, MDXEditorProps } from '@mdxeditor/editor'
+import type { MDXEditorMethods } from '@mdxeditor/editor'
 import '@mdxeditor/editor/style.css'
 
 // Dynamic import to avoid SSR issues

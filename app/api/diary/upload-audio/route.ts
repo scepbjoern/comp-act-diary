@@ -44,20 +44,6 @@ function generateAudioFilename(date: Date, extension: string = 'm4a'): string {
   return `${year}-${month}-${day}_${hours}-${minutes}_${guid}.${extension}`
 }
 
-// Helper to get creation date from file metadata
-async function getBestCreationDate(file: File): Promise<Date> {
-  // Use file.lastModified (browser provides modification time)
-  if (file.lastModified) {
-    const lastModifiedDate = new Date(file.lastModified)
-    console.log('Using file.lastModified:', lastModifiedDate.toISOString())
-    return lastModifiedDate
-  }
-  
-  // Fallback to current time
-  console.log('No date found, using current date')
-  return new Date()
-}
-
 // POST /api/diary/upload-audio
 // FormData: file (audio/*), date (ISO string), time (HH:MM string), model (string), keepAudio (boolean)
 export async function POST(req: NextRequest) {

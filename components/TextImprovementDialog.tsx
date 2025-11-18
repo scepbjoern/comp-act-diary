@@ -26,7 +26,6 @@ export function TextImprovementDialog(props: {
   // Auto-trigger improvement when dialog opens
   useEffect(() => {
     improveText()
-  // eslint-disable-next-line
   }, [])
 
   async function improveText() {

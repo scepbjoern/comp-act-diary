@@ -4,7 +4,6 @@ import { NumberPills } from '@/components/NumberPills'
 import { Sparkline } from '@/components/Sparkline'
 import { HabitChips } from '@/components/HabitChips'
 import { SaveIndicator, useSaveIndicator } from '@/components/SaveIndicator'
-import { CameraPicker } from '@/components/CameraPicker'
 import { MicrophoneButton } from '@/components/MicrophoneButton'
 import { ImproveTextButton } from '@/components/ImproveTextButton'
 import { SaveBar } from '@/components/SaveBar'
@@ -13,7 +12,6 @@ import { Icon } from '@/components/Icon'
 import { MealNotesAccordion } from '@/components/MealNotesAccordion'
 import { DiaryEntriesAccordion } from '@/components/DiaryEntriesAccordion'
 import { DEFAULT_STOOL_ICON } from '@/lib/default-icons'
-import { AudioPlayerH5 } from '@/components/AudioPlayerH5'
 import AudioUploadButton from '@/components/AudioUploadButton'
 import { RichTextEditor } from '@/components/RichTextEditor'
 
@@ -160,7 +158,7 @@ export default function HeutePage() {
   // Diary entries state
   const [newDiaryText, setNewDiaryText] = useState('')
   const [newDiaryTitle, setNewDiaryTitle] = useState('')
-  const [newDiaryAudio, setNewDiaryAudio] = useState<string | null>(null)
+  const [_newDiaryAudio, setNewDiaryAudio] = useState<string | null>(null)
   const [newDiaryAudioFileId, setNewDiaryAudioFileId] = useState<string | null>(null)
   const [newDiaryOriginalTranscript, setNewDiaryOriginalTranscript] = useState<string | null>(null)
   const [newDiaryTime, setNewDiaryTime] = useState('')
@@ -168,9 +166,9 @@ export default function HeutePage() {
   const [keepAudio, setKeepAudio] = useState(true)
   const [showRetranscribeOptions, setShowRetranscribeOptions] = useState(false)
   const [isRetranscribing, setIsRetranscribing] = useState(false)
-  const [notesLoading, setNotesLoading] = useState(false)
-  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
-  const [pendingAudioDelete, setPendingAudioDelete] = useState<string | null>(null)
+  const [_notesLoading, setNotesLoading] = useState(false)
+  const [_pendingDelete, setPendingDelete] = useState<string | null>(null)
+  const [_pendingAudioDelete, setPendingAudioDelete] = useState<string | null>(null)
   const { toasts, push, dismiss } = useToasts()
   // Draft states for symptoms to enable manual save and clear UX feedback on slow connections
   const [draftSymptoms, setDraftSymptoms] = useState<Record<string, number | undefined>>({})
