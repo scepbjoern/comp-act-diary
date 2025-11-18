@@ -94,7 +94,7 @@ export function DiaryEntriesAccordion({
   return (
     <div className="space-y-2">
       {diaryNotes.map(n => (
-        <div key={n.id} className="collapse collapse-arrow bg-base-200 border border-base-300">
+        <div key={n.id} className="collapse collapse-arrow bg-base-200 border-2 border-slate-600">
           <input type="checkbox" />
           <div className="collapse-title text-sm font-medium py-2">
             <div className="flex items-center gap-2">
@@ -113,14 +113,18 @@ export function DiaryEntriesAccordion({
                     <button 
                       className="btn btn-success btn-xs" 
                       onClick={() => onSave(n.id)}
+                      title="Speichern"
                     >
-                      Speichern
+                      <TablerIcon name="save" size={14} />
+                      <span className="md:inline hidden ml-1">Speichern</span>
                     </button>
                     <button 
                       className="btn btn-ghost btn-xs" 
                       onClick={onCancel}
+                      title="Abbrechen"
                     >
-                      Abbrechen
+                      <TablerIcon name="close" size={14} />
+                      <span className="md:inline hidden ml-1">Abbrechen</span>
                     </button>
                   </>
                 ) : (
@@ -131,7 +135,7 @@ export function DiaryEntriesAccordion({
                       onClick={() => onEdit(n)}
                     >
                       <TablerIcon name="edit_note" size={14} />
-                      <span className="ml-1">Bearbeiten</span>
+                      <span className="md:inline hidden ml-1">Bearbeiten</span>
                     </button>
                     <button 
                       className="btn btn-ghost btn-xs text-red-400" 
@@ -139,7 +143,7 @@ export function DiaryEntriesAccordion({
                       onClick={() => onDelete(n.id)}
                     >
                       <TablerIcon name="delete" size={14} />
-                      <span className="ml-1">Löschen</span>
+                      <span className="md:inline hidden ml-1">Löschen</span>
                     </button>
                   </>
                 )}
@@ -187,6 +191,7 @@ export function DiaryEntriesAccordion({
                       }}
                       title="Titel mit KI generieren"
                     >
+                      <span className="md:inline hidden">Generieren</span>
                       ✨
                     </button>
                   </div>
@@ -237,7 +242,7 @@ export function DiaryEntriesAccordion({
                       title="Audio löschen"
                     >
                       <TablerIcon name="delete" size={12} />
-                      Audio löschen
+                      <span className="md:inline hidden ml-1">Audio löschen</span>
                     </button>
                   </div>
                   <AudioPlayerH5 
