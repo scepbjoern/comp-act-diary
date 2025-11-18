@@ -293,6 +293,99 @@ const Editor = dynamic(
       )
     }
 
+    const MobileToolbarMenu = ({ isFullscreen }: { isFullscreen: boolean }) => {
+      const [showMenu, setShowMenu] = React.useState(false)
+      const menuRef = React.useRef<HTMLDivElement>(null)
+      const buttonRef = React.useRef<HTMLButtonElement>(null)
+      const [popupPos, setPopupPos] = React.useState({ top: 0, left: 0 })
+      
+      const handleToggleMenu = () => {
+        if (!showMenu && buttonRef.current) {
+          const rect = buttonRef.current.getBoundingClientRect()
+          setPopupPos({
+            top: rect.bottom + 4,
+            left: rect.left
+          })
+        }
+        setShowMenu(!showMenu)
+      }
+      
+      React.useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+          if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+            setShowMenu(false)
+          }
+        }
+        if (showMenu) {
+          document.addEventListener('mousedown', handleClickOutside)
+          return () => document.removeEventListener('mousedown', handleClickOutside)
+        }
+      }, [showMenu])
+      
+      if (isFullscreen) return null
+      
+      return (
+        <div style={{ position: 'relative', display: 'inline-block' }} ref={menuRef}>
+          <button
+            ref={buttonRef}
+            type="button"
+            onClick={handleToggleMenu}
+            title="Mehr Optionen"
+            style={{
+              padding: '4px 8px',
+              background: '#64748b',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            ⋯
+          </button>
+          {showMenu && (
+            <div
+              style={{
+                position: 'fixed',
+                top: `${popupPos.top}px`,
+                left: `${popupPos.left}px`,
+                background: 'rgb(100, 116, 139)',
+                border: '1px solid rgb(148, 163, 184)',
+                borderRadius: '4px',
+                padding: '8px',
+                zIndex: 99999,
+                minWidth: '180px',
+                maxHeight: '400px',
+                overflowY: 'auto',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.2)', marginBottom: '4px' }}>
+                  <BlockTypeSelect />
+                </div>
+                <div style={{ padding: '4px 0' }}>
+                  <InsertTable />
+                </div>
+                <div style={{ padding: '4px 0' }}>
+                  <InsertThematicBreak />
+                </div>
+                <div style={{ padding: '4px 0' }}>
+                  <InsertCodeBlock />
+                </div>
+                <div style={{ padding: '4px 0' }}>
+                  <InsertAdmonition />
+                </div>
+                <div style={{ padding: '4px 0' }}>
+                  <InsertDirective />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    }
+
     const EditorComponent = forwardRef<MDXEditorMethods, {
       markdown: string
       onChange: (markdown: string) => void
@@ -300,7 +393,8 @@ const Editor = dynamic(
       readOnly?: boolean
       time?: string
       onFullscreen?: () => void
-    }>(({ markdown, onChange, placeholder, readOnly, time, onFullscreen }, ref) => {
+      isFullscreen?: boolean
+    }>(({ markdown, onChange, placeholder, readOnly, time, onFullscreen, isFullscreen }, ref) => {
       return (
         <MDXEditor
           ref={ref}
@@ -361,35 +455,64 @@ const Editor = dynamic(
             }),
             markdownShortcutPlugin(),
             toolbarPlugin({
-              toolbarContents: () => (
-                <>
-                  <UndoRedo />
-                  <Separator />
-                  <BoldItalicUnderlineToggles />
-                  <Separator />
-                  <BlockTypeSelect />
-                  <Separator />
-                  <CreateLink />
-                  <InsertImage />
-                  <Separator />
-                  <ListsToggle />
-                  <Separator />
-                  <InsertTable />
-                  <InsertThematicBreak />
-                  <Separator />
-                  <InsertCodeBlock />
-                  <Separator />
-                  <InsertAdmonition />
-                  <Separator />
-                  <InsertDirective />
-                  {onFullscreen && (
+              toolbarContents: () => {
+                const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+                
+                if (isMobile && !isFullscreen) {
+                  // Mobile: essential tools only + fullscreen
+                  return (
                     <>
+                      <UndoRedo />
                       <Separator />
-                      <FullscreenButton onClick={onFullscreen} />
+                      <BoldItalicUnderlineToggles />
+                      <Separator />
+                      <CreateLink />
+                      <InsertImage />
+                      <Separator />
+                      <ListsToggle />
+                      <Separator />
+                      <MobileToolbarMenu isFullscreen={!!isFullscreen} />
+                      {onFullscreen && (
+                        <>
+                          <Separator />
+                          <FullscreenButton onClick={onFullscreen} />
+                        </>
+                      )}
                     </>
-                  )}
-                </>
-              )
+                  )
+                }
+                
+                // Desktop or fullscreen: show all
+                return (
+                  <>
+                    <UndoRedo />
+                    <Separator />
+                    <BoldItalicUnderlineToggles />
+                    <Separator />
+                    <BlockTypeSelect />
+                    <Separator />
+                    <CreateLink />
+                    <InsertImage />
+                    <Separator />
+                    <ListsToggle />
+                    <Separator />
+                    <InsertTable />
+                    <InsertThematicBreak />
+                    <Separator />
+                    <InsertCodeBlock />
+                    <Separator />
+                    <InsertAdmonition />
+                    <Separator />
+                    <InsertDirective />
+                    {onFullscreen && (
+                      <>
+                        <Separator />
+                        <FullscreenButton onClick={onFullscreen} />
+                      </>
+                    )}
+                  </>
+                )
+              }
             })
           ]}
         />
@@ -436,7 +559,7 @@ export const RichTextEditor = forwardRef<MDXEditorMethods, RichTextEditorProps>(
             : 'min-h-[300px] max-h-[70vh]'
         }`}
       >
-        <Editor {...props} ref={ref} onFullscreen={toggleFullscreen} />
+        <Editor {...props} ref={ref} onFullscreen={toggleFullscreen} isFullscreen={isFullscreen} />
         {isFullscreen && (
           <button
             onClick={toggleFullscreen}

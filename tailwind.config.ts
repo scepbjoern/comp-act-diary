@@ -11,19 +11,19 @@ const config: Config = {
       colors: {
         background: {
           light: '#f8fafc',
-          DEFAULT: '#0b0f14',
+          DEFAULT: '#0f172a',
         },
         surface: {
           light: '#ffffff',
-          DEFAULT: '#121821',
+          DEFAULT: '#1e293b',
         },
         primary: {
-          DEFAULT: '#7dd3fc',
-          foreground: '#0b0f14',
+          DEFAULT: '#38bdf8',
+          foreground: '#0f172a',
         },
         muted: {
           light: '#e2e8f0',
-          DEFAULT: '#334155',
+          DEFAULT: '#475569',
         },
         pill: {
           light: 'rgb(241 245 249)',
@@ -31,12 +31,12 @@ const config: Config = {
         },
         border: {
           light: '#e2e8f0',
-          DEFAULT: '#334155',
+          DEFAULT: '#475569',
         },
       },
       backgroundColor: {
-        'surface/60': 'rgba(18, 24, 33, 0.6)',
-        'surface/80': 'rgba(18, 24, 33, 0.8)',
+        'surface/60': 'rgba(30, 41, 59, 0.6)',
+        'surface/80': 'rgba(30, 41, 59, 0.8)',
       },
       borderRadius: {
         pill: '9999px',
@@ -56,21 +56,38 @@ const config: Config = {
   ],
   daisyui: {
     themes: [
-      'light',
-      'dark',
       {
-        custom: {
-          'primary': '#7dd3fc',
-          'primary-focus': '#38bdf8',
-          'primary-content': '#0b0f14',
-          'base-100': '#0b0f14',
-          'base-200': '#121821',
-          'base-300': '#334155',
-          'base-content': '#f1f5f9',
-          'info': '#38bdf8',
+        light: {
+          'primary': '#0ea5e9',
+          'primary-focus': '#0284c7',
+          'primary-content': '#ffffff',
+          'base-100': '#f8fafc',
+          'base-200': '#f1f5f9',
+          'base-300': '#e2e8f0',
+          'base-content': '#1e293b',
+          'neutral': '#64748b',
+          'neutral-content': '#f8fafc',
+          'info': '#0ea5e9',
           'success': '#10b981',
           'warning': '#f59e0b',
           'error': '#ef4444',
+        },
+      },
+      {
+        dark: {
+          'primary': '#38bdf8',
+          'primary-focus': '#0ea5e9',
+          'primary-content': '#0f172a',
+          'base-100': '#0f172a',
+          'base-200': '#1e293b',
+          'base-300': '#334155',
+          'base-content': '#f1f5f9',
+          'neutral': '#475569',
+          'neutral-content': '#f8fafc',
+          'info': '#38bdf8',
+          'success': '#22c55e',
+          'warning': '#fbbf24',
+          'error': '#f87171',
         },
       },
     ],

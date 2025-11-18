@@ -22,7 +22,7 @@ export const metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'CompACT Diary',
   },
   formatDetection: {
@@ -75,20 +75,26 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const version = (pkg as unknown as { version?: string }).version ?? '0.0.0'
 
   
+  const themeColorDark = '#0f172a'
+  const themeColorLight = '#f8fafc'
+  const currentThemeColor = theme === 'dark' ? themeColorDark : themeColorLight
+  
   return (
     <html 
       lang="de" 
       className={theme === 'dark' ? 'dark' : 'bright'}
+      data-theme={theme === 'dark' ? 'dark' : 'light'}
       suppressHydrationWarning
     >
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="color-scheme" content={theme === 'dark' ? 'dark' : 'light'} />
         <link rel="manifest" href="/manifest.webmanifest" crossOrigin="use-credentials" />
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0..200&display=optional"
           rel="stylesheet"
         />
-        <meta name="theme-color" content="#0b0f14" />
+        <meta name="theme-color" content={currentThemeColor} />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -99,9 +105,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 if (savedTheme === 'dark') {
                   root.classList.add('dark');
                   root.classList.remove('bright');
+                  root.setAttribute('data-theme', 'dark');
+                  document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', 'dark');
+                  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '${themeColorDark}');
                 } else {
                   root.classList.add('bright');
                   root.classList.remove('dark');
+                  root.setAttribute('data-theme', 'light');
+                  document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', 'light');
+                  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '${themeColorLight}');
                 }
                 // Persist as cookie so SSR can read it reliably
                 try { document.cookie = 'theme=' + savedTheme + '; path=/; max-age=31536000'; } catch (e) {}
@@ -111,14 +123,14 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         />
       </head>
       <body className="min-h-screen flex flex-col">
-        <header className="sticky top-0 z-10 bg-surface/80 backdrop-blur border-b border-slate-800 dark:border-slate-200">
+        <header className="sticky top-0 z-10 bg-surface/80 backdrop-blur border-b border-slate-700">
           <div className="container h-14 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 font-semibold">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/icons/logo_32.png"
                 alt="App Icon"
-                className="h-7 w-7 rounded-full border border-slate-700 dark:border-slate-200 bg-surface object-cover"
+                className="h-7 w-7 rounded-full border border-slate-700 bg-surface object-cover"
               />
               <span>CompACT Diary</span>
             </Link>
@@ -128,7 +140,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <main className="container py-4 flex-1">
           {children}
         </main>
-        <footer className="border-t border-slate-800 bg-surface/80">
+        <footer className="border-t border-slate-700 bg-surface/80">
           <div className="container py-2 text-xs text-gray-400 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
             <span>
               Version {version}
