@@ -4,6 +4,7 @@ import { useUIState } from '@/hooks/useUIState'
 import { useSymptomManagement } from '@/hooks/useSymptomManagement'
 import { useHabitManagement } from '@/hooks/useHabitManagement'
 import { useDiaryManagement } from '@/hooks/useDiaryManagement'
+import { useDaySummary } from '@/hooks/useDaySummary'
 import { useSaveIndicator } from '@/components/SaveIndicator'
 import { SaveBar } from '@/components/SaveBar'
 import { Toasts, useToasts } from '@/components/Toast'
@@ -11,6 +12,7 @@ import { Calendar } from '@/components/Calendar'
 import { DateNavigation } from '@/components/DateNavigation'
 import { ReflectionDueBanner } from '@/components/ReflectionDueBanner'
 import { DiarySection } from '@/components/DiarySection'
+import { DaySummary } from '@/components/DaySummary'
 import { DarmkurSection } from '@/components/DarmkurSection'
 import { ResetDaySection } from '@/components/ResetDaySection'
 import { PhotoViewerModal } from '@/components/PhotoViewerModal'
@@ -101,6 +103,15 @@ export default function HeutePage() {
     if (saving) startSaving()
     else doneSaving()
   }, push)
+
+  // Day Summary Hook
+  const {
+    summary,
+    loading: summaryLoading,
+    generateSummary,
+    regenerateSummary,
+    deleteSummary
+  } = useDaySummary(day?.id || null, push)
 
   // Inline analytics
   const [inlineData, setInlineData] = useState<InlineData | null>(null)
@@ -408,6 +419,15 @@ export default function HeutePage() {
 
       {day && (
         <>
+          <DaySummary
+            dayId={day.id}
+            summary={summary}
+            loading={summaryLoading}
+            onGenerate={generateSummary}
+            onRegenerate={regenerateSummary}
+            onDelete={deleteSummary}
+          />
+
           <DiarySection
             date={date}
             notes={notes}

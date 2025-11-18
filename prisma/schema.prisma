@@ -46,6 +46,8 @@ model UserSettings {
   autosaveEnabled     Boolean @default(true)
   autosaveIntervalSec Int     @default(5)
   transcriptionModel  String  @default("gpt-4o-transcribe")
+  summaryModel        String  @default("gpt-oss-120b")
+  summaryPrompt       String  @default("Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form \"**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen\"")
   user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -75,8 +77,20 @@ model DayEntry {
   stool             StoolScore?
   symptoms          SymptomScore[]
   userSymptomScores UserSymptomScore[]
+  summary           DaySummary?
 
   @@unique([userId, date])
+}
+
+model DaySummary {
+  id          String   @id @default(uuid())
+  dayEntryId  String   @unique
+  content     String   // Generated markdown summary
+  model       String   // Model used for generation
+  prompt      String   // Prompt used for generation
+  sources     String[] // Source identifiers (e.g., ["diary:note-id-1", "diary:note-id-2"])
+  generatedAt DateTime @default(now())
+  dayEntry    DayEntry @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
 }
 
 model SymptomScore {

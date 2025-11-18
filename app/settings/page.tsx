@@ -17,6 +17,8 @@ type Me = {
     autosaveIntervalSec: number
     timeFormat24h: boolean
     weekStart: string
+    summaryModel?: string
+    summaryPrompt?: string
   } | null
 }
 
@@ -67,6 +69,8 @@ export default function SettingsPage() {
   const [userSymptomIconDrafts, setUserSymptomIconDrafts] = useState<Record<string, string>>({})
   const [stdSymptomIcons, setStdSymptomIcons] = useState<Record<string, string | null>>({})
   const [stdSymptomIconDrafts, setStdSymptomIconDrafts] = useState<Record<string, string>>({})
+  const [summaryModel, setSummaryModel] = useState('gpt-oss-120b')
+  const [summaryPrompt, setSummaryPrompt] = useState('Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
 
   // Avatar cropper state
   const [avatarOpen, setAvatarOpen] = useState(false)
@@ -100,6 +104,8 @@ export default function SettingsPage() {
         setTheme(u.settings?.theme === 'bright' ? 'bright' : 'dark')
         setAutosaveEnabled(u.settings?.autosaveEnabled ?? true)
         setAutosaveIntervalSec(u.settings?.autosaveIntervalSec ?? 5)
+        setSummaryModel(u.settings?.summaryModel || 'gpt-oss-120b')
+        setSummaryPrompt(u.settings?.summaryPrompt || 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
       }
       if (habitsRes.ok) {
         const data = await habitsRes.json()
@@ -413,7 +419,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch('/api/me', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings: { autosaveEnabled, autosaveIntervalSec } })
+        body: JSON.stringify({ settings: { autosaveEnabled, autosaveIntervalSec, summaryModel, summaryPrompt } })
       })
       await res.json().catch(() => ({}))
     } finally {
@@ -634,6 +640,48 @@ export default function SettingsPage() {
             <button className="pill !bg-green-600 !text-white hover:bg-pill-light dark:hover:bg-pill hover:text-gray-900 dark:hover:text-gray-100" onClick={saveCapture}>Speichern</button>
             <SaveIndicator saving={saving} savedAt={savedAt} />
           </div>
+        </div>
+      </div>
+
+      {/* Summary AI Settings */}
+      <div className="card p-4 space-y-3 max-w-xl">
+        <h2 className="font-medium">
+          <span className="inline-flex items-center gap-1">
+            <Icon name="summarize" />
+            <span>KI-Zusammenfassung</span>
+          </span>
+        </h2>
+        
+        <div className="space-y-2">
+          <label className="block text-sm">
+            <span className="text-gray-400 mb-1 block">Modell</span>
+            <select
+              value={summaryModel}
+              onChange={(e) => setSummaryModel(e.target.value)}
+              className="w-full bg-base-100 border border-base-300 rounded px-3 py-2 text-sm"
+            >
+              <option value="gpt-oss-120b">gpt-oss-120b (Standard)</option>
+              <option value="gpt-4o-mini">gpt-4o-mini</option>
+              <option value="gpt-4o">gpt-4o</option>
+              <option value="openai/gpt-oss-20b">openai/gpt-oss-20b</option>
+            </select>
+          </label>
+          
+          <label className="block text-sm">
+            <span className="text-gray-400 mb-1 block">System-Prompt</span>
+            <textarea
+              value={summaryPrompt}
+              onChange={(e) => setSummaryPrompt(e.target.value)}
+              rows={4}
+              className="w-full bg-base-100 border border-base-300 rounded px-3 py-2 text-sm font-mono"
+              placeholder="System-Prompt für die Zusammenfassung..."
+            />
+          </label>
+          
+          <p className="text-xs text-gray-500">
+            Der Prompt definiert, wie die KI Zusammenfassungen erstellt. 
+            Die Tagebucheinträge werden automatisch als Kontext mitgegeben.
+          </p>
         </div>
       </div>
 

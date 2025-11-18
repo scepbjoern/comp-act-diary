@@ -40,6 +40,18 @@ export async function PATCH(req: NextRequest) {
   if (typeof body.theme === 'string') {
     data.theme = body.theme
   }
+  if (typeof body.summaryModel === 'string') {
+    data.summaryModel = body.summaryModel
+  }
+  if (typeof body.summaryPrompt === 'string') {
+    data.summaryPrompt = body.summaryPrompt
+  }
+  if (typeof body.autosaveEnabled === 'boolean') {
+    data.autosaveEnabled = body.autosaveEnabled
+  }
+  if (typeof body.autosaveIntervalSec === 'number') {
+    data.autosaveIntervalSec = body.autosaveIntervalSec
+  }
 
   const settings = await prisma.userSettings.upsert({
     where: { userId: user.id },
