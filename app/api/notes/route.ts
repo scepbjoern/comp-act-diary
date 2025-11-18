@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     })
 
     // Format the notes for context
-    const formattedNotes = notes.map(note => ({
+    const formattedNotes = notes.map((note: any) => ({
       date: note.day.date,
       text: note.text || note.originalTranscript || '', // Use improved text first, fallback to original
       occurredAt: note.occurredAt

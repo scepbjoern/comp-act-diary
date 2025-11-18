@@ -1,10 +1,28 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Phase 9: Standalone output for smaller Docker images
+  output: 'standalone',
+  
   eslint: {
     // We use flat config; tell Next not to attempt its plugin detection
     ignoreDuringBuilds: false, // keep lint in CI
   },
   reactStrictMode: true,
+  
+  // Phase 9: Compiler optimizations
+  compiler: {
+    // Remove console.log in production
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
+  },
+  
+  // Phase 9: Image optimization
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60,
+  },
+  
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',

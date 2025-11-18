@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
       dayKeyById.set(de.id, key)
       dayIdByKey.set(key, de.id)
     }
-    const dayIds = dayEntries.map(d => d.id)
+    const dayIds = dayEntries.map((d: { id: string }) => d.id)
 
     // Load related rows
     const [symptomRows, stoolRows, customDefs, customScores] = await Promise.all([
@@ -150,7 +150,7 @@ export async function GET(req: NextRequest) {
     let yesterdayHabits: string[] = []
     if (yId) {
       const habitTicks = await prisma.habitTick.findMany({ where: { dayEntryId: yId, checked: true }, select: { habitId: true } })
-      yesterdayHabits = habitTicks.map(r => r.habitId)
+      yesterdayHabits = habitTicks.map((r: { habitId: string }) => r.habitId)
     }
     const yesterday = {
       standard: Object.fromEntries(SYMPTOMS.map(t => [t, perTypeByKey.get(t)?.get(yKey) ?? null])) as Record<SymptomKey, number | null>,
