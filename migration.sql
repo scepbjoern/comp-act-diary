@@ -48,7 +48,7 @@ CREATE TABLE "public"."UserSettings" (
     "autosaveEnabled" BOOLEAN NOT NULL DEFAULT true,
     "autosaveIntervalSec" INTEGER NOT NULL DEFAULT 5,
     "transcriptionModel" TEXT NOT NULL DEFAULT 'gpt-4o-transcribe',
-    "summaryModel" TEXT NOT NULL DEFAULT 'gpt-oss-120b',
+    "summaryModel" TEXT NOT NULL DEFAULT 'openai/gpt-oss-120b',
     "summaryPrompt" TEXT NOT NULL DEFAULT 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"',
 
     CONSTRAINT "UserSettings_pkey" PRIMARY KEY ("userId")

@@ -14,6 +14,8 @@ export const dynamic = 'force-dynamic'
  * - sources array - Track source identifiers
  */
 
+const DEFAULT_SUMMARY_MODEL = 'openai/gpt-oss-120b'
+
 interface SummaryContext {
   diaryNotes: Array<{
     id: string
@@ -33,6 +35,11 @@ async function gatherSummaryContext(dayId: string): Promise<SummaryContext> {
   const day = await prisma.dayEntry.findUnique({
     where: { id: dayId },
     include: {
+      user: { 
+        include: { 
+          settings: true 
+        } 
+      },
       notesList: {
         where: { type: 'DIARY' },
         orderBy: { occurredAt: 'asc' }
@@ -143,9 +150,28 @@ export async function POST(
       }, { status: 400 })
     }
     
+    // Get user settings for model and prompt
+    const dayWithSettings = await prisma.dayEntry.findUnique({
+      where: { id: dayId },
+      include: { 
+        user: { 
+          include: { 
+            settings: true 
+          } 
+        }
+      }
+    })
+    
+    if (!dayWithSettings) {
+      return NextResponse.json({ error: 'Day not found' }, { status: 404 })
+    }
+    
     // Build prompt
-    const summaryPrompt = day.user.settings?.summaryPrompt || 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"'
-    const summaryModel = day.user.settings?.summaryModel || 'gpt-oss-120b'
+    console.log('User settings found:', dayWithSettings.user.settings)
+    const summaryPrompt = dayWithSettings.user.settings?.summaryPrompt || 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"'
+    const summaryModel = dayWithSettings.user.settings?.summaryModel || DEFAULT_SUMMARY_MODEL
+    
+    console.log('Summary model being used:', summaryModel)
     const contextText = buildContextText(context)
     
     const messages = [

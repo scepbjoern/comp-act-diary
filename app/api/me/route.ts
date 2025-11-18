@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/prisma'
 
+const DEFAULT_SUMMARY_MODEL = 'openai/gpt-oss-120b'
+const DEFAULT_SUMMARY_PROMPT = 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"'
+
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -25,6 +28,8 @@ export async function GET(req: NextRequest) {
         weekStart: settings.weekStart,
         autosaveEnabled: settings.autosaveEnabled,
         autosaveIntervalSec: settings.autosaveIntervalSec,
+        summaryModel: settings.summaryModel ?? DEFAULT_SUMMARY_MODEL,
+        summaryPrompt: settings.summaryPrompt ?? DEFAULT_SUMMARY_PROMPT,
       } : null,
     },
   })
@@ -52,6 +57,8 @@ export async function PATCH(req: NextRequest) {
       theme?: 'dark' | 'bright'
       autosaveEnabled?: boolean
       autosaveIntervalSec?: number
+      summaryModel?: string
+      summaryPrompt?: string
     } = {}
     if (body.settings && typeof body.settings === 'object') {
       if (body.settings.theme && (body.settings.theme === 'dark' || body.settings.theme === 'bright')) {
@@ -63,6 +70,13 @@ export async function PATCH(req: NextRequest) {
       if (body.settings.autosaveIntervalSec !== undefined) {
         const n = Number(body.settings.autosaveIntervalSec)
         if (Number.isFinite(n) && n >= 1 && n <= 3600) settingsPatch.autosaveIntervalSec = Math.floor(n)
+      }
+      if (typeof body.settings.summaryModel === 'string' && body.settings.summaryModel.trim().length > 0) {
+        settingsPatch.summaryModel = body.settings.summaryModel.trim()
+      }
+      if (typeof body.settings.summaryPrompt === 'string') {
+        const prompt = body.settings.summaryPrompt.trim()
+        settingsPatch.summaryPrompt = prompt.length > 0 ? prompt : DEFAULT_SUMMARY_PROMPT
       }
     }
 
@@ -83,7 +97,16 @@ export async function PATCH(req: NextRequest) {
     if (Object.keys(settingsPatch).length > 0) {
       updatedSettings = await prisma.userSettings.upsert({
         where: { userId: user.id },
-        create: { userId: user.id, theme: settingsPatch.theme || 'dark', autosaveEnabled: settingsPatch.autosaveEnabled ?? true, autosaveIntervalSec: settingsPatch.autosaveIntervalSec ?? 5, weekStart: 'mon', timeFormat24h: true },
+        create: {
+          userId: user.id,
+          theme: settingsPatch.theme || 'dark',
+          autosaveEnabled: settingsPatch.autosaveEnabled ?? true,
+          autosaveIntervalSec: settingsPatch.autosaveIntervalSec ?? 5,
+          weekStart: 'mon',
+          timeFormat24h: true,
+          summaryModel: settingsPatch.summaryModel ?? DEFAULT_SUMMARY_MODEL,
+          summaryPrompt: settingsPatch.summaryPrompt ?? DEFAULT_SUMMARY_PROMPT,
+        },
         update: settingsPatch,
       })
     }
@@ -101,6 +124,8 @@ export async function PATCH(req: NextRequest) {
           weekStart: updatedSettings.weekStart,
           autosaveEnabled: updatedSettings.autosaveEnabled,
           autosaveIntervalSec: updatedSettings.autosaveIntervalSec,
+          summaryModel: updatedSettings.summaryModel ?? DEFAULT_SUMMARY_MODEL,
+          summaryPrompt: updatedSettings.summaryPrompt ?? DEFAULT_SUMMARY_PROMPT,
         } : null,
       },
     })

@@ -10,7 +10,7 @@ const [summaryPrompt, setSummaryPrompt] = useState('Erstelle eine Zusammenfassun
 
 ### 2. Update load() function to include summary settings:
 ```typescript
-setSummaryModel(u.settings?.summaryModel || 'gpt-oss-120b')
+setSummaryModel(u.settings?.summaryModel || 'openai/gpt-oss-120b')
 setSummaryPrompt(u.settings?.summaryPrompt || 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
 ```
 

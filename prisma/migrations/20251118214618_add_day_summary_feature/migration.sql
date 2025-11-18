@@ -2,7 +2,7 @@
 ALTER TABLE "public"."DayNote" ADD COLUMN     "title" TEXT;
 
 -- AlterTable
-ALTER TABLE "public"."UserSettings" ADD COLUMN     "summaryModel" TEXT NOT NULL DEFAULT 'gpt-oss-120b',
+ALTER TABLE "public"."UserSettings" ADD COLUMN     "summaryModel" TEXT NOT NULL DEFAULT 'openai/gpt-oss-120b',
 ADD COLUMN     "summaryPrompt" TEXT NOT NULL DEFAULT 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"',
 ADD COLUMN     "transcriptionModel" TEXT NOT NULL DEFAULT 'gpt-4o-transcribe';
 

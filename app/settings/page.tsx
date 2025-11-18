@@ -69,7 +69,7 @@ export default function SettingsPage() {
   const [userSymptomIconDrafts, setUserSymptomIconDrafts] = useState<Record<string, string>>({})
   const [stdSymptomIcons, setStdSymptomIcons] = useState<Record<string, string | null>>({})
   const [stdSymptomIconDrafts, setStdSymptomIconDrafts] = useState<Record<string, string>>({})
-  const [summaryModel, setSummaryModel] = useState('gpt-oss-120b')
+  const [summaryModel, setSummaryModel] = useState('openai/gpt-oss-120b')
   const [summaryPrompt, setSummaryPrompt] = useState('Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
 
   // Avatar cropper state
@@ -104,7 +104,7 @@ export default function SettingsPage() {
         setTheme(u.settings?.theme === 'bright' ? 'bright' : 'dark')
         setAutosaveEnabled(u.settings?.autosaveEnabled ?? true)
         setAutosaveIntervalSec(u.settings?.autosaveIntervalSec ?? 5)
-        setSummaryModel(u.settings?.summaryModel || 'gpt-oss-120b')
+        setSummaryModel(u.settings?.summaryModel || 'openai/gpt-oss-120b')
         setSummaryPrompt(u.settings?.summaryPrompt || 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
       }
       if (habitsRes.ok) {
@@ -660,7 +660,7 @@ export default function SettingsPage() {
               onChange={(e) => setSummaryModel(e.target.value)}
               className="w-full bg-base-100 border border-base-300 rounded px-3 py-2 text-sm"
             >
-              <option value="gpt-oss-120b">gpt-oss-120b (Standard)</option>
+              <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (Standard)</option>
               <option value="gpt-4o-mini">gpt-4o-mini</option>
               <option value="gpt-4o">gpt-4o</option>
               <option value="openai/gpt-oss-20b">openai/gpt-oss-20b</option>
