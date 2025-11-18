@@ -2,6 +2,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
+import { useUIState } from '@/hooks/useUIState'
+import { useSymptomManagement } from '@/hooks/useSymptomManagement'
+import { useHabitManagement } from '@/hooks/useHabitManagement'
+import { useDiaryManagement } from '@/hooks/useDiaryManagement'
 import { NumberPills } from '@/components/NumberPills'
 import { Sparkline } from '@/components/Sparkline'
 import { HabitChips } from '@/components/HabitChips'
@@ -147,43 +151,87 @@ function Calendar(props: { date: string; daysWithData: Set<string>; reflectionDa
 export default function HeutePage() {
   const [date, setDate] = useState(() => ymd(new Date()))
   const [day, setDay] = useState<Day | null>(null)
-  const [symptomIcons, setSymptomIcons] = useState<Record<string, string | null>>({})
-  const [habits, setHabits] = useState<Habit[]>([])
-  const [notes, setNotes] = useState<DayNote[]>([])
   const [daysWithData, setDaysWithData] = useState<Set<string>>(new Set())
   const [reflectionDays, setReflectionDays] = useState<Set<string>>(new Set())
   const [mealTime, setMealTime] = useState('')
   const [mealText, setMealText] = useState('')
-  const { saving, savedAt, startSaving, doneSaving } = useSaveIndicator()
-  const [forceBarVisible, setForceBarVisible] = useState(false)
-  const [viewer, setViewer] = useState<{ noteId: string; index: number } | null>(null)
-  const [swipeStartX, setSwipeStartX] = useState<number | null>(null)
+  const { saving, savedAt, startSaving, doneSaving} = useSaveIndicator()
   const [reflectionDue, setReflectionDue] = useState<{ due: boolean; daysSince: number } | null>(null)
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
-  const [editingTime, setEditingTime] = useState<string>('')
-  const [editingText, setEditingText] = useState<string>('')
-  const [editingTitle, setEditingTitle] = useState<string>('')
-  const [darmkurCollapsed, setDarmkurCollapsed] = useState(true)
-  // Diary entries state
-  const [newDiaryText, setNewDiaryText] = useState('')
-  const [newDiaryTitle, setNewDiaryTitle] = useState('')
-  const [_newDiaryAudio, setNewDiaryAudio] = useState<string | null>(null)
-  const [newDiaryAudioFileId, setNewDiaryAudioFileId] = useState<string | null>(null)
-  const [newDiaryOriginalTranscript, setNewDiaryOriginalTranscript] = useState<string | null>(null)
-  const [newDiaryTime, setNewDiaryTime] = useState('')
-  const [editorKey, setEditorKey] = useState(0) // Force editor remount
-  const [keepAudio, setKeepAudio] = useState(true)
-  const [showRetranscribeOptions, setShowRetranscribeOptions] = useState(false)
-  const [isRetranscribing, setIsRetranscribing] = useState(false)
   const [_notesLoading, setNotesLoading] = useState(false)
-  const [_pendingDelete, setPendingDelete] = useState<string | null>(null)
-  const [_pendingAudioDelete, setPendingAudioDelete] = useState<string | null>(null)
   const { toasts, push, dismiss } = useToasts()
-  // Draft states for symptoms to enable manual save and clear UX feedback on slow connections
-  const [draftSymptoms, setDraftSymptoms] = useState<Record<string, number | undefined>>({})
-  const [draftUserSymptoms, setDraftUserSymptoms] = useState<Record<string, number | undefined>>({})
-  const [clearedSymptoms, setClearedSymptoms] = useState<Set<string>>(new Set())
-  const [clearedUserSymptoms, setClearedUserSymptoms] = useState<Set<string>>(new Set())
+  
+  // UI State Hook
+  const { darmkurCollapsed, viewer, swipeStartX, forceBarVisible, setDarmkurCollapsed, setViewer, setSwipeStartX, setForceBarVisible } = useUIState()
+  
+  // Symptom Management Hook
+  const { 
+    symptomIcons, 
+    setSymptomIcons, 
+    draftSymptoms, 
+    draftUserSymptoms, 
+    clearedSymptoms, 
+    clearedUserSymptoms, 
+    unsavedSymptomCount, 
+    setDraftSymptom, 
+    setDraftUserSymptom, 
+    clearDraftSymptom, 
+    clearDraftUserSymptom, 
+    saveDraftSymptoms: saveDraftSymptomsHook, 
+    discardDraftSymptoms: discardDraftSymptomsHook 
+  } = useSymptomManagement(day, date, (saving) => {
+    if (saving) startSaving()
+    else doneSaving()
+  })
+  
+  // Habit Management Hook
+  const { habits, setHabits, toggleHabit: toggleHabitHook } = useHabitManagement(day?.id || null, (saving) => {
+    if (saving) startSaving()
+    else doneSaving()
+  })
+  
+  // Diary Management Hook
+  const {
+    notes,
+    setNotes,
+    editingNoteId,
+    editingTime,
+    editingText,
+    editingTitle,
+    setEditingTime,
+    setEditingText,
+    setEditingTitle,
+    newDiaryText,
+    newDiaryTitle,
+    newDiaryAudioFileId,
+    newDiaryOriginalTranscript,
+    newDiaryTime,
+    editorKey,
+    keepAudio,
+    showRetranscribeOptions,
+    isRetranscribing,
+    setNewDiaryText,
+    setNewDiaryTitle,
+    setNewDiaryAudioFileId,
+    setNewDiaryOriginalTranscript,
+    setNewDiaryTime,
+    setEditorKey,
+    setKeepAudio,
+    setShowRetranscribeOptions,
+    startEditNote,
+    cancelEditNote,
+    saveEditNote,
+    deleteNote,
+    deleteAudio,
+    uploadPhotos,
+    deletePhoto,
+    retranscribeAudio,
+    handleRetranscribe,
+    clearDiaryForm,
+    saveDiaryEntry
+  } = useDiaryManagement(day?.id || null, date, (saving) => {
+    if (saving) startSaving()
+    else doneSaving()
+  }, push)
 
   // Inline analytics (7-day series + yesterday values)
   type InlineData = {
@@ -195,174 +243,10 @@ export default function HeutePage() {
   }
   const [inlineData, setInlineData] = useState<InlineData | null>(null)
 
-  function startEditNote(n: DayNote) {
-    setEditingNoteId(n.id)
-    setEditingTime(fmtHMLocal(n.occurredAtIso))
-    setEditingText(n.text || '')
-    setEditingTitle(n.title || '')
-  }
-
-  function cancelEditNote() {
-    setEditingNoteId(null)
-    setEditingTime('')
-    setEditingText('')
-  }
-
-  async function saveEditNote(noteId: string) {
-    try {
-      const res = await fetch(`/api/notes/${noteId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: editingTitle.trim() || null, text: editingText, time: editingTime }),
-        credentials: 'same-origin',
-      })
-      const data = await res.json()
-      if (data?.notes) setNotes(data.notes)
-      cancelEditNote()
-    } catch (e) {
-      console.error('Edit note failed', e)
-    }
-  }
-
-  async function deleteNote(noteId: string) {
-    if (!window.confirm('Tagebucheintrag wirklich löschen? Audio wird ebenfalls gelöscht.')) return
-    setPendingDelete(noteId)
-    try {
-      const res = await fetch(`/api/notes/${noteId}`, { method: 'DELETE', credentials: 'same-origin' })
-      const data = await res.json()
-      if (data?.notes) setNotes(data.notes)
-      if (editingNoteId === noteId) cancelEditNote()
-      push('Eintrag gelöscht', 'success')
-    } catch (e) {
-      console.error('Delete note failed', e)
-      push('Löschen fehlgeschlagen', 'error')
-    } finally {
-      setPendingDelete(null)
-    }
-  }
-
-  async function deleteAudio(noteId: string) {
-    const note = notes.find(n => n.id === noteId)
-    if (!note?.audioFilePath) return
-    if (!window.confirm('Nur die Audioaufnahme löschen?')) return
-    setPendingAudioDelete(noteId)
-    try {
-      const res = await fetch(`/api/notes/${note.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ audioFilePath: null, keepAudio: false }),
-      })
-      const data = await res.json()
-      if (data?.notes) setNotes(data.notes)
-      push('Audio gelöscht', 'info')
-    } catch (e) {
-      console.error('Delete audio failed', e)
-      push('Audio löschen fehlgeschlagen', 'error')
-    } finally {
-      setPendingAudioDelete(null)
-    }
-  }
-
-  async function retranscribeAudio(model: string) {
-    if (!newDiaryAudioFileId) return
-    
-    setIsRetranscribing(true)
-    setShowRetranscribeOptions(false)
-    
-    try {
-      console.log('Starting re-transcription with model:', model)
-      
-      const formData = new FormData()
-      formData.append('audioFileId', newDiaryAudioFileId)
-      formData.append('model', model)
-      
-      const response = await fetch('/api/diary/retranscribe', {
-        method: 'POST',
-        body: formData,
-        credentials: 'same-origin'
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        console.error('Re-transcription failed:', errorData)
-        push(`Re-Transkription fehlgeschlagen: ${errorData.error || 'Unbekannter Fehler'}`, 'error')
-        return
-      }
-      
-      const data = await response.json()
-      console.log('Re-transcription successful:', data)
-      
-      // Update both the text and original transcript
-      setNewDiaryText(data.text)
-      setNewDiaryOriginalTranscript(data.text)
-      
-      push(`Re-Transkription mit ${model} erfolgreich!`, 'success')
-    } catch (error) {
-      console.error('Re-transcription error:', error)
-      push('Re-Transkription fehlgeschlagen: Netzwerkfehler', 'error')
-    } finally {
-      setIsRetranscribing(false)
-    }
-  }
-
-  async function handleRetranscribe(noteId: string, newText: string) {
-    // Update the local state to reflect the new transcription
-    setNotes(prev => prev.map(note => 
-      note.id === noteId 
-        ? { ...note, text: newText, originalTranscript: newText }
-        : note
-    ))
-    push('Transkription aktualisiert', 'success')
-  }
-
-  async function cleanupAudioFile(audioFileId: string) {
-    try {
-      const res = await fetch('/api/diary/cleanup-audio', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audioFileId }),
-        credentials: 'same-origin'
-      })
-      
-      if (!res.ok) {
-        const errorData = await res.json()
-        console.error('Cleanup audio failed:', errorData)
-        // Don't show error to user if it's just that the file is still in use
-        if (errorData.error !== 'Audio file is still in use') {
-          push('Audio-Cleanup fehlgeschlagen', 'error')
-        }
-      } else {
-        console.log('Audio file cleaned up successfully:', audioFileId)
-      }
-    } catch (e) {
-      console.error('Cleanup audio error:', e)
-      // Don't show error to user for cleanup failures
-    }
-  }
-
-  function clearDiaryForm() {
-    // Clean up audio file ONLY if it exists and wasn't saved
-    if (newDiaryAudioFileId) {
-      // Check if this audio file is referenced by any existing notes
-      const isReferenced = notes.some(note => note.audioFileId === newDiaryAudioFileId)
-      if (!isReferenced) {
-        cleanupAudioFile(newDiaryAudioFileId)
-      }
-    }
-    
-    // Reset form state
-    setNewDiaryText('')
-    setNewDiaryAudio(null)
-    setNewDiaryAudioFileId(null)
-    setNewDiaryOriginalTranscript(null)
-    setNewDiaryTime('')
-    setShowRetranscribeOptions(false)
-    setIsRetranscribing(false)
-  }
-
+  // Diary functions are now handled by useDiaryManagement hook
+  
   const goViewer = (delta: number) => {
-    setViewer(v => {
+    setViewer((v: { noteId: string; index: number } | null) => {
       if (!v) return null
       const note = notes.find(nn => nn.id === v.noteId)
       const photos = note?.photos || []
@@ -456,59 +340,7 @@ export default function HeutePage() {
     return () => { aborted = true }
   }, [date])
 
-  // When day changes, discard any symptom drafts to avoid leaking to a different day
-  useEffect(() => {
-    setDraftSymptoms({})
-    setDraftUserSymptoms({})
-    setClearedSymptoms(new Set())
-    setClearedUserSymptoms(new Set())
-  }, [day?.id])
-
-  async function uploadPhotos(noteId: string, files: FileList | File[]) {
-    try {
-      const formData = new FormData()
-      if ((files as FileList).length !== undefined && typeof (files as FileList).item === 'function') {
-        Array.from(files as FileList).forEach(f => formData.append('files', f))
-      } else {
-        (files as File[]).forEach(f => formData.append('files', f))
-      }
-      
-      // Find the note and pass its time for proper file naming
-      const note = notes.find(n => n.id === noteId)
-      if (note?.time) {
-        formData.append('time', note.time)
-      }
-      
-      // Optional image settings from localStorage for server-side processing
-      try {
-        const raw = localStorage.getItem('imageSettings')
-        if (raw) {
-          const s = JSON.parse(raw)
-          if (s?.format) formData.append('imageFormat', String(s.format))
-          if (s?.quality) formData.append('imageQuality', String(s.quality))
-          if (s?.maxWidth) formData.append('imageMaxWidth', String(s.maxWidth))
-          if (s?.maxHeight) formData.append('imageMaxHeight', String(s.maxHeight))
-        }
-      } catch {}
-      const res = await fetch(`/api/notes/${noteId}/photos`, { method: 'POST', body: formData, credentials: 'same-origin' })
-      const data = await res.json()
-      if (data?.notes) setNotes(data.notes)
-    } catch (e) {
-      console.error('Upload failed', e)
-    }
-  }
-
-  async function deletePhoto(photoId: string) {
-    try {
-      const res = await fetch(`/api/photos/${photoId}`, { method: 'DELETE', credentials: 'same-origin' })
-      const data = await res.json()
-      if (data?.ok) {
-        setNotes(prev => prev.map(n => ({ ...n, photos: (n.photos || []).filter(p => p.id !== photoId) })))
-      }
-    } catch (e) {
-      console.error('Delete failed', e)
-    }
-  }
+  // Photo upload/delete functions are now handled by useDiaryManagement hook
 
   async function updateDayMeta(patch: Partial<Pick<Day, 'phase' | 'careCategory'>>) {
     if (!day) return
@@ -547,106 +379,12 @@ export default function HeutePage() {
     doneSaving()
   }
 
-  // Draft helpers for Symptome: set locally first, then allow manual save
-  function setDraftSymptom(type: string, score: number) {
-    if (!day) return
-    // selecting a new value removes any clear-intent
-    setClearedSymptoms(prev => {
-      if (prev.has(type)) {
-        const next = new Set(prev)
-        next.delete(type)
-        return next
-      }
-      return prev
-    })
-    setDraftSymptoms(prev => {
-      const serverVal = day?.symptoms?.[type]
-      if (serverVal === score) {
-        const { [type]: _omit, ...rest } = prev
-        return rest
-      }
-      return { ...prev, [type]: score }
-    })
-  }
-
-  function setDraftUserSymptom(id: string, score: number) {
-    if (!day) return
-    setClearedUserSymptoms(prev => {
-      if (prev.has(id)) {
-        const next = new Set(prev)
-        next.delete(id)
-        return next
-      }
-      return prev
-    })
-    setDraftUserSymptoms(prev => {
-      const serverVal = (day?.userSymptoms || []).find(u => u.id === id)?.score
-      if (serverVal === score) {
-        const { [id]: _omit, ...rest } = prev
-        return rest
-      }
-      return { ...prev, [id]: score }
-    })
-  }
-
-  function clearDraftSymptom(type: string) {
-    if (!day) return
-    // remove any draft value and mark as cleared
-    setDraftSymptoms(prev => {
-      if (prev[type] !== undefined) {
-        const { [type]: _omit, ...rest } = prev
-        return rest
-      }
-      return prev
-    })
-    setClearedSymptoms(prev => new Set(prev).add(type))
-  }
-
-  function clearDraftUserSymptom(id: string) {
-    if (!day) return
-    setDraftUserSymptoms(prev => {
-      if (prev[id] !== undefined) {
-        const { [id]: _omit, ...rest } = prev
-        return rest
-      }
-      return prev
-    })
-    setClearedUserSymptoms(prev => new Set(prev).add(id))
-  }
-
-  const unsavedSymptomCount = useMemo(() => (
-    Object.keys(draftSymptoms).length + Object.keys(draftUserSymptoms).length + clearedSymptoms.size + clearedUserSymptoms.size
-  ), [draftSymptoms, draftUserSymptoms, clearedSymptoms, clearedUserSymptoms])
-
+  // Symptom functions from hook
   const combinedDirtyCount = useMemo(() => unsavedSymptomCount, [unsavedSymptomCount])
 
   async function saveDraftSymptoms() {
-    if (!day) return
-    const entries = Object.entries(draftSymptoms).filter(([, v]) => typeof v === 'number') as [string, number][]
-    const userEntries = Object.entries(draftUserSymptoms).filter(([, v]) => typeof v === 'number') as [string, number][]
-    const cleared = Array.from(clearedSymptoms)
-    const clearedUser = Array.from(clearedUserSymptoms)
-    if (entries.length === 0 && userEntries.length === 0 && cleared.length === 0 && clearedUser.length === 0) return
-    startSaving()
-    try {
-      await Promise.all([
-        ...entries.map(([type, score]) => fetch(`/api/day/${day.id}/symptoms`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type, score }), credentials: 'same-origin',
-        }).then(r => r.json()).catch(() => ({}))),
-        ...userEntries.map(([userSymptomId, score]) => fetch(`/api/day/${day.id}/user-symptoms`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userSymptomId, score }), credentials: 'same-origin',
-        }).then(r => r.json()).catch(() => ({}))),
-        ...cleared.map((type) => fetch(`/api/day/${day.id}/symptoms`, {
-          method: 'DELETE', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type }), credentials: 'same-origin',
-        }).then(r => r.json()).catch(() => ({}))),
-        ...clearedUser.map((userSymptomId) => fetch(`/api/day/${day.id}/user-symptoms`, {
-          method: 'DELETE', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userSymptomId }), credentials: 'same-origin',
-        }).then(r => r.json()).catch(() => ({}))),
-      ])
+    const success = await saveDraftSymptomsHook()
+    if (success) {
       // Refresh authoritative day payload once after all updates
       try {
         const res = await fetch(`/api/day?date=${date}`, { credentials: 'same-origin' })
@@ -656,10 +394,6 @@ export default function HeutePage() {
         if (data?.habits) setHabits(data.habits)
         if (data?.symptomIcons) setSymptomIcons(data.symptomIcons)
       } catch {}
-      setDraftSymptoms({})
-      setDraftUserSymptoms({})
-      setClearedSymptoms(new Set())
-      setClearedUserSymptoms(new Set())
       // Refresh inline analytics so symptom sparklines update immediately
       try {
         const res2 = await fetch(`/api/analytics/inline?to=${date}`, { credentials: 'same-origin' })
@@ -668,17 +402,11 @@ export default function HeutePage() {
           setInlineData(j2)
         }
       } catch {}
-    } finally {
-      doneSaving()
     }
   }
 
   function discardDraftSymptoms() {
-    setDraftSymptoms({})
-    setDraftUserSymptoms({})
-    setClearedSymptoms(new Set())
-    setClearedUserSymptoms(new Set())
-    push('Änderungen verworfen', 'info')
+    discardDraftSymptomsHook()
   }
 
   async function saveAll() {
@@ -697,69 +425,15 @@ export default function HeutePage() {
   function discardAll() {
     if (unsavedSymptomCount > 0) {
       discardDraftSymptoms()
-      push('Änderungen verworfen', 'info')
     }
   }
 
   async function toggleHabit(habitId: string, checked: boolean) {
-    if (!day) return
-    startSaving()
-    const res = await fetch(`/api/day/${day.id}/habit-ticks`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ habitId, checked }),
-      credentials: 'same-origin',
-    })
-    const data = await res.json()
-    setDay(data.day)
-    doneSaving()
+    const updatedDay = await toggleHabitHook(habitId, checked)
+    if (updatedDay) setDay(updatedDay)
   }
 
-  // Diary entry functions
-  async function saveDiaryEntry() {
-    if (!day || !newDiaryText.trim()) return
-    startSaving()
-    try {
-      const res = await fetch(`/api/day/${day.id}/notes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'DIARY',
-          title: newDiaryTitle.trim() || null,
-          text: newDiaryText.trim(),
-          audioFileId: newDiaryAudioFileId,
-          keepAudio,
-          originalTranscript: newDiaryOriginalTranscript,
-          time: newDiaryTime || new Date().toISOString().slice(11, 16),
-          tzOffsetMinutes: new Date().getTimezoneOffset(),
-        }),
-        credentials: 'same-origin',
-      })
-      const data = await res.json()
-      if (data?.notes) setNotes(data.notes)
-      // Reset form WITHOUT cleanup (audio was saved successfully)
-      setNewDiaryText('')
-      setNewDiaryAudio(null)
-      setNewDiaryAudioFileId(null)
-      setNewDiaryOriginalTranscript(null)
-      // Reset time to current time for next entry
-      const now = new Date()
-      const hh = String(now.getHours()).padStart(2, '0')
-      const mm = String(now.getMinutes()).padStart(2, '0')
-      setNewDiaryTime(`${hh}:${mm}`)
-      setNewDiaryTitle(`${date} ${hh}:${mm}`)
-      setShowRetranscribeOptions(false)
-      setIsRetranscribing(false)
-      setEditorKey(prev => prev + 1) // Force editor remount
-      
-      push('Tagebucheintrag gespeichert', 'success')
-    } catch (e) {
-      console.error('Save diary entry failed', e)
-      push('Speichern fehlgeschlagen', 'error')
-    } finally {
-      doneSaving()
-    }
-  }
+  // saveDiaryEntry is now handled by useDiaryManagement hook
 
   function shiftDate(cur: string, delta: number) {
     const [y, m, d] = cur.split('-').map(Number)
@@ -961,11 +635,10 @@ export default function HeutePage() {
                   date={date}
                   time={newDiaryTime}
                   keepAudio={keepAudio}
-                  onAudioData={({ text, audioFileId, audioFilePath }) => {
+                  onAudioData={({ text, audioFileId }) => {
                     setNewDiaryText(prev => prev ? (prev + '\n\n' + text) : text)
                     if (audioFileId) {
                       setNewDiaryAudioFileId(audioFileId)
-                      setNewDiaryAudio(audioFilePath || null)
                     }
                     // Force editor to remount with new text
                     setEditorKey(prev => prev + 1)
@@ -978,11 +651,10 @@ export default function HeutePage() {
                   date={date}
                   time={newDiaryTime}
                   keepAudio={keepAudio}
-                  onAudioUploaded={({ text, audioFileId, audioFilePath }) => {
+                  onAudioUploaded={({ text, audioFileId }) => {
                     setNewDiaryText(prev => prev ? (prev + '\n\n' + text) : text)
                     if (audioFileId) {
                       setNewDiaryAudioFileId(audioFileId)
-                      setNewDiaryAudio(audioFilePath || null)
                     }
                     // Force editor to remount with new text
                     setEditorKey(prev => prev + 1)
@@ -1318,11 +990,7 @@ export default function HeutePage() {
                         setReflectionDays(new Set<string>(cj?.reflectionDays ?? []))
                       }
                     } catch {}
-                    // Clear any drafts
-                    setDraftSymptoms({})
-                    setDraftUserSymptoms({})
-                    setClearedSymptoms(new Set())
-                    setClearedUserSymptoms(new Set())
+                    // Drafts are cleared automatically by useSymptomManagement hook
                   } finally {
                     doneSaving()
                   }
