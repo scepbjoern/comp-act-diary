@@ -99,43 +99,55 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 /* MDX Editor Styling */
 .mdxeditor {
   font-size: 0.875rem !important;
-  line-height: 1.5 !important;
+  line-height: 1.25rem !important;
 }
 
-.mdxeditor-root-contenteditable {
+.mdxeditor .mdxeditor-root-contenteditable {
   font-size: 0.875rem !important;
-  line-height: 1.5 !important;
+  line-height: 1.25rem !important;
 }
 
 .mdxeditor h1 {
   font-size: 1.5rem !important;
-  margin-top: 1rem !important;
-  margin-bottom: 0.5rem !important;
+  line-height: 2rem !important;
 }
 
 .mdxeditor h2 {
   font-size: 1.25rem !important;
-  margin-top: 0.875rem !important;
-  margin-bottom: 0.5rem !important;
+  line-height: 1.75rem !important;
 }
 
 .mdxeditor h3 {
   font-size: 1.125rem !important;
-  margin-top: 0.75rem !important;
-  margin-bottom: 0.5rem !important;
+  line-height: 1.5rem !important;
 }
 
-.mdxeditor p {
-  margin-top: 0.5rem !important;
-  margin-bottom: 0.5rem !important;
+.mdxeditor p,
+.mdxeditor li {
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
 }
 
 .mdxeditor-toolbar {
-  background-color: rgb(71, 85, 105) !important;
-  border-color: rgb(100, 116, 139) !important;
+  background-color: rgb(100, 116, 139) !important;
+  border-color: rgb(148, 163, 184) !important;
 }
 
 .mdxeditor-popup-container {
-  background-color: rgb(71, 85, 105) !important;
-  border-color: rgb(100, 116, 139) !important;
+  background-color: rgb(100, 116, 139) !important;
+  border-color: rgb(148, 163, 184) !important;
+  z-index: 9999 !important;
+  position: absolute !important;
+}
+
+@media (max-width: 768px) {
+  .mdxeditor-toolbar {
+    flex-wrap: wrap !important;
+    gap: 0.25rem !important;
+    padding: 0.5rem !important;
+  }
+  
+  .mdxeditor-toolbar > * {
+    flex-shrink: 0;
+  }
 }

@@ -51,20 +51,19 @@ export default function AudioUploadButton({
     setError(null)
 
     try {
-      // Resolve transcription model (prop -> localStorage -> env -> fallback)
+      // Resolve transcription model (prop -> DB settings -> fallback)
       let selectedModel = model
-      if (!selectedModel && typeof window !== 'undefined') {
+      if (!selectedModel) {
         try {
-          const stored = window.localStorage.getItem('transcribe:model')
-          if (stored) selectedModel = stored
-        } catch {/* ignore localStorage errors */}
+          const settingsRes = await fetch('/api/user/settings', { credentials: 'same-origin' })
+          if (settingsRes.ok) {
+            const settingsData = await settingsRes.json()
+            selectedModel = settingsData.settings?.transcriptionModel
+          }
+        } catch {/* ignore settings fetch errors */}
       }
       if (!selectedModel) {
-        selectedModel = process.env.NEXT_PUBLIC_TOGETHERAI_TRANSCRIBE_MODEL
-          || process.env.NEXT_PUBLIC_OPENAI_TRANSCRIBE_MODEL
-          || process.env.TOGETHERAI_TRANSCRIBE_MODEL
-          || process.env.OPENAI_TRANSCRIBE_MODEL
-          || 'openai/whisper-large-v3'
+        selectedModel = 'gpt-4o-transcribe'
       }
 
       const formData = new FormData()

@@ -43,7 +43,33 @@ const Editor = dynamic(
     // Custom insert directive component
     const InsertDirective = () => {
       const [showMenu, setShowMenu] = React.useState(false)
+      const [popupPos, setPopupPos] = React.useState({ top: 0, left: 0 })
       const insertDirective = usePublisher(insertDirective$)
+      const menuRef = React.useRef<HTMLDivElement>(null)
+      const buttonRef = React.useRef<HTMLButtonElement>(null)
+      
+      const handleToggleMenu = () => {
+        if (!showMenu && buttonRef.current) {
+          const rect = buttonRef.current.getBoundingClientRect()
+          setPopupPos({
+            top: rect.bottom + 4,
+            left: rect.left
+          })
+        }
+        setShowMenu(!showMenu)
+      }
+      
+      React.useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+          if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+            setShowMenu(false)
+          }
+        }
+        if (showMenu) {
+          document.addEventListener('mousedown', handleClickOutside)
+          return () => document.removeEventListener('mousedown', handleClickOutside)
+        }
+      }, [showMenu])
       
       const insertYouTube = () => {
         const id = prompt('YouTube Video ID eingeben:')
@@ -79,10 +105,11 @@ const Editor = dynamic(
       }
 
       return (
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', display: 'inline-block' }} ref={menuRef}>
           <button
+            ref={buttonRef}
             type="button"
-            onClick={() => setShowMenu(!showMenu)}
+            onClick={handleToggleMenu}
             style={{
               padding: '4px 8px',
               background: '#64748b',
@@ -98,16 +125,16 @@ const Editor = dynamic(
           {showMenu && (
             <div
               style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                marginTop: '4px',
-                background: 'rgb(71, 85, 105)',
-                border: '1px solid rgb(100, 116, 139)',
+                position: 'fixed',
+                top: `${popupPos.top}px`,
+                left: `${popupPos.left}px`,
+                background: 'rgb(100, 116, 139)',
+                border: '1px solid rgb(148, 163, 184)',
                 borderRadius: '4px',
-                padding: '4px',
-                zIndex: 1000,
-                minWidth: '150px'
+                padding: '8px',
+                zIndex: 99999,
+                minWidth: '150px',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
               }}
             >
               <button
@@ -232,13 +259,38 @@ const Editor = dynamic(
       }
     }
 
+    const FullscreenButton = ({ onClick }: { onClick: () => void }) => {
+      return (
+        <button
+          type="button"
+          onClick={onClick}
+          title="Vollbild"
+          style={{
+            padding: '4px 8px',
+            background: '#64748b',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '16px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          ⛶
+        </button>
+      )
+    }
+
     const EditorComponent = forwardRef<MDXEditorMethods, {
       markdown: string
       onChange: (markdown: string) => void
       placeholder?: string
       readOnly?: boolean
       time?: string
-    }>(({ markdown, onChange, placeholder, readOnly, time }, ref) => {
+      onFullscreen?: () => void
+    }>(({ markdown, onChange, placeholder, readOnly, time, onFullscreen }, ref) => {
       return (
         <MDXEditor
           ref={ref}
@@ -320,6 +372,12 @@ const Editor = dynamic(
                   <InsertAdmonition />
                   <Separator />
                   <InsertDirective />
+                  {onFullscreen && (
+                    <>
+                      <Separator />
+                      <FullscreenButton onClick={onFullscreen} />
+                    </>
+                  )}
                 </>
               )
             })
@@ -344,9 +402,40 @@ interface RichTextEditorProps {
 
 export const RichTextEditor = forwardRef<MDXEditorMethods, RichTextEditorProps>(
   (props, ref) => {
+    const [isFullscreen, setIsFullscreen] = React.useState(false)
+
+    const toggleFullscreen = () => {
+      setIsFullscreen(prev => !prev)
+    }
+
+    React.useEffect(() => {
+      const handleEsc = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && isFullscreen) {
+          setIsFullscreen(false)
+        }
+      }
+      window.addEventListener('keydown', handleEsc)
+      return () => window.removeEventListener('keydown', handleEsc)
+    }, [isFullscreen])
+
     return (
-      <div className="border border-slate-700 rounded bg-background min-h-[300px] max-h-[70vh] overflow-auto resize-y">
-        <Editor {...props} ref={ref} />
+      <div 
+        className={`border border-slate-700 rounded bg-background overflow-auto resize-y ${
+          isFullscreen 
+            ? 'fixed inset-0 z-[10000] m-0 rounded-none min-h-screen max-h-screen' 
+            : 'min-h-[300px] max-h-[70vh]'
+        }`}
+      >
+        <Editor {...props} ref={ref} onFullscreen={toggleFullscreen} />
+        {isFullscreen && (
+          <button
+            onClick={toggleFullscreen}
+            className="fixed top-4 right-4 z-[10001] bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded shadow-lg"
+            title="Fullscreen beenden (ESC)"
+          >
+            ✕ Schließen
+          </button>
+        )}
       </div>
     )
   }

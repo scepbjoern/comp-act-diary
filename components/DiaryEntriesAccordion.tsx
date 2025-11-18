@@ -260,7 +260,8 @@ export function DiaryEntriesAccordion({
               
               {/* Photos - includes both uploaded photos and images from markdown */}
               {(() => {
-                const markdownImages = extractImageUrls(n.text)
+                const textToScan = editingNoteId === n.id ? editingText : n.text
+                const markdownImages = extractImageUrls(textToScan)
                 const uploadedPhotos = n.photos || []
                 const allImages = [
                   ...uploadedPhotos.map((p, idx) => ({ type: 'uploaded' as const, data: p, index: idx })),

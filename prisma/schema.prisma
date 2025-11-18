@@ -45,6 +45,7 @@ model UserSettings {
   weekStart           String  @default("mon")
   autosaveEnabled     Boolean @default(true)
   autosaveIntervalSec Int     @default(5)
+  transcriptionModel  String  @default("gpt-4o-transcribe")
   user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 

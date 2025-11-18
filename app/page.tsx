@@ -985,7 +985,10 @@ export default function HeutePage() {
                 
                 <ImproveTextButton
                   text={newDiaryText}
-                  onImprovedText={(t) => setNewDiaryText(t)}
+                  onImprovedText={(t) => {
+                    setNewDiaryText(t)
+                    setEditorKey(prev => prev + 1)
+                  }}
                   onOriginalPreserved={(orig) => setNewDiaryOriginalTranscript(orig)}
                   className="text-gray-300 hover:text-gray-100"
                 />

@@ -36,14 +36,10 @@ export function MicrophoneButton(props: {
 
   const defaultModels = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_TRANSCRIBE_MODELS)
     ? String(process.env.NEXT_PUBLIC_TRANSCRIBE_MODELS).split(',').map(s => s.trim()).filter(Boolean)
-    : ['openai/whisper-large-v3', 'gpt-4o-mini-transcribe', 'gpt-4o-transcribe']
+    : ['gpt-4o-transcribe', 'gpt-4o-mini-transcribe', 'openai/whisper-large-v3']
 
   const [selectedModel, setSelectedModel] = useState<string>(
-    initialModel || (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_TOGETHERAI_TRANSCRIBE_MODEL)
-      || (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_OPENAI_TRANSCRIBE_MODEL)
-      || (typeof process !== 'undefined' && process.env?.TOGETHERAI_TRANSCRIBE_MODEL)
-      || (typeof process !== 'undefined' && process.env?.OPENAI_TRANSCRIBE_MODEL)
-      || defaultModels[0]
+    initialModel || 'gpt-4o-transcribe'
   )
   const [models] = useState<string[]>(modelOptions && modelOptions.length ? modelOptions : defaultModels)
 
@@ -56,18 +52,42 @@ export function MicrophoneButton(props: {
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
   const recordingStartTimeRef = useRef<Date | null>(null)
+  const isInitialMountRef = useRef(true)
 
   useEffect(() => {
-    // Restore model from localStorage
-    try {
-      const saved = localStorage.getItem('transcribe:model')
-      if (saved) setSelectedModel(saved)
-    } catch {}
+    // Restore model from DB settings
+    async function loadModel() {
+      try {
+        const res = await fetch('/api/user/settings', { credentials: 'same-origin' })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.settings?.transcriptionModel) {
+            setSelectedModel(data.settings.transcriptionModel)
+          }
+        }
+      } catch {/* ignore */}
+      finally {
+        isInitialMountRef.current = false
+      }
+    }
+    loadModel()
   }, [])
 
   useEffect(() => {
-    // Persist model selection
-    try { localStorage.setItem('transcribe:model', selectedModel) } catch {}
+    // Persist model selection to DB (skip on initial mount)
+    if (isInitialMountRef.current) return
+    
+    async function saveModel() {
+      try {
+        await fetch('/api/user/settings', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcriptionModel: selectedModel }),
+          credentials: 'same-origin',
+        })
+      } catch {/* ignore */}
+    }
+    saveModel()
   }, [selectedModel])
 
   async function startRec() {
