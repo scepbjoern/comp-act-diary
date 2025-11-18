@@ -123,10 +123,11 @@ RUN chmod +x ./entrypoint.sh \
 ARG UID=1000
 ARG GID=1000
 RUN if [ "$UID" != "1000" ] || [ "$GID" != "1000" ]; then \
+    deluser node 2>/dev/null || true && \
     delgroup node 2>/dev/null || true && \
     addgroup -g $GID node && \
-    deluser node 2>/dev/null || true && \
-    adduser -u $UID -G node -s /bin/sh -D node; \
+    adduser -u $UID -G node -s /bin/sh -D node && \
+    chown -R node:node /app; \
   fi
 
 USER node
