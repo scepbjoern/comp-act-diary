@@ -1,6 +1,6 @@
 'use server'
 
-import type { Day } from '@/types/day'
+import type { Day, DayNote, InlineData, Habit } from '@/types/day'
 
 /**
  * Server actions for day-related operations
@@ -33,7 +33,7 @@ export async function addMealNote(
   dayId: string,
   mealTime: string,
   mealText: string
-): Promise<{ notes: any[] }> {
+): Promise<{ notes: DayNote[] }> {
   const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/day/${dayId}/notes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -47,22 +47,30 @@ export async function addMealNote(
   return res.json()
 }
 
-export async function fetchDayData(date: string): Promise<any> {
+export async function fetchDayData(date: string): Promise<{
+  day: Day | null
+  habits: Habit[]
+  notes: DayNote[]
+  symptomIcons: Record<string, string | null>
+}> {
   const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/day?date=${date}`)
   return res.json()
 }
 
-export async function fetchInlineAnalytics(date: string): Promise<any> {
+export async function fetchInlineAnalytics(date: string): Promise<InlineData> {
   const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/analytics/inline?to=${date}`)
   return res.json()
 }
 
-export async function fetchReflectionsDue(): Promise<any> {
+export async function fetchReflectionsDue(): Promise<{ due: boolean; daysSince: number } | null> {
   const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/reflections/due`)
   return res.json()
 }
 
-export async function fetchCalendarData(yearMonth: string): Promise<any> {
+export async function fetchCalendarData(yearMonth: string): Promise<{
+  days: string[]
+  reflectionDays: string[]
+}> {
   const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/calendar?month=${yearMonth}`)
   return res.json()
 }

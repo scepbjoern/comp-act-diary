@@ -114,6 +114,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <header className="sticky top-0 z-10 bg-surface/80 backdrop-blur border-b border-slate-800 dark:border-slate-200">
           <div className="container h-14 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 font-semibold">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/icons/logo_32.png"
                 alt="App Icon"

@@ -14,7 +14,7 @@ import { DiarySection } from '@/components/DiarySection'
 import { DarmkurSection } from '@/components/DarmkurSection'
 import { ResetDaySection } from '@/components/ResetDaySection'
 import { PhotoViewerModal } from '@/components/PhotoViewerModal'
-import { ymd, shiftDate } from '@/lib/date-utils'
+import { ymd } from '@/lib/date-utils'
 import type { Day, InlineData } from '@/types/day'
 
 export default function HeutePage() {
@@ -71,6 +71,7 @@ export default function HeutePage() {
     newDiaryText,
     newDiaryTitle,
     newDiaryAudioFileId,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     newDiaryOriginalTranscript,
     newDiaryTime,
     editorKey,
@@ -80,7 +81,7 @@ export default function HeutePage() {
     setNewDiaryText,
     setNewDiaryTitle,
     setNewDiaryAudioFileId,
-    setNewDiaryOriginalTranscript,
+    setNewDiaryOriginalTranscript: _setNewDiaryOriginalTranscript,
     setNewDiaryTime,
     setEditorKey,
     setKeepAudio,
@@ -447,7 +448,7 @@ export default function HeutePage() {
             onDeleteAudio={deleteAudio}
             onHandleRetranscribe={handleRetranscribe}
             onGenerateTitle={handleGenerateTitle}
-            onOriginalPreserved={(orig) => setNewDiaryOriginalTranscript(orig)}
+            onOriginalPreserved={(orig) => _setNewDiaryOriginalTranscript(orig)}
           />
 
           <DarmkurSection
