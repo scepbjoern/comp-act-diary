@@ -17,6 +17,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   const body = await req.json().catch(() => ({}))
   const type = String(body?.type || '') as NoteType
   const text = String(body?.text || '').trim()
+  const title = body?.title ? String(body.title).trim() : null
   const time = body?.time ? String(body.time) : undefined
   const tzOffsetMinutes = Number.isFinite(Number(body?.tzOffsetMinutes)) ? Number(body.tzOffsetMinutes) : null
   const audioFileId = body?.audioFileId ?? null
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     data: {
       dayEntryId: day.id,
       type,
+      title,
       text,
       occurredAt,
       audioFileId,
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     id: n.id,
     dayId: n.dayEntryId,
     type: (n.type as unknown as NoteType),
+    title: n.title ?? null,
     time: n.occurredAt?.toISOString().slice(11, 16),
     techTime: n.createdAt?.toISOString().slice(11, 16),
     occurredAtIso: n.occurredAt?.toISOString(),

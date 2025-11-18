@@ -110,6 +110,7 @@ model DayNote {
   id                 String                 @id @default(uuid())
   dayEntryId         String
   type               NoteType
+  title              String?
   text               String?
   occurredAt         DateTime
   createdAt          DateTime               @default(now())

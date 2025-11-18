@@ -36,34 +36,44 @@ const Editor = dynamic(
       InsertCodeBlock,
       InsertAdmonition,
       Select,
+      usePublisher,
+      insertDirective$,
     } = await import('@mdxeditor/editor')
 
     // Custom insert directive component
     const InsertDirective = () => {
       const [showMenu, setShowMenu] = React.useState(false)
+      const insertDirective = usePublisher(insertDirective$)
       
       const insertYouTube = () => {
         const id = prompt('YouTube Video ID eingeben:')
         if (id) {
-          const markdown = `:youtube[Video]{id="${id}"}`
-          // Insert into editor - this is a simplified version
-          // In a real implementation, you'd use the editor's API
-          console.log('Insert:', markdown)
+          insertDirective({
+            name: 'youtube',
+            type: 'leafDirective',
+            attributes: { id }
+          })
         }
         setShowMenu(false)
       }
 
       const insertTOC = () => {
-        const markdown = '::toc'
-        console.log('Insert:', markdown)
+        insertDirective({
+          name: 'toc',
+          type: 'leafDirective',
+          attributes: {}
+        })
         setShowMenu(false)
       }
 
       const insertSpoiler = () => {
         const title = prompt('Spoiler-Titel eingeben:', 'Spoiler')
         if (title !== null) {
-          const markdown = `:::spoiler{title="${title}"}\nInhalt hier\n:::`
-          console.log('Insert:', markdown)
+          insertDirective({
+            name: 'spoiler',
+            type: 'containerDirective',
+            attributes: { title }
+          })
         }
         setShowMenu(false)
       }
@@ -92,8 +102,8 @@ const Editor = dynamic(
                 top: '100%',
                 left: 0,
                 marginTop: '4px',
-                background: 'rgb(51, 65, 85)',
-                border: '1px solid rgb(71, 85, 105)',
+                background: 'rgb(71, 85, 105)',
+                border: '1px solid rgb(100, 116, 139)',
                 borderRadius: '4px',
                 padding: '4px',
                 zIndex: 1000,
@@ -113,6 +123,8 @@ const Editor = dynamic(
                   cursor: 'pointer',
                   fontSize: '13px'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 Spoiler
               </button>
@@ -129,6 +141,8 @@ const Editor = dynamic(
                   cursor: 'pointer',
                   fontSize: '13px'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 TOC
               </button>
@@ -145,6 +159,8 @@ const Editor = dynamic(
                   cursor: 'pointer',
                   fontSize: '13px'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 YouTube
               </button>

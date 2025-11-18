@@ -131,11 +131,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .mdxeditor-toolbar {
-  background-color: rgb(51, 65, 85) !important;
-  border-color: rgb(71, 85, 105) !important;
+  background-color: rgb(71, 85, 105) !important;
+  border-color: rgb(100, 116, 139) !important;
 }
 
 .mdxeditor-popup-container {
-  background-color: rgb(51, 65, 85) !important;
-  border-color: rgb(71, 85, 105) !important;
+  background-color: rgb(71, 85, 105) !important;
+  border-color: rgb(100, 116, 139) !important;
 }

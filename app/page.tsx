@@ -192,6 +192,7 @@ export default function HeutePage() {
     setEditingNoteId(n.id)
     setEditingTime(fmtHMLocal(n.occurredAtIso))
     setEditingText(n.text || '')
+    setEditingTitle(n.title || '')
   }
 
   function cancelEditNote() {
@@ -205,7 +206,7 @@ export default function HeutePage() {
       const res = await fetch(`/api/notes/${noteId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: editingText, time: editingTime }),
+        body: JSON.stringify({ title: editingTitle.trim() || null, text: editingText, time: editingTime }),
         credentials: 'same-origin',
       })
       const data = await res.json()
@@ -380,12 +381,21 @@ export default function HeutePage() {
         const mm = String(now.getMinutes()).padStart(2, '0')
         setMealTime(`${hh}:${mm}`)
         setNewDiaryTime(`${hh}:${mm}`)
+        // Set default title based on date and time
+        setNewDiaryTitle(`${date} ${hh}:${mm}`)
       } finally {
         setNotesLoading(false)
       }
     }
     load()
   }, [date])
+
+  // Update diary title when time changes
+  useEffect(() => {
+    if (newDiaryTime && date) {
+      setNewDiaryTitle(`${date} ${newDiaryTime}`)
+    }
+  }, [newDiaryTime, date])
 
   // Load inline analytics with small debounce and abort on date change
   useEffect(() => {
@@ -708,6 +718,7 @@ export default function HeutePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'DIARY',
+          title: newDiaryTitle.trim() || null,
           text: newDiaryText.trim(),
           audioFileId: newDiaryAudioFileId,
           keepAudio,
@@ -729,6 +740,7 @@ export default function HeutePage() {
       const hh = String(now.getHours()).padStart(2, '0')
       const mm = String(now.getMinutes()).padStart(2, '0')
       setNewDiaryTime(`${hh}:${mm}`)
+      setNewDiaryTitle(`${date} ${hh}:${mm}`)
       setShowRetranscribeOptions(false)
       setIsRetranscribing(false)
       setEditorKey(prev => prev + 1) // Force editor remount
@@ -833,6 +845,44 @@ export default function HeutePage() {
             {/* New diary entry form */}
             <div className="space-y-2 p-3 rounded border border-slate-700 bg-slate-800/30">
               <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs text-gray-400">Titel</span>
+                <input 
+                  type="text" 
+                  value={newDiaryTitle}
+                  onChange={e => setNewDiaryTitle(e.target.value)}
+                  placeholder="Optional: Titel für Eintrag"
+                  className="flex-1 bg-background border border-slate-700 rounded px-2 py-1 text-sm"
+                />
+                <button
+                  className="btn btn-ghost btn-xs text-gray-300 hover:text-gray-100"
+                  onClick={async () => {
+                    if (!newDiaryText.trim()) {
+                      push('Bitte erst Text eingeben', 'error')
+                      return
+                    }
+                    try {
+                      const res = await fetch('/api/generate-title', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: newDiaryText, model: 'gpt-4o-mini' })
+                      })
+                      const data = await res.json()
+                      if (data.title) {
+                        setNewDiaryTitle(data.title)
+                        push('Titel generiert', 'success')
+                      }
+                    } catch (e) {
+                      console.error('Title generation failed', e)
+                      push('Titel-Generierung fehlgeschlagen', 'error')
+                    }
+                  }}
+                  title="Titel mit KI generieren"
+                >
+                  ✨ Generieren
+                </button>
+              </div>
+              
+              <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs text-gray-400">Uhrzeit</span>
                 <input 
                   type="time" 
@@ -905,11 +955,13 @@ export default function HeutePage() {
                   time={newDiaryTime}
                   keepAudio={keepAudio}
                   onAudioData={({ text, audioFileId, audioFilePath }) => {
-                    setNewDiaryText(prev => prev ? (prev + ' ' + text) : text)
+                    setNewDiaryText(prev => prev ? (prev + '\n\n' + text) : text)
                     if (audioFileId) {
                       setNewDiaryAudioFileId(audioFileId)
                       setNewDiaryAudio(audioFilePath || null)
                     }
+                    // Force editor to remount with new text
+                    setEditorKey(prev => prev + 1)
                   }}
                   className="text-gray-300 hover:text-gray-100"
                   compact
@@ -920,11 +972,13 @@ export default function HeutePage() {
                   time={newDiaryTime}
                   keepAudio={keepAudio}
                   onAudioUploaded={({ text, audioFileId, audioFilePath }) => {
-                    setNewDiaryText(prev => prev ? (prev + ' ' + text) : text)
+                    setNewDiaryText(prev => prev ? (prev + '\n\n' + text) : text)
                     if (audioFileId) {
                       setNewDiaryAudioFileId(audioFileId)
                       setNewDiaryAudio(audioFilePath || null)
                     }
+                    // Force editor to remount with new text
+                    setEditorKey(prev => prev + 1)
                   }}
                   compact
                 />
@@ -971,12 +1025,14 @@ export default function HeutePage() {
               editingNoteId={editingNoteId}
               editingText={editingText}
               editingTime={editingTime}
+              editingTitle={editingTitle}
               onEdit={startEditNote}
               onSave={saveEditNote}
               onCancel={cancelEditNote}
               onDelete={deleteNote}
               onTextChange={setEditingText}
               onTimeChange={setEditingTime}
+              onTitleChange={setEditingTitle}
               onUploadPhotos={uploadPhotos}
               onDeletePhoto={deletePhoto}
               onViewPhoto={(noteId, index) => setViewer({ noteId, index })}

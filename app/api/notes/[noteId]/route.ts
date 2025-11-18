@@ -46,7 +46,8 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
   if (!note) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (note.day.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const data: { text?: string | null; type?: NoteType; occurredAt?: Date; audioFileId?: string | null; keepAudio?: boolean } = {}
+  const data: { title?: string | null; text?: string | null; type?: NoteType; occurredAt?: Date; audioFileId?: string | null; keepAudio?: boolean } = {}
+  if (typeof body.title === 'string') data.title = String(body.title).trim() || null
   if (typeof body.text === 'string') data.text = String(body.text).trim()
   if (typeof body.type === 'string' && (NoteTypes as readonly string[]).includes(body.type)) {
     data.type = body.type as NoteType
@@ -102,6 +103,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
     id: n.id,
     dayId: n.dayEntryId,
     type: (n.type as unknown as NoteType),
+    title: n.title ?? null,
     time: n.occurredAt?.toISOString().slice(11, 16),
     techTime: n.createdAt?.toISOString().slice(11, 16),
     occurredAtIso: n.occurredAt?.toISOString(),
@@ -166,6 +168,7 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ note
     id: n.id,
     dayId: n.dayEntryId,
     type: (n.type as unknown as NoteType),
+    title: n.title ?? null,
     time: n.occurredAt?.toISOString().slice(11, 16),
     techTime: n.createdAt?.toISOString().slice(11, 16),
     occurredAtIso: n.occurredAt?.toISOString(),

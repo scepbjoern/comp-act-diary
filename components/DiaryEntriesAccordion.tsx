@@ -13,6 +13,7 @@ type DayNote = {
   id: string
   dayId: string
   type: 'MEAL' | 'REFLECTION' | 'DIARY'
+  title?: string | null
   time?: string
   techTime?: string
   text: string
@@ -30,12 +31,14 @@ interface DiaryEntriesAccordionProps {
   editingNoteId: string | null
   editingText: string
   editingTime: string
+  editingTitle: string
   onEdit: (note: DayNote) => void
   onSave: (id: string) => void
   onCancel: () => void
   onDelete: (id: string) => void
   onTextChange: (text: string) => void
   onTimeChange: (time: string) => void
+  onTitleChange: (title: string) => void
   onUploadPhotos: (id: string, files: FileList | File[]) => void
   onDeletePhoto: (id: string) => void
   onViewPhoto: (noteId: string, index: number) => void
@@ -48,12 +51,14 @@ export function DiaryEntriesAccordion({
   editingNoteId,
   editingText,
   editingTime,
+  editingTitle,
   onEdit,
   onSave,
   onCancel,
   onDelete,
   onTextChange,
   onTimeChange,
+  onTitleChange,
   onUploadPhotos,
   onDeletePhoto,
   onViewPhoto,
@@ -64,6 +69,17 @@ export function DiaryEntriesAccordion({
     if (!iso) return ''
     const d = new Date(iso)
     return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  // Extract image URLs from markdown text
+  const extractImageUrls = (text: string): string[] => {
+    const imageRegex = /!\[.*?\]\((.*?)\)/g
+    const urls: string[] = []
+    let match
+    while ((match = imageRegex.exec(text)) !== null) {
+      urls.push(match[1])
+    }
+    return urls
   }
 
   const diaryNotes = notes.filter(n => n.type === 'DIARY').sort((a, b) => 
@@ -83,7 +99,7 @@ export function DiaryEntriesAccordion({
             <div className="flex items-center gap-2">
               <span className="text-gray-400">{fmtHMLocal(n.occurredAtIso)}</span>
               <span className="text-gray-300 truncate">
-                {n.text}
+                {n.title || n.text.substring(0, 100) || 'Tagebucheintrag'}
               </span>
             </div>
           </div>
@@ -143,6 +159,36 @@ export function DiaryEntriesAccordion({
               
               {editingNoteId === n.id ? (
                 <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">Titel</span>
+                    <input 
+                      type="text" 
+                      value={editingTitle} 
+                      onChange={e => onTitleChange(e.target.value)} 
+                      placeholder="Optional: Titel für Eintrag"
+                      className="flex-1 bg-background border border-slate-700 rounded px-2 py-1 text-xs" 
+                    />
+                    <button
+                      className="btn btn-ghost btn-xs text-gray-300 hover:text-gray-100"
+                      onClick={async () => {
+                        if (!editingText.trim()) return
+                        try {
+                          const res = await fetch('/api/generate-title', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text: editingText, model: 'gpt-4o-mini' })
+                          })
+                          const data = await res.json()
+                          if (data.title) onTitleChange(data.title)
+                        } catch (e) {
+                          console.error('Title generation failed', e)
+                        }
+                      }}
+                      title="Titel mit KI generieren"
+                    >
+                      ✨
+                    </button>
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-400">Zeit</span>
                     <input 
@@ -212,28 +258,51 @@ export function DiaryEntriesAccordion({
                 </details>
               )}
               
-              {/* Photos */}
-              {n.photos && n.photos.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {n.photos.map((p, idx) => (
-                    <div key={p.id} className="relative group">
-                      <img 
-                        src={`${p.url}?v=${p.id}`} 
-                        alt="Foto" 
-                        className="w-16 h-16 object-cover rounded border border-slate-700 cursor-zoom-in" 
-                        onClick={() => onViewPhoto(n.id, idx)} 
-                      />
-                      <button 
-                        className="btn btn-circle btn-error btn-xs absolute -top-2 -right-2 opacity-0 group-hover:opacity-100" 
-                        title="Foto löschen" 
-                        onClick={e => { e.stopPropagation(); e.preventDefault(); onDeletePhoto(p.id); }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Photos - includes both uploaded photos and images from markdown */}
+              {(() => {
+                const markdownImages = extractImageUrls(n.text)
+                const uploadedPhotos = n.photos || []
+                const allImages = [
+                  ...uploadedPhotos.map((p, idx) => ({ type: 'uploaded' as const, data: p, index: idx })),
+                  ...markdownImages.map((url, idx) => ({ type: 'markdown' as const, url, index: uploadedPhotos.length + idx }))
+                ]
+                
+                if (allImages.length === 0) return null
+                
+                return (
+                  <div className="flex flex-wrap gap-2">
+                    {allImages.map((img, idx) => (
+                      <div key={idx} className="relative group">
+                        {img.type === 'uploaded' ? (
+                          <>
+                            <img 
+                              src={`${img.data.url}?v=${img.data.id}`} 
+                              alt="Foto" 
+                              className="w-16 h-16 object-cover rounded border border-slate-700 cursor-zoom-in" 
+                              onClick={() => onViewPhoto(n.id, img.index)} 
+                            />
+                            <button 
+                              className="btn btn-circle btn-error btn-xs absolute -top-2 -right-2 opacity-0 group-hover:opacity-100" 
+                              title="Foto löschen" 
+                              onClick={e => { e.stopPropagation(); e.preventDefault(); onDeletePhoto(img.data.id); }}
+                            >
+                              ×
+                            </button>
+                          </>
+                        ) : (
+                          <img 
+                            src={img.url} 
+                            alt="Markdown Bild" 
+                            className="w-16 h-16 object-cover rounded border border-blue-500/50 cursor-zoom-in" 
+                            onClick={() => onViewPhoto(n.id, img.index)}
+                            title="Aus Markdown"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
               
               {/* Photo upload */}
               <div className="flex flex-wrap gap-2">
