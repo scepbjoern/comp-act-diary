@@ -32,6 +32,7 @@ build/
 
 # Env-Dateien (lokale Secrets nicht ins Repo)
 .env
+.env.docker
 .env.local
 .env.development.local
 .env.test.local
