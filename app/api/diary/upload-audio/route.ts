@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile, mkdir, stat, unlink } from 'fs/promises'
+import { writeFile, mkdir, stat, unlink, readFile } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
 import { getPrisma } from '@/lib/prisma'
 import { Together } from 'together-ai'
 import { v4 as uuidv4 } from 'uuid'
+import {
+  getAudioMetadata,
+  needsChunking,
+  splitAudioIntoChunks,
+  cleanupChunks,
+  mergeTranscriptions,
+  formatDuration,
+  AudioChunkInfo,
+} from '@/lib/audio-chunker'
 
 const whisperModels = ['openai/whisper-large-v3'] as const
 type WhisperModel = (typeof whisperModels)[number]
@@ -136,7 +145,6 @@ export async function POST(req: NextRequest) {
     console.log('Saving file to:', fullPath)
     await writeFile(fullPath, buffer)
     tempFilePath = fullPath
-    const finalBuffer = buffer
     
     // Get file stats for metadata
     const fileStats = await stat(fullPath)
@@ -144,11 +152,51 @@ export async function POST(req: NextRequest) {
 
     console.log('File saved successfully, size on disk:', fileSizeBytes, 'bytes')
 
-    // Transcribe audio
+    // Analyze audio duration and determine if chunking is needed
+    console.log('Analyzing audio file for duration...')
+    let audioDuration = 0
+    let chunks: AudioChunkInfo[] = []
+    
+    try {
+      const metadata = await getAudioMetadata(fullPath)
+      audioDuration = metadata.duration
+      console.log(`Audio duration: ${formatDuration(audioDuration)} (${audioDuration}s)`)
+      
+      if (needsChunking(audioDuration)) {
+        console.log('Audio is longer than 20 minutes, splitting into chunks...')
+        const tempChunkDir = path.join(getUploadsDir(), 'temp', uuidv4())
+        chunks = await splitAudioIntoChunks(fullPath, tempChunkDir, (progress) => {
+          console.log(`[Chunking] ${progress.message}`)
+        })
+        console.log(`Audio split into ${chunks.length} chunks`)
+      } else {
+        // Single chunk pointing to original file
+        chunks = [{
+          filePath: fullPath,
+          startTime: 0,
+          duration: audioDuration,
+          index: 0,
+        }]
+        console.log('Audio is short enough, no chunking needed')
+      }
+    } catch (metadataError) {
+      console.warn('Could not analyze audio duration, proceeding without chunking:', metadataError)
+      // Fall back to single chunk
+      chunks = [{
+        filePath: fullPath,
+        startTime: 0,
+        duration: 0,
+        index: 0,
+      }]
+    }
+
+    // Transcribe audio (with chunking support)
     let transcribedText = ''
+    const transcriptions: string[] = []
     
     console.log('Starting transcription with model:', model)
     console.log('Is Whisper model:', isWhisperModel(model))
+    console.log('Number of chunks to transcribe:', chunks.length)
     console.log('Environment variables:', {
       hasTogetherAI: !!process.env.TOGETHERAI_API_KEY,
       hasOpenAI: !!process.env.OPENAI_API_KEY,
@@ -156,74 +204,100 @@ export async function POST(req: NextRequest) {
       openaiPrefix: process.env.OPENAI_API_KEY?.substring(0, 10) + '...'
     })
     
-    if (isWhisperModel(model)) {
-      const apiKey = process.env.TOGETHERAI_API_KEY
-      if (!apiKey) {
-        console.error('ERROR: Missing TOGETHERAI_API_KEY for Whisper model')
-        return NextResponse.json({ error: 'Missing TOGETHERAI_API_KEY' }, { status: 500 })
-      }
-
-      console.log('Using TogetherAI for transcription...')
-      const together = new Together({ apiKey })
+    // Transcribe each chunk
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i]
+      console.log(`Transcribing chunk ${i + 1}/${chunks.length} (start: ${formatDuration(chunk.startTime)}, duration: ${formatDuration(chunk.duration)})`)
       
-      try {
-        const response = await together.audio.transcriptions.create({
-          model,
-          language: 'de',
-          file: new File([new Uint8Array(finalBuffer)], filename, { type: file.type || 'audio/webm' }),
-        })
-
-        transcribedText = response?.text || ''
-        console.log('TogetherAI transcription successful, text length:', transcribedText.length)
-      } catch (togetherError) {
-        console.error('TogetherAI transcription failed:', togetherError)
-        return NextResponse.json({ 
-          error: 'TogetherAI transcription failed', 
-          details: togetherError instanceof Error ? togetherError.message : String(togetherError) 
-        }, { status: 500 })
-      }
-    } else {
-      // Use OpenAI for GPT transcription models
-      const apiKey = process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_TRANSCRIBE
-      if (!apiKey) {
-        console.error('ERROR: Missing OPENAI_API_KEY for GPT model')
-        return NextResponse.json({ error: 'Missing OPENAI_API_KEY' }, { status: 500 })
-      }
-
-      console.log('Using OpenAI for transcription...')
-      const ofd = new FormData()
-      const blob = new Blob([new Uint8Array(finalBuffer)], { type: file.type || 'audio/webm' })
-      ofd.append('file', blob, filename)
-      ofd.append('model', model)
-
-      try {
-        const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: ofd,
-        })
-
-        console.log('OpenAI response status:', res.status)
-
-        if (!res.ok) {
-          const text = await res.text()
-          console.error('OpenAI API error:', text)
-          return NextResponse.json({ error: 'OpenAI error', details: text }, { status: 500 })
+      // Read chunk file
+      const chunkBuffer = await readFile(chunk.filePath)
+      const chunkFilename = path.basename(chunk.filePath)
+      
+      let chunkText = ''
+      
+      if (isWhisperModel(model)) {
+        const apiKey = process.env.TOGETHERAI_API_KEY
+        if (!apiKey) {
+          console.error('ERROR: Missing TOGETHERAI_API_KEY for Whisper model')
+          await cleanupChunks(chunks, fullPath)
+          return NextResponse.json({ error: 'Missing TOGETHERAI_API_KEY' }, { status: 500 })
         }
 
-        const data = await res.json()
-        transcribedText = data?.text || ''
-        console.log('OpenAI transcription successful, text length:', transcribedText.length)
-      } catch (openaiError) {
-        console.error('OpenAI request failed:', openaiError)
-        return NextResponse.json({ 
-          error: 'OpenAI request failed', 
-          details: openaiError instanceof Error ? openaiError.message : String(openaiError) 
-        }, { status: 500 })
+        console.log(`Using TogetherAI for chunk ${i + 1}...`)
+        const together = new Together({ apiKey })
+        
+        try {
+          const response = await together.audio.transcriptions.create({
+            model,
+            language: 'de',
+            file: new File([new Uint8Array(chunkBuffer)], chunkFilename, { type: file.type || 'audio/webm' }),
+          })
+
+          chunkText = response?.text || ''
+          console.log(`TogetherAI transcription chunk ${i + 1} successful, text length: ${chunkText.length}`)
+        } catch (togetherError) {
+          console.error(`TogetherAI transcription chunk ${i + 1} failed:`, togetherError)
+          await cleanupChunks(chunks, fullPath)
+          return NextResponse.json({ 
+            error: 'TogetherAI transcription failed', 
+            details: togetherError instanceof Error ? togetherError.message : String(togetherError) 
+          }, { status: 500 })
+        }
+      } else {
+        // Use OpenAI for GPT transcription models
+        const apiKey = process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_TRANSCRIBE
+        if (!apiKey) {
+          console.error('ERROR: Missing OPENAI_API_KEY for GPT model')
+          await cleanupChunks(chunks, fullPath)
+          return NextResponse.json({ error: 'Missing OPENAI_API_KEY' }, { status: 500 })
+        }
+
+        console.log(`Using OpenAI for chunk ${i + 1}...`)
+        const ofd = new FormData()
+        const blob = new Blob([new Uint8Array(chunkBuffer)], { type: file.type || 'audio/webm' })
+        ofd.append('file', blob, chunkFilename)
+        ofd.append('model', model)
+
+        try {
+          const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: ofd,
+          })
+
+          console.log(`OpenAI response status for chunk ${i + 1}:`, res.status)
+
+          if (!res.ok) {
+            const text = await res.text()
+            console.error(`OpenAI API error for chunk ${i + 1}:`, text)
+            await cleanupChunks(chunks, fullPath)
+            return NextResponse.json({ error: 'OpenAI error', details: text }, { status: 500 })
+          }
+
+          const data = await res.json()
+          chunkText = data?.text || ''
+          console.log(`OpenAI transcription chunk ${i + 1} successful, text length: ${chunkText.length}`)
+        } catch (openaiError) {
+          console.error(`OpenAI request chunk ${i + 1} failed:`, openaiError)
+          await cleanupChunks(chunks, fullPath)
+          return NextResponse.json({ 
+            error: 'OpenAI request failed', 
+            details: openaiError instanceof Error ? openaiError.message : String(openaiError) 
+          }, { status: 500 })
+        }
       }
+      
+      transcriptions.push(chunkText)
     }
+    
+    // Merge all transcriptions
+    transcribedText = mergeTranscriptions(transcriptions)
+    console.log(`Merged ${transcriptions.length} transcriptions, total length: ${transcribedText.length}`)
+    
+    // Clean up temporary chunk files
+    await cleanupChunks(chunks, fullPath)
 
     console.log('Creating database record...')
     

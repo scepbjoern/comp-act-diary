@@ -15,6 +15,13 @@ Die App unterstützt:
 - Prisma + PostgreSQL
 - PWA (manifest + service worker)
 
+## Voraussetzungen
+- **Node.js** (v18+)
+- **FFmpeg** muss installiert und im PATH verfügbar sein (für Audio-Chunking bei langen Aufnahmen)
+  - Windows: `winget install ffmpeg` oder [Download](https://ffmpeg.org/download.html)
+  - macOS: `brew install ffmpeg`
+  - Linux: `sudo apt install ffmpeg`
+
 ## Setup
 1. Copy `.env.example` to `.env` and adjust `DATABASE_URL`.
 2. Install deps:

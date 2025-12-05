@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { TablerIcon } from './TablerIcon'
 
 interface AudioUploadButtonProps {
@@ -12,6 +12,16 @@ interface AudioUploadButtonProps {
   compact?: boolean
   disabled?: boolean
   model?: string
+}
+
+type UploadStage = 'idle' | 'uploading' | 'analyzing' | 'transcribing' | 'complete'
+
+const stageMessages: Record<UploadStage, string> = {
+  idle: '',
+  uploading: 'Datei wird hochgeladen...',
+  analyzing: 'Audio wird analysiert...',
+  transcribing: 'Wird transkribiert...',
+  complete: 'Fertig!',
 }
 
 export default function AudioUploadButton({
@@ -27,6 +37,60 @@ export default function AudioUploadButton({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [stage, setStage] = useState<UploadStage>('idle')
+  const [elapsedTime, setElapsedTime] = useState(0)
+  const elapsedTimeRef = useRef(0)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Timer for elapsed time display
+  useEffect(() => {
+    if (uploading) {
+      setElapsedTime(0)
+      elapsedTimeRef.current = 0
+      timerRef.current = setInterval(() => {
+        elapsedTimeRef.current += 1
+        setElapsedTime(elapsedTimeRef.current)
+      }, 1000)
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+    }
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+      }
+    }
+  }, [uploading])
+
+  const formatElapsedTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    if (mins === 0) return `${secs}s`
+    return `${mins}m ${secs}s`
+  }
+
+  // Estimate progress stage based on elapsed time and file size
+  const updateStageByTime = (fileSizeMB: number) => {
+    // Rough estimates: 
+    // - Upload: ~2 seconds per MB (min 3s)
+    // - Analysis: ~5 seconds
+    // - Transcription: rest of the time
+    const uploadTime = Math.max(3, fileSizeMB * 2)
+    const analysisTime = 5
+    
+    return () => {
+      const elapsed = elapsedTimeRef.current
+      if (elapsed < uploadTime) {
+        setStage('uploading')
+      } else if (elapsed < uploadTime + analysisTime) {
+        setStage('analyzing')
+      } else {
+        setStage('transcribing')
+      }
+    }
+  }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -49,6 +113,16 @@ export default function AudioUploadButton({
 
     setUploading(true)
     setError(null)
+    setStage('uploading')
+    
+    // Calculate file size in MB for stage estimation
+    const fileSizeMB = file.size / (1024 * 1024)
+    const stageUpdater = updateStageByTime(fileSizeMB)
+    
+    // Start stage estimation interval
+    const stageInterval = setInterval(() => {
+      stageUpdater()
+    }, 1000)
 
     try {
       // Resolve transcription model (prop -> DB settings -> fallback)
@@ -73,6 +147,7 @@ export default function AudioUploadButton({
       formData.append('model', selectedModel)
       formData.append('keepAudio', String(keepAudio))
 
+      setStage('uploading')
       const response = await fetch('/api/diary/upload-audio', {
         method: 'POST',
         body: formData,
@@ -86,6 +161,7 @@ export default function AudioUploadButton({
         throw new Error(errorMessage + details)
       }
 
+      setStage('complete')
       const result = await response.json()
       onAudioUploaded({
         text: result.text,
@@ -102,8 +178,18 @@ export default function AudioUploadButton({
       console.error('Audio upload error:', err)
       setError(err instanceof Error ? err.message : 'Upload fehlgeschlagen')
     } finally {
+      clearInterval(stageInterval)
       setUploading(false)
+      setStage('idle')
     }
+  }
+
+  // Get current status message
+  const getStatusMessage = () => {
+    if (!uploading) return ''
+    const baseMessage = stageMessages[stage]
+    const timeInfo = elapsedTime > 0 ? ` (${formatElapsedTime(elapsedTime)})` : ''
+    return baseMessage + timeInfo
   }
 
   if (compact) {
@@ -121,7 +207,7 @@ export default function AudioUploadButton({
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || uploading}
           className="text-gray-300 hover:text-gray-100 disabled:opacity-50"
-          title="Audio-Datei hochladen"
+          title={uploading ? getStatusMessage() : 'Audio-Datei hochladen'}
         >
           {uploading ? (
             <TablerIcon name="hourglass_empty" className="animate-spin" />
@@ -129,6 +215,11 @@ export default function AudioUploadButton({
             <TablerIcon name="upload_file" />
           )}
         </button>
+        {uploading && (
+          <span className="text-xs text-blue-400 ml-2 animate-pulse">
+            {getStatusMessage()}
+          </span>
+        )}
         {error && <span className="text-xs text-red-400 ml-2">{error}</span>}
       </div>
     )
@@ -152,7 +243,7 @@ export default function AudioUploadButton({
         {uploading ? (
           <>
             <TablerIcon name="hourglass_empty" className="animate-spin" />
-            <span>Wird hochgeladen...</span>
+            <span>{getStatusMessage()}</span>
           </>
         ) : (
           <>
@@ -161,6 +252,11 @@ export default function AudioUploadButton({
           </>
         )}
       </button>
+      {uploading && (
+        <div className="text-sm text-blue-400 mt-1 animate-pulse">
+          Lange Audios werden automatisch in Teile aufgeteilt.
+        </div>
+      )}
       {error && <div className="text-sm text-red-400 mt-1">{error}</div>}
     </div>
   )
