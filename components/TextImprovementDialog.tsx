@@ -54,8 +54,8 @@ export function TextImprovementDialog(props: {
   }, [improveText])
 
   const modalContent = (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50" onClick={onCancel}>
-      <div className="modal-box max-w-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 p-4" onClick={onCancel}>
+      <div className="bg-base-100 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-bold mb-4">Text verbessern</h2>
 
         <div className="space-y-4">

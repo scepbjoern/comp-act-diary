@@ -2,7 +2,7 @@ import { Icon } from '@/components/Icon'
 import { MicrophoneButton } from '@/components/MicrophoneButton'
 import AudioUploadButton from '@/components/AudioUploadButton'
 import { ImproveTextButton } from '@/components/ImproveTextButton'
-import { OriginalTextButton } from '@/components/OriginalTextButton'
+import { OriginalTranscriptSection } from '@/components/OriginalTextButton'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { SaveIndicator } from '@/components/SaveIndicator'
 import dynamic from 'next/dynamic'
@@ -146,6 +146,17 @@ export function DiarySection({
           placeholder="Neuer Tagebucheintrag..."
           time={newDiaryTime}
         />
+
+        {/* Original transcript section - shown when text was improved */}
+        {originalDiaryText && (
+          <OriginalTranscriptSection
+            originalText={originalDiaryText}
+            onRestore={(t: string) => {
+              onNewDiaryTextChange(t)
+              setTimeout(() => onEditorKeyIncrement(), 0)
+            }}
+          />
+        )}
         
         {/* Direct re-transcribe button for newly uploaded audio */}
         {newDiaryAudioFileId && (
@@ -231,17 +242,6 @@ export function DiarySection({
             className="text-gray-300 hover:text-gray-100"
           />
 
-          {originalDiaryText && (
-            <OriginalTextButton
-              originalText={originalDiaryText}
-              onRestore={(t) => {
-                onNewDiaryTextChange(t)
-                setTimeout(() => onEditorKeyIncrement(), 0)
-              }}
-              className="text-gray-300 hover:text-gray-100"
-            />
-          )}
-          
           {/* Mobile-friendly toggle for audio */}
           <label className="flex items-center gap-1 text-xs text-gray-400 cursor-pointer" title="Audio behalten">
             <input
