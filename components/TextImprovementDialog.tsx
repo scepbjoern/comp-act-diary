@@ -53,7 +53,7 @@ export function TextImprovementDialog(props: {
   }, [improveText])
 
   return (
-    <div className="modal modal-open z-[9999]" onClick={onCancel}>
+    <div className="modal modal-open !z-[99999]" onClick={onCancel}>
       <div className="modal-box max-w-2xl" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-bold mb-4">Text verbessern</h2>
 

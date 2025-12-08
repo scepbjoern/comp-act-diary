@@ -221,7 +221,8 @@ export function DiarySection({
             text={newDiaryText}
             onImprovedText={(t) => {
               onNewDiaryTextChange(t)
-              onEditorKeyIncrement()
+              // Defer key increment to ensure state is updated first
+              setTimeout(() => onEditorKeyIncrement(), 0)
             }}
             onOriginalPreserved={onOriginalPreserved}
             className="text-gray-300 hover:text-gray-100"
