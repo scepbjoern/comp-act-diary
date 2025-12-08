@@ -126,11 +126,13 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/deploy/entrypoint.sh ./entrypoint.sh
 
-# Copy Prisma CLI and all dependencies for migrations (not included in standalone)
+# Copy Prisma CLI and dependencies for migrations (not included in standalone)
 COPY --from=build /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build /app/node_modules/prisma ./node_modules/prisma
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+
+# Install Prisma directly in Alpine to ensure all runtime files (WASM, engines) are available
+RUN npm install prisma@6.19.0 --no-save
 
 # Ensure entrypoint is executable and create writable uploads directory
 RUN chmod +x ./entrypoint.sh \
