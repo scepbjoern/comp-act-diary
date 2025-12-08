@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
     const improvedText = response.choices?.[0]?.message?.content || text
 
-    return NextResponse.json({ improvedText })
+    return NextResponse.json({ improved: improvedText })
   } catch (err) {
     console.error('POST /api/improve-text failed', err)
     return NextResponse.json(
