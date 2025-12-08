@@ -455,7 +455,7 @@ export default function HeutePage() {
             onShowRetranscribeOptionsToggle={() => setShowRetranscribeOptions(!showRetranscribeOptions)}
             onSaveDiaryEntry={saveDiaryEntry}
             onClearDiaryForm={clearDiaryForm}
-            onRetranscribeAudio={(model: string) => retranscribeAudio(model)}
+            onRetranscribeAudio={async (model: string) => { await retranscribeAudio(model) }}
             onStartEditNote={startEditNote}
             onSaveEditNote={saveEditNote}
             onCancelEditNote={cancelEditNote}
