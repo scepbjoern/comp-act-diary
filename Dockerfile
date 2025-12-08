@@ -38,12 +38,12 @@ ENV OPENAI_API_KEY=${OPENAI_API_KEY} \
 COPY package*.json ./
 
 # DEBUG: Show what we're actually building
-RUN echo "=== DEBUG: Git commit ===" \
- && git log --oneline -1 \
- && echo "=== DEBUG: Prisma version in package-lock.json ===" \
+RUN echo "=== DEBUG: Prisma version in package-lock.json ===" \
  && cat package-lock.json | grep -A3 '"prisma"' \
  && echo "=== DEBUG: Prisma version in package.json ===" \
- && cat package.json | grep -A2 '"prisma"'
+ && cat package.json | grep -A2 '"prisma"' \
+ && echo "=== DEBUG: Full package.json content ===" \
+ && cat package.json
 
 # Show versions
 RUN node -v && npm -v
