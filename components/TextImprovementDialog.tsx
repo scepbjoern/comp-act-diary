@@ -1,5 +1,6 @@
 "use client"
 import React, { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { MicrophoneButton } from './MicrophoneButton'
 
 export function TextImprovementDialog(props: {
@@ -52,8 +53,8 @@ export function TextImprovementDialog(props: {
     improveText()
   }, [improveText])
 
-  return (
-    <div className="modal modal-open !z-[99999]" onClick={onCancel}>
+  const modalContent = (
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50" onClick={onCancel}>
       <div className="modal-box max-w-2xl" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-bold mb-4">Text verbessern</h2>
 
@@ -148,4 +149,9 @@ export function TextImprovementDialog(props: {
       </div>
     </div>
   )
+
+  // Render in portal to ensure proper z-index layering
+  return typeof document !== 'undefined'
+    ? createPortal(modalContent, document.body)
+    : null
 }

@@ -2,6 +2,7 @@ import { Icon } from '@/components/Icon'
 import { MicrophoneButton } from '@/components/MicrophoneButton'
 import AudioUploadButton from '@/components/AudioUploadButton'
 import { ImproveTextButton } from '@/components/ImproveTextButton'
+import { OriginalTextButton } from '@/components/OriginalTextButton'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { SaveIndicator } from '@/components/SaveIndicator'
 import dynamic from 'next/dynamic'
@@ -28,6 +29,7 @@ interface DiarySectionProps {
   editingTitle: string
   saving: boolean
   savedAt: number | null
+  originalDiaryText?: string
   onNewDiaryTitleChange: (title: string) => void
   onNewDiaryTextChange: (text: string) => void
   onNewDiaryTimeChange: (time: string) => void
@@ -71,6 +73,7 @@ export function DiarySection({
   editingTitle,
   saving,
   savedAt,
+  originalDiaryText,
   onNewDiaryTitleChange,
   onNewDiaryTextChange,
   onNewDiaryTimeChange,
@@ -227,6 +230,17 @@ export function DiarySection({
             onOriginalPreserved={onOriginalPreserved}
             className="text-gray-300 hover:text-gray-100"
           />
+
+          {originalDiaryText && (
+            <OriginalTextButton
+              originalText={originalDiaryText}
+              onRestore={(t) => {
+                onNewDiaryTextChange(t)
+                setTimeout(() => onEditorKeyIncrement(), 0)
+              }}
+              className="text-gray-300 hover:text-gray-100"
+            />
+          )}
           
           {/* Mobile-friendly toggle for audio */}
           <label className="flex items-center gap-1 text-xs text-gray-400 cursor-pointer" title="Audio behalten">
