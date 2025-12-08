@@ -63,7 +63,7 @@ RUN npm config set fetch-retries 5 \
 RUN npm ping --registry=https://registry.npmjs.org || true
 
 # Install ALL dependencies (including dev) for build
-RUN npm ci --no-audit --no-fund --ignore-scripts --verbose --legacy-peer-deps \
+RUN npm ci --no-audit --no-fund --ignore-scripts --verbose \
  || (echo 'Dumping npm logs...' \
      && (test -d /root/.npm/_logs && find /root/.npm/_logs -type f -name '*.log' -print -exec cat {} \; || true) \
      && exit 1)
