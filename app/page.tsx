@@ -445,7 +445,7 @@ export default function HeutePage() {
             editingTitle={editingTitle}
             saving={saving}
             savedAt={savedAt}
-            originalDiaryText={newDiaryOriginalTranscript}
+            originalDiaryText={newDiaryOriginalTranscript || undefined}
             onNewDiaryTitleChange={setNewDiaryTitle}
             onNewDiaryTextChange={setNewDiaryText}
             onNewDiaryTimeChange={setNewDiaryTime}
@@ -455,7 +455,7 @@ export default function HeutePage() {
             onShowRetranscribeOptionsToggle={() => setShowRetranscribeOptions(!showRetranscribeOptions)}
             onSaveDiaryEntry={saveDiaryEntry}
             onClearDiaryForm={clearDiaryForm}
-            onRetranscribeAudio={handleRetranscribe}
+            onRetranscribeAudio={(model: string) => retranscribeAudio(model)}
             onStartEditNote={startEditNote}
             onSaveEditNote={saveEditNote}
             onCancelEditNote={cancelEditNote}
