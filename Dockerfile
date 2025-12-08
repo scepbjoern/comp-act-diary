@@ -106,7 +106,7 @@ COPY . .
 RUN npm run build
 
 # Phase 9: Install only production dependencies
-RUN npm ci --omit=dev --ignore-scripts --legacy-peer-deps
+RUN npm ci --omit=dev --ignore-scripts
 
 # ---- Runtime stage ----
 # Phase 9: Use Alpine for smaller image size
