@@ -27,15 +27,15 @@ run_with_retry() {
 log "Starting with DATABASE_URL=${DATABASE_URL:-<unset>}"
 log "Running as: $(whoami) (uid=$(id -u) gid=$(id -g))"
 # Prisma-Version (nicht kritisch, aber hilfreich beim Debuggen)
-if npx prisma --version >/dev/null 2>&1; then
+if ./node_modules/.bin/prisma --version >/dev/null 2>&1; then
   # Zeile ohne Zeilenumbrueche loggen
-  VERSION="$(npx prisma --version 2>/dev/null | tr '\n' ' ')"
+  VERSION="$(./node_modules/.bin/prisma --version 2>/dev/null | tr '\n' ' ')"
   log "Prisma: $VERSION"
 fi
 
 # 1) Ausstehende Migrationen deployen (OHNE --skip-generate)
 run_with_retry \
-  "npx prisma migrate deploy --schema=\"$SCHEMA_PATH\"" \
+  "./node_modules/.bin/prisma migrate deploy --schema=\"$SCHEMA_PATH\"" \
   "migrate deploy fehlgeschlagen oder DB nicht bereit."
 
 # 2) Schema-Sync mit db push (nur für Development, nie in Production!)
@@ -43,7 +43,7 @@ run_with_retry \
 if [ "${ENABLE_DB_PUSH:-false}" = "true" ]; then
   log "WARNUNG: db push aktiviert (Development-Modus) – kann Daten löschen!"
   run_with_retry \
-    "npx prisma db push --skip-generate --accept-data-loss --schema=\"$SCHEMA_PATH\"" \
+    "./node_modules/.bin/prisma db push --skip-generate --accept-data-loss --schema=\"$SCHEMA_PATH\"" \
     "db push fehlgeschlagen oder DB nicht bereit."
 else
   log "db push übersprungen (Production-Modus) – nur Migrationen werden angewendet."
