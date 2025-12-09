@@ -86,7 +86,13 @@ export function SiteNav({ user }: { user: UserLite }) {
     ;(async () => {
       try {
         const res = await fetch('/api/links', { credentials: 'same-origin' })
-        if (!res.ok) return
+        if (!res.ok) {
+          // Silently ignore 401 on initial load - user may not be authenticated yet
+          if (res.status !== 401) {
+            console.warn('Failed to load links:', res.status)
+          }
+          return
+        }
         const data = await res.json()
         if (!aborted) setCustomLinks(Array.isArray(data.links) ? data.links : [])
       } catch { /* ignore */ }

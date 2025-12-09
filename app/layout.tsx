@@ -91,9 +91,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <meta name="color-scheme" content={theme === 'dark' ? 'dark' : 'light'} />
         <link rel="manifest" href="/manifest.webmanifest" crossOrigin="use-credentials" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0..200&display=optional"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0..200&display=block"
           rel="stylesheet"
         />
+        <link rel="preload" href="/icons/logo_32.png" as="image" />
         <meta name="theme-color" content={currentThemeColor} />
         <script
           dangerouslySetInnerHTML={{
@@ -130,6 +131,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               <img
                 src="/icons/logo_32.png"
                 alt="App Icon"
+                width={28}
+                height={28}
+                fetchPriority="high"
+                decoding="sync"
                 className="h-7 w-7 rounded-full border border-slate-700 bg-surface object-cover"
               />
               <span>CompACT Diary</span>

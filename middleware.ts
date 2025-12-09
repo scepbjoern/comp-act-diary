@@ -14,7 +14,9 @@ export function middleware(req: NextRequest) {
     publicPaths.includes(pathname) ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
-    pathname.startsWith('/uploads')
+    pathname.startsWith('/uploads') ||
+    pathname.startsWith('/icons') ||
+    pathname.startsWith('/docs')
   ) {
     return NextResponse.next()
   }
