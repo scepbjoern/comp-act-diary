@@ -115,7 +115,7 @@ export function DiaryEntriesAccordion({
                       onClick={() => onSave(n.id)}
                       title="Speichern"
                     >
-                      <TablerIcon name="save" size={14} />
+                      <TablerIcon name="device-floppy" size={16} />
                       <span className="md:inline hidden ml-1">Speichern</span>
                     </button>
                     <button 
@@ -123,7 +123,7 @@ export function DiaryEntriesAccordion({
                       onClick={onCancel}
                       title="Abbrechen"
                     >
-                      <TablerIcon name="close" size={14} />
+                      <TablerIcon name="cancel" size={16} />
                       <span className="md:inline hidden ml-1">Abbrechen</span>
                     </button>
                   </>
@@ -134,7 +134,7 @@ export function DiaryEntriesAccordion({
                       title="Bearbeiten" 
                       onClick={() => onEdit(n)}
                     >
-                      <TablerIcon name="edit_note" size={14} />
+                      <TablerIcon name="edit" size={16} />
                       <span className="md:inline hidden ml-1">Bearbeiten</span>
                     </button>
                     <button 
@@ -142,7 +142,7 @@ export function DiaryEntriesAccordion({
                       title="Löschen" 
                       onClick={() => onDelete(n.id)}
                     >
-                      <TablerIcon name="delete" size={14} />
+                      <TablerIcon name="trash" size={16} />
                       <span className="md:inline hidden ml-1">Löschen</span>
                     </button>
                   </>
@@ -233,7 +233,7 @@ export function DiaryEntriesAccordion({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <TablerIcon name="microphone" size={12} />
+                      <TablerIcon name="microphone-filled" size={16} className="text-green-500" />
                       Audio-Aufnahme
                     </span>
                     <button 
@@ -241,7 +241,7 @@ export function DiaryEntriesAccordion({
                       onClick={(e) => { e.stopPropagation(); e.preventDefault(); onDeleteAudio?.(n.id); }}
                       title="Audio löschen"
                     >
-                      <TablerIcon name="delete" size={12} />
+                      <TablerIcon name="trash" size={16} />
                       <span className="md:inline hidden ml-1">Audio löschen</span>
                     </button>
                   </div>

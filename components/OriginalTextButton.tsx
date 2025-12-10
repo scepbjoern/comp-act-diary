@@ -29,20 +29,20 @@ export function OriginalTranscriptSection(props: {
 
   const modalContent = (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowDialog(false)}>
-      <div className="bg-base-100 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-lg font-bold mb-4">Original-Transkript</h2>
+      <div className="bg-base-200 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-4" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-lg font-semibold text-base-content mb-3">Original-Transkript</h2>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Original text display */}
-          <div className="bg-slate-700/30 border border-slate-600 rounded p-3 min-h-[120px] max-h-[300px] overflow-y-auto whitespace-pre-wrap text-sm">
+          <div className="bg-base-100 border border-base-300 rounded-lg p-3 min-h-[120px] max-h-[300px] overflow-y-auto whitespace-pre-wrap text-sm text-base-content">
             {originalText}
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
-              className="btn btn-primary flex-1"
+              className="btn btn-primary btn-sm flex-1"
             >
               <TablerIcon name="copy" size={16} />
               {copied ? 'Kopiert!' : 'Kopieren'}
@@ -52,16 +52,16 @@ export function OriginalTranscriptSection(props: {
                 handleRestore()
                 setShowDialog(false)
               }}
-              className="btn btn-warning flex-1"
+              className="btn btn-warning btn-sm flex-1"
             >
-              <TablerIcon name="arrow-back-up" size={16} />
+              <TablerIcon name="restore" size={16} />
               Wiederherstellen
             </button>
           </div>
 
           <button
             onClick={() => setShowDialog(false)}
-            className="btn btn-ghost w-full"
+            className="btn btn-ghost btn-sm w-full"
           >
             Schließen
           </button>
@@ -71,31 +71,31 @@ export function OriginalTranscriptSection(props: {
   )
 
   return (
-    <div className="flex items-center gap-2 p-2 bg-slate-700/30 rounded text-sm">
-      <span className="text-gray-400">Original-Transkript vorhanden</span>
+    <div className="flex items-center gap-2 p-2 bg-base-300/50 rounded text-sm">
+      <span className="text-base-content/70">Original-Transkript vorhanden</span>
       <div className="flex items-center gap-1 ml-auto">
         <button
           onClick={() => setShowDialog(true)}
-          className="btn btn-ghost btn-xs text-gray-300 hover:text-gray-100"
+          className="btn btn-ghost btn-xs"
           title="Original-Transkript anzeigen"
         >
-          <TablerIcon name="eye" size={14} />
+          <TablerIcon name="blockquote" size={16} />
           <span className="hidden md:inline ml-1">Anzeigen</span>
         </button>
         <button
           onClick={handleCopy}
-          className="btn btn-ghost btn-xs text-gray-300 hover:text-gray-100"
+          className="btn btn-ghost btn-xs"
           title="In Zwischenablage kopieren"
         >
-          <TablerIcon name="copy" size={14} />
-          {copied && <span className="ml-1 text-green-400">✓</span>}
+          <TablerIcon name="copy" size={16} />
+          {copied && <span className="ml-1 text-success">✓</span>}
         </button>
         <button
           onClick={handleRestore}
-          className="btn btn-ghost btn-xs text-amber-400 hover:text-amber-300"
+          className="btn btn-ghost btn-xs text-warning"
           title="Original-Text wiederherstellen"
         >
-          <TablerIcon name="arrow-back-up" size={14} />
+          <TablerIcon name="restore" size={16} />
           <span className="hidden md:inline ml-1">Wiederherstellen</span>
         </button>
       </div>

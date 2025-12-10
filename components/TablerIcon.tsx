@@ -2,6 +2,7 @@
 // Uses @tabler/icons-react for standard UI icons
 import {
   IconSettings,
+  IconSettingsFilled,
   IconUserEdit,
   IconPalette,
   IconChecklist,
@@ -15,10 +16,14 @@ import {
   IconNotebook,
   IconLeaf,
   IconHourglass,
+  IconHourglassFilled,
   IconUpload,
+  IconCloudUpload,
   IconPlayerPause,
+  IconPlayerPauseFilled,
   IconPlayerPlay,
   IconPlayerStop,
+  IconPlayerStopFilled,
   IconX,
   IconChevronDown,
   IconChevronUp,
@@ -32,25 +37,44 @@ import {
   IconCheck,
   IconCamera,
   IconMicrophone,
+  IconMicrophoneFilled,
   IconSparkles,
   IconRefresh,
   IconStairs,
   IconAlertTriangle,
+  IconDatabase,
+  IconDatabaseOff,
+  IconEdit,
+  IconLanguageHiragana,
+  IconTextGrammar,
+  IconCancel,
+  IconBlockquote,
+  IconCopy,
+  IconRestore,
+  IconEye,
+  IconArrowBackUp,
 } from '@tabler/icons-react'
 
 // Mapping from old Material Icon names to Tabler Icons
 const iconMap: Record<string, typeof IconSettings> = {
   // Settings & Profile
   settings: IconSettings,
+  'settings-filled': IconSettingsFilled,
   manage_accounts: IconUserEdit,
   palette: IconPalette,
   tune: IconAdjustments,
   
   // Actions
   delete: IconTrash,
+  trash: IconTrash,
   save: IconDeviceFloppy,
+  'device-floppy': IconDeviceFloppy,
   add_link: IconLink,
   upload_file: IconUpload,
+  upload: IconUpload,
+  'cloud-upload': IconCloudUpload,
+  edit: IconEdit,
+  cancel: IconCancel,
   
   // Medical
   stethoscope: IconStethoscope,
@@ -61,12 +85,20 @@ const iconMap: Record<string, typeof IconSettings> = {
   menu_book: IconBook,
   edit_note: IconNotebook,
   menu_book_2: IconBook,
+  'text-grammar': IconTextGrammar,
+  'language-hiragana': IconLanguageHiragana,
   
   // Media controls
   hourglass_empty: IconHourglass,
+  hourglass: IconHourglass,
+  'hourglass-filled': IconHourglassFilled,
   pause: IconPlayerPause,
+  'player-pause': IconPlayerPause,
+  'player-pause-filled': IconPlayerPauseFilled,
   play_arrow: IconPlayerPlay,
+  'player-play': IconPlayerPlay,
   'player-stop': IconPlayerStop,
+  'player-stop-filled': IconPlayerStopFilled,
   
   // UI Elements
   close: IconX,
@@ -83,11 +115,23 @@ const iconMap: Record<string, typeof IconSettings> = {
   checklist: IconChecklist,
   camera: IconCamera,
   microphone: IconMicrophone,
+  'microphone-filled': IconMicrophoneFilled,
   sparkles: IconSparkles,
   share: IconFileExport,
   cycle: IconRefresh,
   stairs_2: IconStairs,
   warning: IconAlertTriangle,
+  
+  // Database icons for audio keep toggle
+  database: IconDatabase,
+  'database-off': IconDatabaseOff,
+  
+  // OriginalTranscriptSection icons
+  blockquote: IconBlockquote,
+  copy: IconCopy,
+  restore: IconRestore,
+  eye: IconEye,
+  'arrow-back-up': IconArrowBackUp,
 }
 
 interface TablerIconProps {

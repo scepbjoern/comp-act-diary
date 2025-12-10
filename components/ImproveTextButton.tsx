@@ -29,6 +29,9 @@ export function ImproveTextButton(props: {
     setShowDialog(false)
   }
 
+  // Icon size consistent at 20px
+  const ICON_SIZE = 20
+
   return (
     <>
       <span
@@ -38,7 +41,7 @@ export function ImproveTextButton(props: {
         aria-label={title}
         className={[
           'inline-flex items-center justify-center cursor-pointer select-none',
-          'text-gray-300 hover:text-gray-100',
+          'text-blue-500 hover:text-blue-400',
           className || ''
         ].join(' ')}
         onClick={() => setShowDialog(true)}
@@ -49,7 +52,7 @@ export function ImproveTextButton(props: {
           }
         }}
       >
-        <TablerIcon name="sparkles" size={16} />
+        <TablerIcon name="text-grammar" size={ICON_SIZE} />
       </span>
 
       {showDialog && (

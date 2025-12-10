@@ -3,9 +3,12 @@ import React, { useEffect, useRef, useState } from 'react'
 import { TablerIcon } from './TablerIcon'
 import fixWebmDuration from 'fix-webm-duration'
 
+type RecordingState = 'idle' | 'recording' | 'paused' | 'uploading'
+
 /**
  * MicrophoneButton
  * - Records audio with MediaRecorder
+ * - 4 states: idle, recording, paused, uploading
  * - Sends audio to /api/diary/upload-audio (if keepAudio/date provided) or /api/transcribe
  * - Calls onAudioData with transcribed text and optional audio file ID
  */
@@ -43,10 +46,10 @@ export function MicrophoneButton(props: {
   )
   const [models] = useState<string[]>(modelOptions && modelOptions.length ? modelOptions : defaultModels)
 
-  const [recording, setRecording] = useState(false)
-  const [uploading, setUploading] = useState(false)
+  const [state, setState] = useState<RecordingState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [showCfg, setShowCfg] = useState(false)
+  const [statusMessage, setStatusMessage] = useState<string>('')
 
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
@@ -98,7 +101,7 @@ export function MicrophoneButton(props: {
       const mime = getSupportedMime()
       const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined)
       chunksRef.current = []
-      recordingStartTimeRef.current = new Date() // Record start time
+      recordingStartTimeRef.current = new Date()
       rec.ondataavailable = (ev) => {
         if (ev.data && ev.data.size > 0) chunksRef.current.push(ev.data)
       }
@@ -117,22 +120,38 @@ export function MicrophoneButton(props: {
           await sendForTranscription(blob)
         } catch (e: unknown) {
           setError(e instanceof Error ? e.message : 'Transkription fehlgeschlagen')
+          setState('idle')
         } finally {
           cleanup()
         }
       }
       recorderRef.current = rec
       rec.start()
-      setRecording(true)
+      setState('recording')
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Mikrofon nicht verfügbar')
       cleanup()
     }
   }
 
+  function pauseRec() {
+    if (recorderRef.current && recorderRef.current.state === 'recording') {
+      recorderRef.current.pause()
+      setState('paused')
+    }
+  }
+
+  function resumeRec() {
+    if (recorderRef.current && recorderRef.current.state === 'paused') {
+      recorderRef.current.resume()
+      setState('recording')
+    }
+  }
+
   function stopRec() {
     try { recorderRef.current?.stop() } catch {}
-    setRecording(false)
+    setState('uploading')
+    setStatusMessage('Datei wird hochgeladen...')
   }
 
   function cleanup() {
@@ -153,7 +172,6 @@ export function MicrophoneButton(props: {
       'audio/mp4',
       'audio/mpeg'
     ]
-    // Only rely on presence of MediaRecorder and its static isTypeSupported
     const MR = (globalThis as unknown as { MediaRecorder?: { isTypeSupported?: (m: string) => boolean } }).MediaRecorder
     for (const m of candidates) {
       if (MR && typeof MR.isTypeSupported === 'function' && MR.isTypeSupported(m)) return m
@@ -162,13 +180,13 @@ export function MicrophoneButton(props: {
   }
 
   async function sendForTranscription(blob: Blob) {
-    setUploading(true)
+    setState('uploading')
+    setStatusMessage('Datei wird hochgeladen...')
     setError(null)
     try {
       const fd = new FormData()
       const ext = blob.type.includes('ogg') ? 'ogg' : blob.type.includes('mp4') ? 'mp4' : blob.type.includes('mpeg') ? 'mp3' : 'webm'
       
-      // Generate filename with recording start time
       const startTime = recordingStartTimeRef.current || new Date()
       const year = startTime.getFullYear()
       const month = String(startTime.getMonth() + 1).padStart(2, '0')
@@ -181,12 +199,12 @@ export function MicrophoneButton(props: {
       fd.append('file', new File([blob], filename, { type: blob.type || 'audio/webm' }))
       fd.append('model', selectedModel)
 
-      // Use /api/diary/upload-audio if we have date and want to save audio
       if (keepAudio && date) {
         fd.append('date', date)
         fd.append('time', time || '')
         fd.append('keepAudio', String(keepAudio))
         
+        setStatusMessage('Wird transkribiert...')
         const res = await fetch('/api/diary/upload-audio', { method: 'POST', body: fd, credentials: 'same-origin' })
         if (!res.ok) {
           const errorData = await res.json()
@@ -206,7 +224,7 @@ export function MicrophoneButton(props: {
           onText(data.text)
         }
       } else {
-        // Use /api/transcribe for transcription only
+        setStatusMessage('Wird transkribiert...')
         const res = await fetch('/api/transcribe', { method: 'POST', body: fd, credentials: 'same-origin' })
         if (!res.ok) {
           const text = await res.text()
@@ -220,37 +238,84 @@ export function MicrophoneButton(props: {
         }
       }
     } finally {
-      setUploading(false)
+      setState('idle')
+      setStatusMessage('')
     }
   }
 
+  // Icon size consistent at 20px
+  const ICON_SIZE = 20
+
   return (
     <div className="relative inline-flex items-center gap-1">
+      {/* Main microphone/pause button */}
       <span
         role="button"
         tabIndex={0}
-        title={title}
+        title={state === 'idle' ? title : state === 'recording' ? 'Pause' : state === 'paused' ? 'Fortsetzen' : 'Wird hochgeladen...'}
         aria-label={title}
         className={[
           'inline-flex items-center justify-center cursor-pointer select-none',
-          recording ? 'text-red-300 hover:text-red-200' : 'text-gray-300 hover:text-gray-100',
-          uploading ? 'opacity-60 pointer-events-none' : '',
+          state === 'idle' ? 'text-green-500 hover:text-green-400' : '',
+          state === 'recording' ? 'text-orange-500 hover:text-orange-400' : '',
+          state === 'paused' ? 'text-orange-500 hover:text-orange-400 animate-pulse' : '',
+          state === 'uploading' ? 'opacity-60 pointer-events-none' : '',
           className || ''
         ].join(' ')}
-        onClick={() => (recording ? stopRec() : startRec())}
+        onClick={() => {
+          if (state === 'idle') startRec()
+          else if (state === 'recording') pauseRec()
+          else if (state === 'paused') resumeRec()
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
-            if (recording) {
-              stopRec()
-            } else {
-              startRec()
-            }
+            if (state === 'idle') startRec()
+            else if (state === 'recording') pauseRec()
+            else if (state === 'paused') resumeRec()
           }
         }}
       >
-        {recording ? <TablerIcon name="player-stop" size={16} /> : <TablerIcon name="microphone" size={16} />}
+        {state === 'idle' && <TablerIcon name="microphone-filled" size={ICON_SIZE} />}
+        {state === 'recording' && <TablerIcon name="player-pause-filled" size={ICON_SIZE} />}
+        {state === 'paused' && <TablerIcon name="player-pause-filled" size={ICON_SIZE} />}
+        {state === 'uploading' && <TablerIcon name="hourglass-filled" size={ICON_SIZE} className="animate-spin text-amber-700" />}
       </span>
+
+      {/* Stop button - only visible during recording or paused */}
+      {(state === 'recording' || state === 'paused') && (
+        <span
+          role="button"
+          tabIndex={0}
+          title="Aufnahme beenden"
+          aria-label="Aufnahme beenden"
+          className="inline-flex items-center justify-center cursor-pointer select-none text-red-500 hover:text-red-400"
+          onClick={stopRec}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              stopRec()
+            }
+          }}
+        >
+          <TablerIcon name="player-stop-filled" size={ICON_SIZE} />
+        </span>
+      )}
+
+      {/* Settings button */}
+      {compact && state === 'idle' && (
+        <button 
+          type="button" 
+          title="Modell wählen" 
+          aria-label="Modell wählen" 
+          className="text-gray-500 hover:text-gray-400" 
+          onClick={() => setShowCfg(v => !v)}
+        >
+          <TablerIcon name="settings-filled" size={ICON_SIZE} />
+        </button>
+      )}
+      
+      {/* Model selection dropdown */}
       {!compact && (
         <select
           className="bg-background border border-slate-700 rounded px-2 py-1 text-xs"
@@ -261,11 +326,7 @@ export function MicrophoneButton(props: {
           {models.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
       )}
-      {compact && (
-        <button type="button" title="Modell wählen" aria-label="Modell wählen" className="text-xs text-gray-400 hover:text-gray-200" onClick={() => setShowCfg(v => !v)}>
-          <TablerIcon name="settings" size={16} />
-        </button>
-      )}
+      
       {compact && showCfg && (
         <div className="absolute z-20 top-full mt-1 right-0 bg-surface border border-slate-800 rounded p-2 shadow">
           <div className="text-xs mb-1 text-gray-400">Modell</div>
@@ -281,8 +342,13 @@ export function MicrophoneButton(props: {
           </select>
         </div>
       )}
-      {uploading && <span className="text-xs text-gray-400">…übertrage</span>}
-      {error && <span className="text-xs text-red-400" title={error}>Fehler</span>}
+      
+      {/* Status message during upload */}
+      {state === 'uploading' && statusMessage && (
+        <span className="text-sm text-base-content/70 ml-2">{statusMessage}</span>
+      )}
+      
+      {error && <span className="text-sm text-error ml-2" title={error}>Fehler</span>}
     </div>
   )
 }

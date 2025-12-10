@@ -192,6 +192,9 @@ export default function AudioUploadButton({
     return baseMessage + timeInfo
   }
 
+  // Icon size consistent at 20px
+  const ICON_SIZE = 20
+
   if (compact) {
     return (
       <div className={`inline-flex items-center ${className}`}>
@@ -206,21 +209,21 @@ export default function AudioUploadButton({
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || uploading}
-          className="text-gray-300 hover:text-gray-100 disabled:opacity-50"
+          className="text-green-500 hover:text-green-400 disabled:opacity-50"
           title={uploading ? getStatusMessage() : 'Audio-Datei hochladen'}
         >
           {uploading ? (
-            <TablerIcon name="hourglass_empty" className="animate-spin" />
+            <TablerIcon name="hourglass-filled" size={ICON_SIZE} className="animate-spin text-amber-700" />
           ) : (
-            <TablerIcon name="upload_file" />
+            <TablerIcon name="cloud-upload" size={ICON_SIZE} />
           )}
         </button>
         {uploading && (
-          <span className="text-xs text-blue-400 ml-2 animate-pulse">
+          <span className="text-sm text-base-content/70 ml-2">
             {getStatusMessage()}
           </span>
         )}
-        {error && <span className="text-xs text-red-400 ml-2">{error}</span>}
+        {error && <span className="text-sm text-error ml-2">{error}</span>}
       </div>
     )
   }
@@ -242,22 +245,22 @@ export default function AudioUploadButton({
       >
         {uploading ? (
           <>
-            <TablerIcon name="hourglass_empty" className="animate-spin" />
+            <TablerIcon name="hourglass-filled" size={ICON_SIZE} className="animate-spin text-amber-700" />
             <span>{getStatusMessage()}</span>
           </>
         ) : (
           <>
-            <TablerIcon name="upload_file" />
+            <TablerIcon name="cloud-upload" size={ICON_SIZE} className="text-green-500" />
             <span>Audio hochladen</span>
           </>
         )}
       </button>
       {uploading && (
-        <div className="text-sm text-blue-400 mt-1 animate-pulse">
+        <div className="text-sm text-base-content/70 mt-1">
           Lange Audios werden automatisch in Teile aufgeteilt.
         </div>
       )}
-      {error && <div className="text-sm text-red-400 mt-1">{error}</div>}
+      {error && <div className="text-sm text-error mt-1">{error}</div>}
     </div>
   )
 }

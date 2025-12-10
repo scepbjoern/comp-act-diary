@@ -1,4 +1,4 @@
-import { Icon } from '@/components/Icon'
+import { TablerIcon } from '@/components/TablerIcon'
 import { MicrophoneButton } from '@/components/MicrophoneButton'
 import AudioUploadButton from '@/components/AudioUploadButton'
 import { ImproveTextButton } from '@/components/ImproveTextButton'
@@ -103,7 +103,7 @@ export function DiarySection({
     <div className="card p-4 md:p-4 p-2 space-y-3">
       <h2 className="font-medium">
         <span className="inline-flex items-center gap-1">
-          <Icon name="edit_note" />
+          <TablerIcon name="edit_note" size={20} />
           <span>Tagebuch</span>
         </span>
       </h2>
@@ -230,6 +230,19 @@ export function DiarySection({
             }}
             compact
           />
+
+          {/* Audio storage toggle - database icons */}
+          <button
+            type="button"
+            onClick={() => onKeepAudioChange(!keepAudio)}
+            title={keepAudio ? 'Audio wird gespeichert' : 'Audio wird nicht gespeichert'}
+            className="text-gray-500 hover:text-gray-400"
+          >
+            <TablerIcon name={keepAudio ? 'database' : 'database-off'} size={20} />
+          </button>
+          
+          {/* Vertical divider */}
+          <div className="w-px h-5 bg-slate-600" />
           
           <ImproveTextButton
             text={newDiaryText}
@@ -239,39 +252,32 @@ export function DiarySection({
               setTimeout(() => onEditorKeyIncrement(), 0)
             }}
             onOriginalPreserved={onOriginalPreserved}
-            className="text-gray-300 hover:text-gray-100"
           />
-
-          {/* Mobile-friendly toggle for audio */}
-          <label className="flex items-center gap-1 text-xs text-gray-400 cursor-pointer" title="Audio behalten">
-            <input
-              type="checkbox"
-              checked={keepAudio}
-              onChange={e => onKeepAudioChange(e.target.checked)}
-              className="toggle toggle-sm md:toggle-md"
-            />
-            <span className="md:inline hidden">Audio behalten</span>
-            <Icon name="mic" className="md:hidden" />
-          </label>
           
-          <button 
-            className="pill !bg-blue-600 !text-white hover:!bg-blue-500"
-            onClick={onSaveDiaryEntry}
-            disabled={!newDiaryText.trim()}
-            title="Speichern"
-          >
-            <Icon name="save" />
-            <span className="md:inline hidden ml-1">Speichern</span>
-          </button>
+          {/* Vertical divider */}
+          <div className="w-px h-5 bg-slate-600" />
           
+          {/* Save button - icon only, hidden when nothing to save */}
+          {newDiaryText.trim() && (
+            <button 
+              type="button"
+              onClick={onSaveDiaryEntry}
+              title="Speichern"
+              className="text-green-500 hover:text-green-400"
+            >
+              <TablerIcon name="device-floppy" size={20} />
+            </button>
+          )}
+          
+          {/* Cancel button - icon only, hidden when nothing to cancel */}
           {(newDiaryText.trim() || newDiaryAudioFileId || newDiaryTime) && (
             <button 
-              className="pill !bg-gray-600 !text-white hover:!bg-gray-500"
+              type="button"
               onClick={onClearDiaryForm}
               title="Abbrechen"
+              className="text-red-500 hover:text-red-400"
             >
-              <Icon name="close" />
-              <span className="md:inline hidden ml-1">Abbrechen</span>
+              <TablerIcon name="cancel" size={20} />
             </button>
           )}
         </div>

@@ -1,5 +1,6 @@
 "use client"
 import React, { useState } from 'react'
+import { TablerIcon } from './TablerIcon'
 
 interface RetranscribeButtonProps {
   audioFileId: string | null
@@ -63,7 +64,8 @@ export function RetranscribeButton({ audioFileId, onRetranscribed, disabled = fa
         disabled={isRetranscribing || disabled}
         title="Audio erneut transkribieren"
       >
-        🔄 {isRetranscribing ? '...' : 'Re-Transkribieren'}
+        <TablerIcon name="language-hiragana" size={16} />
+        <span className="ml-1">{isRetranscribing ? '...' : 'Re-Transkribieren'}</span>
       </button>
       
       {showModelSelector && (
