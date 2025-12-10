@@ -1,6 +1,6 @@
 # ---- Dependencies stage ----
 # Phase 9: Separate layer for better caching
-FROM node:22-bookworm AS deps
+FROM node:24-bookworm AS deps
 WORKDIR /app
 
 # System build deps for native modules (e.g. sharp)
@@ -76,7 +76,7 @@ COPY prisma ./prisma
 RUN npx prisma generate
 
 # ---- Build stage ----
-FROM node:22-bookworm AS build
+FROM node:24-bookworm AS build
 WORKDIR /app
 
 # Phase 9: Pass build args to build stage
@@ -110,7 +110,7 @@ RUN npm ci --omit=dev --ignore-scripts
 
 # ---- Runtime stage ----
 # Phase 9: Use Alpine for smaller image size
-FROM node:22-alpine AS runner
+FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
