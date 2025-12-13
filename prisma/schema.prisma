@@ -1,3 +1,13 @@
+// =============================================================================
+// COMP-ACT-DIARY - Finales Prisma Schema (Dokumentiert)
+// =============================================================================
+// Basierend auf: docs/data-model-architecture.md
+// Erstellt: Dezember 2024
+// 
+// Dieses Schema enthält vollständige Dokumentation aller Attribute.
+// Prisma-Kommentare mit /// werden in die generierte Dokumentation übernommen.
+// =============================================================================
+
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
@@ -8,282 +18,1438 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model HabitIcon {
-  id      String  @id @default(uuid())
-  userId  String
-  habitId String
-  icon    String?
-  habit   Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+// =============================================================================
+// ENUMS
+// =============================================================================
 
-  @@unique([userId, habitId])
+/// Typ einer Kern-Entität für die Entity-Registry (Polymorphie)
+enum EntityType {
+  JOURNAL_ENTRY       /// Tagebucheintrag
+  CONTACT             /// Kontakt/Person
+  LOCATION            /// Ort
+  MEDIA_ASSET         /// Mediendatei (Foto, Audio, Video)
+  MEASUREMENT         /// Messwert (Symptom, Metrik)
+  ACT_VALUE           /// ACT-Wert
+  ACT_GOAL            /// ACT-Ziel
+  HABIT               /// Gewohnheit
+  CALENDAR_EVENT      /// Kalendereintrag
+  CONSUMPTION         /// Medienkonsum (Musik, Film, Buch)
+  INVENTORY_ITEM      /// Inventar-Gegenstand
+  TIME_TRACKING_ENTRY /// Zeiterfassungseintrag
+  BOOKMARK            /// Lesezeichen
 }
 
+/// Art eines Zeitraums
+enum TimeBoxKind {
+  DAY    /// Ein einzelner Tag
+  WEEK   /// Eine Kalenderwoche
+  MONTH  /// Ein Kalendermonat
+  YEAR   /// Ein Kalenderjahr
+  CUSTOM /// Benutzerdefinierter Zeitraum (z.B. Reise, Projekt, Kur-Phase)
+}
+
+/// Art einer Taxonomie-Einheit
+enum TaxonomyKind {
+  CATEGORY  /// Hierarchische Kategorie (z.B. "Arbeit > Meetings")
+  TAG       /// Flaches Schlagwort
+  EMOTION   /// Emotion/Gefühl (z.B. "Freude", "Angst")
+  TOPIC     /// Thema (z.B. "Gesundheit", "Familie")
+  TRAIT     /// Persönlichkeitsmerkmal
+  LIFE_AREA /// Lebensbereich für ACT-Werte
+}
+
+/// Herkunft einer Taxonomie
+enum TaxonomyOrigin {
+  SYSTEM /// Vom System vordefiniert (z.B. Standard-Emotionen)
+  USER   /// Vom Benutzer erstellt
+  IMPORT /// Aus externem System importiert
+  AI     /// Von KI vorgeschlagen
+}
+
+/// Quelle eines Taggings
+enum TaggingSource {
+  USER   /// Manuell vom Benutzer vergeben
+  AI     /// Von KI automatisch vergeben
+  IMPORT /// Aus Import übernommen
+}
+
+/// Status eines ACT-Ziels
+enum GoalStatus {
+  ACTIVE    /// Aktiv verfolgt
+  PAUSED    /// Pausiert
+  ACHIEVED  /// Erfolgreich erreicht
+  ABANDONED /// Aufgegeben
+}
+
+/// Status eines Habit-CheckIns
+enum CheckInStatus {
+  DONE    /// Vollständig erledigt
+  PARTIAL /// Teilweise erledigt
+  SKIPPED /// Bewusst übersprungen
+}
+
+/// Status einer Belohnung
+enum RewardStatus {
+  PENDING /// Noch nicht verdient
+  EARNED  /// Verdient, aber noch nicht eingelöst
+  CLAIMED /// Eingelöst
+}
+
+/// Status eines Inventar-Gegenstands
+enum InventoryStatus {
+  IN_POSSESSION /// Im Besitz
+  SOLD          /// Verkauft
+  GIFTED        /// Verschenkt
+}
+
+/// Rolle eines Medien-Anhangs
+enum MediaRole {
+  COVER      /// Titelbild/Hauptbild
+  GALLERY    /// Teil einer Galerie
+  ATTACHMENT /// Allgemeiner Anhang
+  THUMBNAIL  /// Vorschaubild
+}
+
+/// Art des Medienkonsums
+enum ConsumptionKind {
+  MUSIC   /// Musik (Song, Album)
+  MOVIE   /// Film
+  BOOK    /// Buch
+  PODCAST /// Podcast-Episode
+  GAME    /// Videospiel
+  ARTICLE /// Artikel/Blogpost
+  VIDEO   /// Video (YouTube, etc.)
+}
+
+/// Datentyp einer Metrik
+enum MetricDataType {
+  NUMERIC /// Zahlenwert (z.B. Gewicht in kg)
+  TEXT    /// Freitext
+  BOOLEAN /// Ja/Nein
+  SCALE   /// Skala (z.B. 1-10)
+}
+
+/// Quelle einer Messung
+enum MeasurementSource {
+  MANUAL /// Manuell eingegeben
+  IMPORT /// Aus Import
+  DEVICE /// Von Gerät (z.B. Smartwatch)
+}
+
+/// Status eines Sync-Laufs
+enum SyncStatus {
+  PENDING   /// Geplant/Wartend
+  RUNNING   /// Läuft gerade
+  COMPLETED /// Erfolgreich abgeschlossen
+  FAILED    /// Fehlgeschlagen
+}
+
+/// Typ eines Sync-Providers
+enum SyncProviderType {
+  PHOTOPRISM      /// Photoprism Fotoverwaltung
+  SAMSUNG_GALLERY /// Samsung Gallery
+  TOGGL           /// Toggl Zeiterfassung
+  GOOGLE_CALENDAR /// Google Kalender
+  APPLE_CALENDAR  /// Apple Kalender
+  SPOTIFY         /// Spotify Musikstreaming
+  LAST_FM         /// Last.fm Scrobbling
+}
+
+// =============================================================================
+// KERN-SYSTEM
+// =============================================================================
+
+/// Benutzer der Anwendung
 model User {
-  id              String        @id @default(uuid())
-  username        String        @unique
+  /// Eindeutige ID (UUID)
+  id              String   @id @default(uuid())
+  /// Benutzername für Login (eindeutig)
+  username        String   @unique
+  /// Anzeigename (optional, z.B. "Max Mustermann")
   displayName     String?
+  /// E-Mail-Adresse (optional)
+  email           String?
+  /// Gehashtes Passwort (bcrypt)
   passwordHash    String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  /// URL zum Profilbild (optional)
   profileImageUrl String?
-  chatMethods     ChatMethod[]
-  days            DayEntry[]
-  habits          Habit[]
-  habitIcons      HabitIcon[]
-  reflections     Reflection[]
-  symptomIcons    SymptomIcon[]
-  links           UserLink[]
-  settings        UserSettings?
-  userSymptoms    UserSymptom[]
+  /// Benutzereinstellungen als JSON (Theme, Zeitformat, KI-Modelle, etc.)
+  settings        Json?
+  /// Erstellungszeitpunkt
+  createdAt       DateTime @default(now())
+  /// Letztes Update
+  updatedAt       DateTime @updatedAt
+
+  // Relationen
+  entities              Entity[]
+  timeBoxes             TimeBox[]
+  dayEntries            DayEntry[]
+  journalEntryTypes     JournalEntryType[]
+  journalTemplates      JournalTemplate[]
+  journalEntries        JournalEntry[]
+  actValues             ActValue[]
+  actGoals              ActGoal[]
+  habits                Habit[]
+  habitCheckIns         HabitCheckIn[]
+  rewards               Reward[]
+  exerciseDefinitions   ExerciseDefinition[]
+  exerciseSessions      ExerciseSession[]
+  taxonomies            Taxonomy[]
+  taggings              Tagging[]
+  contacts              Contact[]
+  personRelations       PersonRelation[]
+  interactions          Interaction[]
+  locations             Location[]
+  mediaAssets           MediaAsset[]
+  mediaAttachments      MediaAttachment[]
+  metricDefinitions     MetricDefinition[]
+  measurements          Measurement[]
+  syncProviders         SyncProvider[]
+  externalSyncs         ExternalSync[]
+  timeTrackingEntries   TimeTrackingEntry[]
+  calendarEvents        CalendarEvent[]
+  consumptions          Consumption[]
+  inventoryItems        InventoryItem[]
+  bookmarks             Bookmark[]
+  entityLinks           EntityLink[]
+  embeddings            Embedding[]
+  entryTimeBoxes        EntryTimeBox[]
+  trashItems            Trash[]
+  chatMethods           ChatMethod[]
 }
 
-model UserSettings {
-  userId              String  @id
-  theme               String  @default("dark")
-  timeFormat24h       Boolean @default(true)
-  weekStart           String  @default("mon")
-  autosaveEnabled     Boolean @default(true)
-  autosaveIntervalSec Int     @default(5)
-  transcriptionModel  String  @default("gpt-4o-transcribe")
-  summaryModel        String  @default("openai/gpt-oss-120b")
-  summaryPrompt       String  @default("Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form \"**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen\"")
-  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+/// Entity-Registry: Zentrale Tabelle für FK-basierte Polymorphie.
+/// Jede Kern-Entität (JournalEntry, Contact, etc.) teilt ihre ID mit einem Entity-Eintrag.
+/// Polymorphe Tabellen (Tagging, MediaAttachment, etc.) referenzieren Entity.id als echten FK.
+model Entity {
+  /// ID (identisch mit der ID der spezifischen Entität, z.B. JournalEntry.id)
+  id        String     @id @default(uuid())
+  /// Besitzer-User
+  userId    String
+  /// Typ der Entität (bestimmt, welche spezifische Tabelle die Details enthält)
+  type      EntityType
+  /// Erstellungszeitpunkt
+  createdAt DateTime   @default(now())
+  /// Letztes Update
+  updatedAt DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Polymorphe Relationen
+  taggings         Tagging[]
+  mediaAttachments MediaAttachment[]
+  entityLinksFrom  EntityLink[]      @relation("EntityLinkSource")
+  entityLinksTo    EntityLink[]      @relation("EntityLinkTarget")
+  externalSyncs    ExternalSync[]
+  embeddings       Embedding[]
+  entryTimeBoxes   EntryTimeBox[]
+
+  @@index([userId, type])
+  @@index([type])
 }
 
-model Habit {
-  id            String      @id @default(uuid())
-  userId        String?
-  title         String
-  isActive      Boolean     @default(true)
-  sortIndex     Int         @default(0)
-  icon          String?
-  user          User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  iconOverrides HabitIcon[]
-  ticks         HabitTick[]
+// =============================================================================
+// ZEITMODELL
+// =============================================================================
+
+/// Zeitraum: Generisches Konzept für Tage, Wochen, Monate, Jahre oder benutzerdefinierte Perioden.
+/// Ermöglicht hierarchische Strukturen (z.B. Wochen gehören zu Monaten).
+model TimeBox {
+  /// Eindeutige ID
+  id        String      @id @default(uuid())
+  /// Besitzer-User
+  userId    String
+  /// Art des Zeitraums (DAY, WEEK, MONTH, YEAR, CUSTOM)
+  kind      TimeBoxKind
+  /// Beginn des Zeitraums (inklusiv)
+  startAt   DateTime
+  /// Ende des Zeitraums (exklusiv)
+  endAt     DateTime
+  /// Zeitzone (z.B. "Europe/Zurich") - wichtig für korrekte Tagesberechnung
+  timezone  String      @default("Europe/Zurich")
+  /// Lokales Datum im Format YYYY-MM-DD (nur für kind=DAY, z.B. "2024-12-13")
+  localDate String?
+  /// Titel (optional, z.B. "Sommerurlaub 2024" für CUSTOM)
+  title     String?
+  /// Übergeordneter Zeitraum (z.B. Woche für einen Tag, Monat für eine Woche)
+  parentId  String?
+  /// Erstellungszeitpunkt
+  createdAt DateTime    @default(now())
+  /// Letztes Update
+  updatedAt DateTime    @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   TimeBox?  @relation("TimeBoxHierarchy", fields: [parentId], references: [id])
+  children TimeBox[] @relation("TimeBoxHierarchy")
+
+  // Relationen
+  dayEntry            DayEntry?
+  journalEntries      JournalEntry[]
+  habitCheckIns       HabitCheckIn[]
+  exerciseSessions    ExerciseSession[]
+  interactions        Interaction[]
+  mediaAttachments    MediaAttachment[]
+  measurements        Measurement[]
+  timeTrackingEntries TimeTrackingEntry[]
+  calendarEvents      CalendarEvent[]
+  consumptions        Consumption[]
+  entryTimeBoxes      EntryTimeBox[]
+
+  /// Pro User und Tag nur eine DAY-TimeBox
+  @@unique([userId, kind, localDate])
+  @@index([userId, kind, startAt])
+  @@index([parentId])
 }
 
+/// Tageseintrag: Spezifische Daten für einen einzelnen Tag.
+/// 1:1-Beziehung zu einer TimeBox mit kind=DAY.
+/// Enthält tagesspezifische Aggregat-Daten wie Bewertung und KI-Zusammenfassung.
 model DayEntry {
-  id                String             @id @default(uuid())
-  userId            String
-  date              DateTime
-  phase             Phase
-  careCategory      CareCategory
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  notesList         DayNote[]
-  habitTicks        HabitTick[]
-  stool             StoolScore?
-  symptoms          SymptomScore[]
-  userSymptomScores UserSymptomScore[]
-  summary           DaySummary?
-
-  @@unique([userId, date])
-}
-
-model DaySummary {
-  id          String   @id @default(uuid())
-  dayEntryId  String   @unique
-  content     String   // Generated markdown summary
-  model       String   // Model used for generation
-  prompt      String   // Prompt used for generation
-  sources     String[] // Source identifiers (e.g., ["diary:note-id-1", "diary:note-id-2"])
-  generatedAt DateTime @default(now())
-  dayEntry    DayEntry @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
-}
-
-model SymptomScore {
-  id         String      @id @default(uuid())
-  dayEntryId String
-  type       SymptomType
-  score      Int
-  day        DayEntry    @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
-
-  @@unique([dayEntryId, type])
-}
-
-model StoolScore {
-  id         String   @id @default(uuid())
-  dayEntryId String   @unique
-  bristol    Int
-  day        DayEntry @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
-}
-
-model HabitTick {
-  id         String   @id @default(uuid())
-  dayEntryId String
-  habitId    String
-  checked    Boolean  @default(false)
-  day        DayEntry @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
-  habit      Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
-
-  @@unique([dayEntryId, habitId])
-}
-
-model DayNote {
-  id                 String                 @id @default(uuid())
-  dayEntryId         String
-  type               NoteType
-  title              String?
-  text               String?
-  occurredAt         DateTime
-  createdAt          DateTime               @default(now())
-  keepAudio          Boolean                @default(true)
-  originalTranscript String?
-  updatedAt          DateTime               @updatedAt
-  audioFileId        String?                @unique
-  testField          String?                // Test-Spalte für sichere Migration
-  reflectionFields   DailyReflectionFields?
-  audioFile          AudioFile?             @relation(fields: [audioFileId], references: [id])
-  day                DayEntry               @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
-  photos             PhotoFile[]
-
-  @@index([type, dayEntryId])
-}
-
-model AudioFile {
-  id          String   @id @default(uuid())
-  filePath    String   @unique
-  fileName    String
-  mimeType    String
-  sizeBytes   Int
-  durationSec Float?
-  uploadedAt  DateTime @default(now())
-  dayNote     DayNote?
-
-  @@index([filePath])
-}
-
-model PhotoFile {
-  id           String      @id @default(uuid())
-  filePath     String      @unique
-  fileName     String
-  mimeType     String
-  sizeBytes    Int
-  widthPx      Int?
-  heightPx     Int?
-  uploadedAt   DateTime    @default(now())
-  dayNoteId    String?
-  reflectionId String?
-  dayNote      DayNote?    @relation(fields: [dayNoteId], references: [id], onDelete: Cascade)
-  reflection   Reflection? @relation(fields: [reflectionId], references: [id], onDelete: Cascade)
-
-  @@index([filePath])
-}
-
-model DailyReflectionFields {
-  id        String  @id @default(uuid())
-  dayNoteId String  @unique
-  changed   String?
-  gratitude String?
-  vows      String?
-  note      DayNote @relation(fields: [dayNoteId], references: [id], onDelete: Cascade)
-}
-
-model Reflection {
-  id        String         @id @default(uuid())
-  userId    String
-  kind      ReflectionKind
-  createdAt DateTime       @default(now())
-  changed   String?
-  gratitude String?
-  vows      String?
-  remarks   String?
-  weightKg  Float?
-  updatedAt DateTime       @updatedAt
-  photos    PhotoFile[]
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-}
-
-model UserLink {
+  /// Eindeutige ID
   id        String   @id @default(uuid())
+  /// Besitzer-User
   userId    String
-  name      String
-  url       String
+  /// Referenz auf die zugehörige DAY-TimeBox (1:1)
+  timeBoxId String?  @unique
+  /// Tagesbewertung (1-10, optional)
+  dayRating Int?
+  /// KI-generierte Zusammenfassung des Tages (Markdown)
+  aiSummary String?
+  /// Wetterdaten als JSON (optional, z.B. {temp: 22, condition: "sunny"})
+  weather   Json?
+  /// Erstellungszeitpunkt
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Letztes Update
+  updatedAt DateTime @updatedAt
 
-  @@index([userId, createdAt])
-}
-
-model UserSymptom {
-  id        String             @id @default(uuid())
-  userId    String
-  title     String
-  sortIndex Int                @default(0)
-  isActive  Boolean            @default(true)
-  icon      String?
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  scores    UserSymptomScore[]
-
-  @@index([userId, sortIndex])
-}
-
-model SymptomIcon {
-  id     String      @id @default(uuid())
-  userId String
-  type   SymptomType
-  icon   String?
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, type])
-}
-
-model UserSymptomScore {
-  id            String      @id @default(uuid())
-  dayEntryId    String
-  userSymptomId String
-  score         Int
-  day           DayEntry    @relation(fields: [dayEntryId], references: [id], onDelete: Cascade)
-  userSymptom   UserSymptom @relation(fields: [userSymptomId], references: [id], onDelete: Cascade)
-
-  @@unique([dayEntryId, userSymptomId])
-}
-
-model ChatMethod {
-  id           String   @id @default(uuid())
-  userId       String
-  name         String
-  systemPrompt String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeBox TimeBox? @relation(fields: [timeBoxId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
-enum Phase {
-  PHASE_1
-  PHASE_2
-  PHASE_3
+/// Verknüpfung zwischen Entitäten und Zeiträumen (M:N).
+/// Ermöglicht die Zuordnung einer Entität zu mehreren Zeiträumen.
+/// Beispiel: Ein Foto kann sowohl einem Tag als auch einem Reisejournal zugeordnet sein.
+model EntryTimeBox {
+  /// Eindeutige ID
+  id        String  @id @default(uuid())
+  /// Referenz auf die Entität (via Entity-Registry)
+  entityId  String
+  /// Besitzer-User (für Multi-Tenant-Queries)
+  userId    String
+  /// Referenz auf den Zeitraum
+  timeBoxId String
+  /// Ist dies die primäre Zeitraum-Zuordnung?
+  isPrimary Boolean @default(false)
+  /// Erstellungszeitpunkt
+  createdAt DateTime @default(now())
+
+  entity  Entity  @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeBox TimeBox @relation(fields: [timeBoxId], references: [id], onDelete: Cascade)
+
+  @@unique([entityId, timeBoxId])
+  @@index([userId, timeBoxId])
+  @@index([entityId])
 }
 
-enum CareCategory {
-  SANFT
-  MEDIUM
-  INTENSIV
+// =============================================================================
+// JOURNAL
+// =============================================================================
+
+/// Typ eines Tagebucheintrags (z.B. "Tagesnotiz", "Mahlzeit", "Reflexion").
+/// Als Entität statt Enum, um neue Typen ohne Migration hinzufügen zu können.
+model JournalEntryType {
+  /// Eindeutige ID
+  id                String   @id @default(uuid())
+  /// User-ID (NULL = System-definierter Typ, verfügbar für alle User)
+  userId            String?
+  /// Eindeutiger Code (z.B. "meal", "daily_reflection", "diary")
+  code              String
+  /// Anzeigename (z.B. "Mahlzeit")
+  name              String
+  /// Beschreibung (optional)
+  description       String?
+  /// Icon (Emoji oder Icon-Name, z.B. "🍽️")
+  icon              String?
+  /// Standard-Template für diesen Typ
+  defaultTemplateId String?
+  /// Sortierreihenfolge in der UI
+  sortOrder         Int      @default(0)
+  /// Erstellungszeitpunkt
+  createdAt         DateTime @default(now())
+  /// Letztes Update
+  updatedAt         DateTime @updatedAt
+
+  user            User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultTemplate JournalTemplate? @relation("DefaultTemplate", fields: [defaultTemplateId], references: [id])
+  journalEntries  JournalEntry[]
+
+  @@unique([userId, code])
+  @@index([userId, sortOrder])
 }
 
-enum SymptomType {
-  BESCHWERDEFREIHEIT
-  ENERGIE
-  STIMMUNG
-  SCHLAF
-  ENTSPANNUNG
-  HEISSHUNGERFREIHEIT
-  BEWEGUNG
+/// Vorlage für strukturierte Tagebucheinträge.
+/// Enthält Prompts/Fragen, die den Benutzer beim Schreiben leiten.
+model JournalTemplate {
+  /// Eindeutige ID
+  id          String         @id @default(uuid())
+  /// User-ID (NULL = System-definiertes Template)
+  userId      String?
+  /// Name des Templates (z.B. "Morgenreflexion")
+  name        String
+  /// Beschreibung (optional)
+  description String?
+  /// Prompts/Fragen als JSON-Array (z.B. ["Was war heute gut?", "Wofür bist du dankbar?"])
+  prompts     Json?
+  /// Herkunft (SYSTEM, USER, AI)
+  origin      TaxonomyOrigin @default(USER)
+  /// Erstellungszeitpunkt
+  createdAt   DateTime       @default(now())
+  /// Letztes Update
+  updatedAt   DateTime       @updatedAt
+
+  user            User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  journalEntries  JournalEntry[]
+  defaultForTypes JournalEntryType[] @relation("DefaultTemplate")
+
+  @@index([userId])
 }
 
-enum NoteType {
-  MEAL
-  REFLECTION
-  DIARY
+/// Tagebucheintrag: Kern-Entität für alle Arten von Journal-Einträgen.
+/// Kann Tagesnotizen, Mahlzeiten, Reflexionen, etc. sein (bestimmt durch typeId).
+model JournalEntry {
+  /// Eindeutige ID (= Entity.id für Polymorphie)
+  id          String    @id @default(uuid())
+  /// Besitzer-User
+  userId      String
+  /// Typ des Eintrags (Referenz auf JournalEntryType)
+  typeId      String
+  /// Verwendetes Template (optional)
+  templateId  String?
+  /// Zeitraum, zu dem der Eintrag gehört (DAY für Tagesnotiz, WEEK für Wochenreflexion, etc.)
+  timeBoxId   String
+  /// Titel (optional)
+  title       String?
+  /// Inhalt (Markdown)
+  content     String
+  /// KI-generierte Zusammenfassung (optional)
+  aiSummary   String?
+  /// Enthält sensible Daten? (für Verschlüsselung/biometrischen Schutz)
+  isSensitive Boolean   @default(false)
+  /// Soft-Delete Zeitpunkt (NULL = nicht gelöscht)
+  deletedAt   DateTime?
+  /// Erstellungszeitpunkt
+  createdAt   DateTime  @default(now())
+  /// Letztes Update
+  updatedAt   DateTime  @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type     JournalEntryType @relation(fields: [typeId], references: [id])
+  template JournalTemplate? @relation(fields: [templateId], references: [id])
+  timeBox  TimeBox          @relation(fields: [timeBoxId], references: [id])
+
+  exerciseSessions ExerciseSession[]
+
+  @@index([userId, typeId])
+  @@index([timeBoxId])
+  @@index([deletedAt])
 }
 
-enum ReflectionKind {
-  WEEK
-  MONTH
+// =============================================================================
+// ACT-DOMÄNE (Acceptance and Commitment Therapy)
+// =============================================================================
+
+/// ACT-Wert: Was ist mir wirklich wichtig im Leben?
+/// Werte sind dauerhafte Richtungen, keine erreichbaren Ziele.
+/// Unterstützt Versionierung via validFrom/validTo.
+model ActValue {
+  /// Eindeutige ID (= Entity.id)
+  id             String    @id @default(uuid())
+  /// Besitzer-User
+  userId         String
+  /// URL-freundlicher Slug (z.B. "family", "health")
+  slug           String
+  /// Titel (z.B. "Familie", "Gesundheit")
+  title          String
+  /// Beschreibung (optional, Markdown)
+  description    String?
+  /// Icon (Emoji oder Icon-Name)
+  icon           String?
+  /// Bild-URL (optional)
+  imageUrl       String?
+  /// Lebensbereich (z.B. "relationships", "career")
+  lifeArea       String?
+  /// Wichtigkeits-Rang (1 = wichtigster Wert)
+  importanceRank Int?
+  /// Gültig ab (für Versionierung)
+  validFrom      DateTime  @default(now())
+  /// Gültig bis (NULL = aktuell gültig)
+  validTo        DateTime?
+  /// Erstellungszeitpunkt
+  createdAt      DateTime  @default(now())
+  /// Letztes Update
+  updatedAt      DateTime  @updatedAt
+
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goals ActGoal[]
+
+  @@unique([userId, slug])
+  @@index([userId, validFrom])
+}
+
+/// ACT-Ziel: Konkretes, messbares Ziel, das einem Wert dient.
+/// Im Gegensatz zu Werten sind Ziele erreichbar.
+model ActGoal {
+  /// Eindeutige ID (= Entity.id)
+  id          String     @id @default(uuid())
+  /// Besitzer-User
+  userId      String
+  /// Zugehöriger Wert (optional, da Ziele auch unabhängig sein können)
+  valueId     String?
+  /// URL-freundlicher Slug
+  slug        String
+  /// Titel (z.B. "10km laufen können")
+  title       String
+  /// Beschreibung (optional, Markdown)
+  description String?
+  /// Icon
+  icon        String?
+  /// Bild-URL
+  imageUrl    String?
+  /// Zieldatum (optional)
+  targetDate  DateTime?
+  /// Fortschritt in Prozent (0-100)
+  progress    Int        @default(0)
+  /// Status (ACTIVE, PAUSED, ACHIEVED, ABANDONED)
+  status      GoalStatus @default(ACTIVE)
+  /// Gültig ab (für Versionierung)
+  validFrom   DateTime   @default(now())
+  /// Gültig bis (NULL = aktuell gültig)
+  validTo     DateTime?
+  /// Erstellungszeitpunkt
+  createdAt   DateTime   @default(now())
+  /// Letztes Update
+  updatedAt   DateTime   @updatedAt
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  value   ActValue? @relation(fields: [valueId], references: [id])
+  habits  Habit[]
+  rewards Reward[]
+
+  @@unique([userId, slug])
+  @@index([userId, status])
+  @@index([valueId])
+}
+
+/// Gewohnheit: Wiederkehrende Aktivität zur Zielerreichung.
+model Habit {
+  /// Eindeutige ID (= Entity.id)
+  id          String    @id @default(uuid())
+  /// Besitzer-User
+  userId      String
+  /// Zugehöriges Ziel (optional)
+  goalId      String?
+  /// URL-freundlicher Slug
+  slug        String
+  /// Titel (z.B. "Täglich 30 Min laufen")
+  title       String
+  /// Beschreibung (optional)
+  description String?
+  /// Icon
+  icon        String?
+  /// Häufigkeit als String (z.B. "daily", "3x_week", "weekdays")
+  frequency   String?
+  /// Aktuelle Streak-Länge (Cache, berechnet aus CheckIns)
+  streakCount Int       @default(0)
+  /// Letzter CheckIn-Zeitpunkt (Cache)
+  lastCheckIn DateTime?
+  /// Ist die Gewohnheit aktiv?
+  isActive    Boolean   @default(true)
+  /// Sortierreihenfolge in der UI
+  sortOrder   Int       @default(0)
+  /// Erstellungszeitpunkt
+  createdAt   DateTime  @default(now())
+  /// Letztes Update
+  updatedAt   DateTime  @updatedAt
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal     ActGoal?       @relation(fields: [goalId], references: [id])
+  checkIns HabitCheckIn[]
+  rewards  Reward[]
+
+  @@unique([userId, slug])
+  @@index([userId, isActive])
+  @@index([goalId])
+}
+
+/// Habit-CheckIn: Erfasst, ob eine Gewohnheit an einem Tag erfüllt wurde.
+/// Ermöglicht Historisierung und Analyse von Gewohnheiten.
+model HabitCheckIn {
+  /// Eindeutige ID
+  id         String        @id @default(uuid())
+  /// Zugehörige Gewohnheit
+  habitId    String
+  /// Besitzer-User (für Multi-Tenant-Queries)
+  userId     String
+  /// Zeitraum (typischerweise DAY-TimeBox)
+  timeBoxId  String
+  /// Status (DONE, PARTIAL, SKIPPED)
+  status     CheckInStatus @default(DONE)
+  /// Notizen (optional)
+  notes      String?
+  /// Zeitpunkt der Erfüllung
+  occurredAt DateTime      @default(now())
+  /// Erstellungszeitpunkt
+  createdAt  DateTime      @default(now())
+
+  habit   Habit   @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeBox TimeBox @relation(fields: [timeBoxId], references: [id])
+
+  /// Pro Habit pro Tag nur ein CheckIn
+  @@unique([habitId, timeBoxId])
+  @@index([userId, occurredAt])
+}
+
+/// Belohnung: Selbst-Belohnung für Zielerreichung oder Streak-Meilensteine.
+model Reward {
+  /// Eindeutige ID
+  id             String       @id @default(uuid())
+  /// Besitzer-User
+  userId         String
+  /// Zugehöriges Ziel (optional, für Goal-Belohnungen)
+  goalId         String?
+  /// Zugehörige Gewohnheit (optional, für Streak-Belohnungen)
+  habitId        String?
+  /// Titel (z.B. "Neues Buch kaufen")
+  title          String
+  /// Beschreibung (optional)
+  description    String?
+  /// Benötigte Punkte/Tage (z.B. 30 für "30-Tage-Streak")
+  pointsRequired Int?
+  /// Status (PENDING, EARNED, CLAIMED)
+  status         RewardStatus @default(PENDING)
+  /// Zeitpunkt, wann verdient
+  earnedAt       DateTime?
+  /// Zeitpunkt, wann eingelöst
+  claimedAt      DateTime?
+  /// Erstellungszeitpunkt
+  createdAt      DateTime     @default(now())
+  /// Letztes Update
+  updatedAt      DateTime     @updatedAt
+
+  user  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal  ActGoal? @relation(fields: [goalId], references: [id])
+  habit Habit?   @relation(fields: [habitId], references: [id])
+
+  @@index([userId, status])
+}
+
+// =============================================================================
+// EXERCISES (ACT-Übungen, Mindfulness, etc.)
+// =============================================================================
+
+/// Übungs-Definition: Vorlage für eine strukturierte Übung.
+/// Kann System-definiert (z.B. ACT-Übungen) oder User-definiert sein.
+model ExerciseDefinition {
+  /// Eindeutige ID
+  id          String         @id @default(uuid())
+  /// User-ID (NULL = System-definierte Übung)
+  userId      String?
+  /// URL-freundlicher Slug
+  slug        String
+  /// Name (z.B. "Defusion: Gedanken-Labeling")
+  name        String
+  /// Beschreibung (optional, Markdown)
+  description String?
+  /// Kategorie (z.B. "ACT", "Mindfulness", "CBT")
+  category    String?
+  /// Skill/Fähigkeit (z.B. "Defusion", "Values Clarification")
+  skill       String?
+  /// Schritte/Prompts als JSON-Array
+  prompts     Json?
+  /// Herkunft (SYSTEM, USER)
+  origin      TaxonomyOrigin @default(SYSTEM)
+  /// Erstellungszeitpunkt
+  createdAt   DateTime       @default(now())
+  /// Letztes Update
+  updatedAt   DateTime       @updatedAt
+
+  user     User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions ExerciseSession[]
+
+  @@unique([userId, slug])
+  @@index([category])
+}
+
+/// Übungs-Durchführung: Protokolliert eine einzelne Übungssitzung.
+model ExerciseSession {
+  /// Eindeutige ID
+  id             String   @id @default(uuid())
+  /// Referenz auf die Übungs-Definition
+  definitionId   String
+  /// Besitzer-User
+  userId         String
+  /// Zeitraum (optional)
+  timeBoxId      String?
+  /// Verlinkter Tagebucheintrag (optional, für ausführliche Notizen)
+  journalEntryId String?
+  /// Notizen zur Durchführung (optional)
+  notes          String?
+  /// Strukturierte Ergebnisse als JSON (optional)
+  results        Json?
+  /// Zeitpunkt der Durchführung
+  occurredAt     DateTime @default(now())
+  /// Erstellungszeitpunkt
+  createdAt      DateTime @default(now())
+
+  definition   ExerciseDefinition @relation(fields: [definitionId], references: [id])
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeBox      TimeBox?           @relation(fields: [timeBoxId], references: [id])
+  journalEntry JournalEntry?      @relation(fields: [journalEntryId], references: [id])
+
+  @@index([userId, occurredAt])
+}
+
+// =============================================================================
+// TAXONOMIE (Tags, Kategorien, Emotionen, etc.)
+// =============================================================================
+
+/// Taxonomie: Einheitliches System für alle Klassifikationen.
+/// Unterstützt Hierarchie (parentId), verschiedene Arten (kind) und Herkunft (origin).
+model Taxonomy {
+  /// Eindeutige ID
+  id          String         @id @default(uuid())
+  /// Besitzer-User
+  userId      String
+  /// Übergeordnete Taxonomie (für Hierarchie, z.B. "Arbeit" → "Meetings")
+  parentId    String?
+  /// URL-freundlicher Slug (eindeutig pro User)
+  slug        String
+  /// Kurzname für kompakte Anzeige (z.B. "Meeting")
+  shortName   String
+  /// Vollständiger Name (optional, z.B. "Berufliches Meeting")
+  longName    String?
+  /// Beschreibung (optional)
+  description String?
+  /// Icon (Emoji oder Icon-Name)
+  icon        String?
+  /// Bild-URL
+  imageUrl    String?
+  /// Art (CATEGORY, TAG, EMOTION, TOPIC, TRAIT, LIFE_AREA)
+  kind        TaxonomyKind
+  /// Herkunft (SYSTEM, USER, IMPORT, AI)
+  origin      TaxonomyOrigin @default(USER)
+  /// Archiviert? (statt Löschen, falls noch verwendet)
+  isArchived  Boolean        @default(false)
+  /// Sortierreihenfolge in der UI
+  sortOrder   Int            @default(0)
+  /// Erstellungszeitpunkt
+  createdAt   DateTime       @default(now())
+  /// Letztes Update
+  updatedAt   DateTime       @updatedAt
+
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   Taxonomy?  @relation("TaxonomyHierarchy", fields: [parentId], references: [id])
+  children Taxonomy[] @relation("TaxonomyHierarchy")
+  taggings Tagging[]
+
+  @@unique([userId, slug])
+  @@index([userId, kind, isArchived])
+  @@index([parentId])
+}
+
+/// Tagging: Verknüpft eine Taxonomie mit einer Entität.
+/// Polymorph via Entity-Registry (entityId → Entity.id).
+model Tagging {
+  /// Eindeutige ID
+  id         String        @id @default(uuid())
+  /// Referenz auf die Taxonomie
+  taxonomyId String
+  /// Referenz auf die getaggte Entität (via Entity-Registry)
+  entityId   String
+  /// Besitzer-User (für Multi-Tenant-Queries)
+  userId     String
+  /// Quelle des Taggings (USER, AI, IMPORT)
+  source     TaggingSource @default(USER)
+  /// Konfidenz bei AI-Tagging (0.0-1.0)
+  confidence Float?
+  /// Erstellungszeitpunkt
+  createdAt  DateTime      @default(now())
+
+  taxonomy Taxonomy @relation(fields: [taxonomyId], references: [id], onDelete: Cascade)
+  entity   Entity   @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taxonomyId, entityId])
+  @@index([entityId])
+  @@index([userId, taxonomyId])
+}
+
+// =============================================================================
+// PERSONEN & ORTE
+// =============================================================================
+
+/// Kontakt: Person aus dem sozialen Umfeld.
+model Contact {
+  /// Eindeutige ID (= Entity.id)
+  id                String    @id @default(uuid())
+  /// Besitzer-User
+  userId            String
+  /// URL-freundlicher Slug
+  slug              String
+  /// Vollständiger Name
+  name              String
+  /// Spitzname (optional)
+  nickname          String?
+  /// E-Mail-Adresse (optional)
+  email             String?
+  /// Telefonnummer (optional)
+  phone             String?
+  /// Notizen (optional, Markdown)
+  notes             String?
+  /// Geburtstag (optional)
+  birthday          DateTime?
+  /// Datum des ersten Treffens (optional)
+  firstMetAt        DateTime?
+  /// Beziehungsintensität (1-5, optional)
+  relationshipLevel Int?
+  /// Archiviert?
+  isArchived        Boolean   @default(false)
+  /// Erstellungszeitpunkt
+  createdAt         DateTime  @default(now())
+  /// Letztes Update
+  updatedAt         DateTime  @updatedAt
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relationsAsA PersonRelation[] @relation("PersonA")
+  relationsAsB PersonRelation[] @relation("PersonB")
+  interactions Interaction[]
+
+  @@unique([userId, slug])
+  @@index([userId, isArchived])
+}
+
+/// Personenbeziehung: Beziehung zwischen zwei Kontakten.
+/// Beispiel: "Max ist Bruder von Anna"
+model PersonRelation {
+  /// Eindeutige ID
+  id           String    @id @default(uuid())
+  /// Besitzer-User
+  userId       String
+  /// Person A
+  personAId    String
+  /// Person B
+  personBId    String
+  /// Art der Beziehung (z.B. "Bruder", "Kollege", "Ehepartner")
+  relationType String
+  /// Beziehung gültig ab (optional)
+  validFrom    DateTime?
+  /// Beziehung gültig bis (optional, NULL = aktuell)
+  validTo      DateTime?
+  /// Erstellungszeitpunkt
+  createdAt    DateTime  @default(now())
+  /// Letztes Update
+  updatedAt    DateTime  @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  personA Contact @relation("PersonA", fields: [personAId], references: [id], onDelete: Cascade)
+  personB Contact @relation("PersonB", fields: [personBId], references: [id], onDelete: Cascade)
+
+  @@unique([personAId, personBId, relationType])
+  @@index([userId])
+}
+
+/// Interaktion: Kontakt mit einer Person.
+/// Beispiel: Telefonat, Treffen, E-Mail-Austausch.
+model Interaction {
+  /// Eindeutige ID
+  id         String   @id @default(uuid())
+  /// Referenz auf den Kontakt
+  contactId  String
+  /// Besitzer-User
+  userId     String
+  /// Zeitraum (optional)
+  timeBoxId  String?
+  /// Art der Interaktion (z.B. "call", "meeting", "message")
+  kind       String
+  /// Notizen (optional)
+  notes      String?
+  /// Zeitpunkt der Interaktion
+  occurredAt DateTime @default(now())
+  /// Erstellungszeitpunkt
+  createdAt  DateTime @default(now())
+
+  contact Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeBox TimeBox? @relation(fields: [timeBoxId], references: [id])
+
+  @@index([userId, occurredAt])
+  @@index([contactId])
+}
+
+/// Ort: Geografischer Ort (Wohnung, Restaurant, Reiseziel, etc.)
+model Location {
+  /// Eindeutige ID (= Entity.id)
+  id         String   @id @default(uuid())
+  /// Besitzer-User
+  userId     String
+  /// URL-freundlicher Slug
+  slug       String
+  /// Name (z.B. "Zuhause", "Lieblingscafé")
+  name       String
+  /// Breitengrad (optional)
+  lat        Float?
+  /// Längengrad (optional)
+  lng        Float?
+  /// Adresse (optional)
+  address    String?
+  /// Land (optional)
+  country    String?
+  /// Stadt (optional)
+  city       String?
+  /// POI-Typ (z.B. "restaurant", "home", "landmark")
+  poiType    String?
+  /// Favorit?
+  isFavorite Boolean  @default(false)
+  /// Notizen (optional)
+  notes      String?
+  /// Erstellungszeitpunkt
+  createdAt  DateTime @default(now())
+  /// Letztes Update
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, slug])
+  @@index([userId, isFavorite])
+}
+
+// =============================================================================
+// MEDIEN
+// =============================================================================
+
+/// Medien-Asset: Einzelne Mediendatei (Foto, Audio, Video).
+/// Kann lokal gespeichert oder extern verlinkt sein (Photoprism, etc.).
+model MediaAsset {
+  /// Eindeutige ID (= Entity.id)
+  id               String    @id @default(uuid())
+  /// Besitzer-User
+  userId           String
+  /// Lokaler Dateipfad (z.B. "images/2024/12/13/photo.jpg")
+  filePath         String?
+  /// Thumbnail als Base64-Bytes (für schnelle Vorschau)
+  thumbnailData    Bytes?
+  /// MIME-Type (z.B. "image/jpeg", "audio/mpeg")
+  mimeType         String
+  /// Breite in Pixeln (für Bilder/Videos)
+  width            Int?
+  /// Höhe in Pixeln (für Bilder/Videos)
+  height           Int?
+  /// Dauer in Sekunden (für Audio/Video)
+  duration         Float?
+  /// Externer Provider (z.B. "photoprism", "samsung_gallery")
+  externalProvider String?
+  /// Externe ID beim Provider
+  externalId       String?
+  /// Externe URL (vollständige URL zur Datei beim Provider)
+  externalUrl      String?
+  /// Externe Thumbnail-URL
+  thumbnailUrl     String?
+  /// Aufnahmezeitpunkt (aus EXIF, optional)
+  capturedAt       DateTime?
+  /// Erstellungszeitpunkt (Import-Zeitpunkt)
+  createdAt        DateTime  @default(now())
+  /// Letztes Update
+  updatedAt        DateTime  @updatedAt
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments MediaAttachment[]
+
+  @@unique([userId, filePath])
+  @@unique([userId, externalProvider, externalId])
+  @@index([userId, capturedAt])
+}
+
+/// Medien-Anhang: Verknüpft ein MediaAsset mit einer Entität.
+/// Polymorph via Entity-Registry (entityId → Entity.id).
+/// Ermöglicht M:N zwischen Assets und Entitäten.
+model MediaAttachment {
+  /// Eindeutige ID
+  id           String    @id @default(uuid())
+  /// Referenz auf das MediaAsset
+  assetId      String
+  /// Referenz auf die Entität (via Entity-Registry)
+  entityId     String
+  /// Besitzer-User (für Multi-Tenant-Queries)
+  userId       String
+  /// Rolle des Anhangs (COVER, GALLERY, ATTACHMENT, THUMBNAIL)
+  role         MediaRole @default(ATTACHMENT)
+  /// Anzeigereihenfolge in Galerien
+  displayOrder Int       @default(0)
+  /// Zeitraum-Zuordnung (optional, für explizite Zeit-Verankerung)
+  timeBoxId    String?
+  /// Erstellungszeitpunkt
+  createdAt    DateTime  @default(now())
+
+  asset   MediaAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  entity  Entity     @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  user    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeBox TimeBox?   @relation(fields: [timeBoxId], references: [id])
+
+  @@unique([assetId, entityId, role])
+  @@index([userId, entityId])
+  @@index([timeBoxId])
+}
+
+// =============================================================================
+// MESSWERTE
+// =============================================================================
+
+/// Metrik-Definition: Vorlage für einen Messwert-Typ.
+/// Beispiele: "Energie", "Schlafqualität", "Gewicht", "Bristol-Stuhlform"
+model MetricDefinition {
+  /// Eindeutige ID
+  id          String         @id @default(uuid())
+  /// User-ID (NULL = System-definierte Metrik)
+  userId      String?
+  /// Eindeutiger Code (z.B. "symptom_energie", "weight")
+  code        String
+  /// Anzeigename (z.B. "Energie")
+  name        String
+  /// Beschreibung (optional)
+  description String?
+  /// Datentyp (NUMERIC, TEXT, BOOLEAN, SCALE)
+  dataType    MetricDataType @default(NUMERIC)
+  /// Einheit (z.B. "kg", "bpm")
+  unit        String?
+  /// Minimalwert (für Validierung)
+  minValue    Float?
+  /// Maximalwert (für Validierung)
+  maxValue    Float?
+  /// Normal-Minimum (für Referenzbereich)
+  normalMin   Float?
+  /// Normal-Maximum (für Referenzbereich)
+  normalMax   Float?
+  /// Kategorie (z.B. "health", "mood", "fitness")
+  category    String?
+  /// Icon
+  icon        String?
+  /// Sind Messwerte dieser Metrik sensibel?
+  isSensitive Boolean        @default(false)
+  /// Herkunft (SYSTEM, USER)
+  origin      TaxonomyOrigin @default(USER)
+  /// Erstellungszeitpunkt
+  createdAt   DateTime       @default(now())
+  /// Letztes Update
+  updatedAt   DateTime       @updatedAt
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  measurements Measurement[]
+
+  @@unique([userId, code])
+  @@index([category])
+}
+
+/// Messung: Einzelner erfasster Messwert.
+model Measurement {
+  /// Eindeutige ID (= Entity.id)
+  id             String            @id @default(uuid())
+  /// Referenz auf die Metrik-Definition
+  metricId       String
+  /// Besitzer-User
+  userId         String
+  /// Zeitraum (typischerweise DAY-TimeBox)
+  timeBoxId      String?
+  /// Numerischer Wert (für dataType=NUMERIC oder SCALE)
+  valueNum       Float?
+  /// Text-Wert (für dataType=TEXT)
+  valueText      String?
+  /// Boolean-Wert (für dataType=BOOLEAN)
+  valueBool      Boolean?
+  /// Verschlüsselter Wert (für sensitive Daten mit ALE)
+  valueEncrypted String?
+  /// Quelle (MANUAL, IMPORT, DEVICE)
+  source         MeasurementSource @default(MANUAL)
+  /// Notizen (optional)
+  notes          String?
+  /// Ist dieser Messwert sensibel?
+  isSensitive    Boolean           @default(false)
+  /// Zeitpunkt der Messung
+  occurredAt     DateTime          @default(now())
+  /// Erstellungszeitpunkt
+  createdAt      DateTime          @default(now())
+  /// Letztes Update
+  updatedAt      DateTime          @updatedAt
+
+  metric  MetricDefinition @relation(fields: [metricId], references: [id])
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeBox TimeBox?         @relation(fields: [timeBoxId], references: [id])
+
+  @@index([userId, metricId, occurredAt])
+  @@index([timeBoxId])
+}
+
+// =============================================================================
+// EXTERNE INTEGRATIONEN
+// =============================================================================
+
+/// Sync-Provider: Konfiguration einer externen Datenquelle.
+model SyncProvider {
+  /// Eindeutige ID
+  id                   String           @id @default(uuid())
+  /// Besitzer-User
+  userId               String
+  /// Provider-Typ (PHOTOPRISM, TOGGL, etc.)
+  provider             SyncProviderType
+  /// Verschlüsselte Zugangsdaten (API-Key, Token, etc.)
+  credentialsEncrypted String?
+  /// Provider-spezifische Einstellungen als JSON
+  settings             Json?
+  /// Ist der Provider aktiv?
+  isActive             Boolean          @default(true)
+  /// Letzter Sync-Zeitpunkt
+  lastSyncAt           DateTime?
+  /// Erstellungszeitpunkt
+  createdAt            DateTime         @default(now())
+  /// Letztes Update
+  updatedAt            DateTime         @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  syncRuns      SyncRun[]
+  externalSyncs ExternalSync[]
+
+  @@unique([userId, provider])
+  @@index([userId, isActive])
+}
+
+/// Sync-Lauf: Protokolliert einen einzelnen Synchronisations-Durchlauf.
+model SyncRun {
+  /// Eindeutige ID
+  id             String     @id @default(uuid())
+  /// Referenz auf den Provider
+  providerId     String
+  /// Startzeitpunkt
+  startedAt      DateTime   @default(now())
+  /// Endzeitpunkt
+  finishedAt     DateTime?
+  /// Status (PENDING, RUNNING, COMPLETED, FAILED)
+  status         SyncStatus @default(PENDING)
+  /// Anzahl verarbeiteter Items
+  itemsProcessed Int        @default(0)
+  /// Anzahl neu erstellter Items
+  itemsCreated   Int        @default(0)
+  /// Anzahl aktualisierter Items
+  itemsUpdated   Int        @default(0)
+  /// Anzahl übersprungener Items
+  itemsSkipped   Int        @default(0)
+  /// Fehler als JSON-Array (optional)
+  errors         Json?
+
+  provider SyncProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, startedAt])
+}
+
+/// External-Sync: Verknüpft eine lokale Entität mit einem externen Objekt.
+/// Ermöglicht Tracking von Sync-Status und Deduplizierung.
+model ExternalSync {
+  /// Eindeutige ID
+  id           String   @id @default(uuid())
+  /// Referenz auf den Provider
+  providerId   String
+  /// Referenz auf die lokale Entität (via Entity-Registry)
+  entityId     String
+  /// Besitzer-User (für Multi-Tenant-Queries)
+  userId       String
+  /// ID beim externen Provider
+  externalId   String
+  /// URL beim externen Provider (optional)
+  externalUrl  String?
+  /// Letzte Sync-Payload als JSON (für Änderungserkennung)
+  syncPayload  Json?
+  /// Letzter Sync-Zeitpunkt
+  lastSyncedAt DateTime @default(now())
+  /// Erstellungszeitpunkt
+  createdAt    DateTime @default(now())
+
+  provider SyncProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  entity   Entity       @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  timeTrackingEntries TimeTrackingEntry[]
+  calendarEvents      CalendarEvent[]
+
+  @@unique([providerId, externalId])
+  @@index([entityId])
+  @@index([userId])
+}
+
+/// Zeiterfassungs-Eintrag: Erfasste Arbeitszeit (z.B. von Toggl).
+model TimeTrackingEntry {
+  /// Eindeutige ID (= Entity.id)
+  id             String    @id @default(uuid())
+  /// Besitzer-User
+  userId         String
+  /// Referenz auf ExternalSync (falls importiert)
+  externalSyncId String?
+  /// Zeitraum (optional)
+  timeBoxId      String?
+  /// Projekt (optional)
+  project        String?
+  /// Task/Aufgabe (optional)
+  task           String?
+  /// Beschreibung (optional)
+  description    String?
+  /// Startzeitpunkt
+  startedAt      DateTime
+  /// Endzeitpunkt
+  endedAt        DateTime?
+  /// Dauer in Minuten (berechnet oder explizit)
+  duration       Int?
+  /// Erstellungszeitpunkt
+  createdAt      DateTime  @default(now())
+  /// Letztes Update
+  updatedAt      DateTime  @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  externalSync ExternalSync? @relation(fields: [externalSyncId], references: [id])
+  timeBox      TimeBox?      @relation(fields: [timeBoxId], references: [id])
+
+  @@index([userId, startedAt])
+}
+
+/// Kalender-Event: Termin aus externem Kalender.
+model CalendarEvent {
+  /// Eindeutige ID (= Entity.id)
+  id             String    @id @default(uuid())
+  /// Besitzer-User
+  userId         String
+  /// Referenz auf ExternalSync (falls importiert)
+  externalSyncId String?
+  /// Zeitraum (optional)
+  timeBoxId      String?
+  /// Titel
+  title          String
+  /// Beschreibung (optional)
+  description    String?
+  /// Startzeitpunkt
+  startedAt      DateTime
+  /// Endzeitpunkt
+  endedAt        DateTime?
+  /// Ganztägig?
+  isAllDay       Boolean   @default(false)
+  /// Ort (optional)
+  location       String?
+  /// Erstellungszeitpunkt
+  createdAt      DateTime  @default(now())
+  /// Letztes Update
+  updatedAt      DateTime  @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  externalSync ExternalSync? @relation(fields: [externalSyncId], references: [id])
+  timeBox      TimeBox?      @relation(fields: [timeBoxId], references: [id])
+
+  @@index([userId, startedAt])
+}
+
+/// Medienkonsum: Gelesene Bücher, gehörte Musik, geschaute Filme, etc.
+model Consumption {
+  /// Eindeutige ID (= Entity.id)
+  id         String          @id @default(uuid())
+  /// Besitzer-User
+  userId     String
+  /// Art (MUSIC, MOVIE, BOOK, etc.)
+  kind       ConsumptionKind
+  /// Titel
+  title      String
+  /// Künstler/Autor (optional)
+  artist     String?
+  /// Externe ID (z.B. Spotify Track ID, ISBN)
+  externalId String?
+  /// Zeitraum (optional)
+  timeBoxId  String?
+  /// Zeitpunkt des Konsums
+  occurredAt DateTime        @default(now())
+  /// Erstellungszeitpunkt
+  createdAt  DateTime        @default(now())
+  /// Letztes Update
+  updatedAt  DateTime        @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeBox TimeBox? @relation(fields: [timeBoxId], references: [id])
+
+  @@index([userId, kind, occurredAt])
+}
+
+// =============================================================================
+// SONSTIGES
+// =============================================================================
+
+/// Inventar-Gegenstand: Besitz erfassen (für Minimalismus, Versicherung, etc.)
+model InventoryItem {
+  /// Eindeutige ID (= Entity.id)
+  id            String          @id @default(uuid())
+  /// Besitzer-User
+  userId        String
+  /// Name des Gegenstands
+  name          String
+  /// Beschreibung (optional)
+  description   String?
+  /// Kategorie (z.B. "Elektronik", "Kleidung", "Bücher")
+  category      String?
+  /// Kaufdatum (optional)
+  purchaseDate  DateTime?
+  /// Kaufpreis (optional)
+  purchasePrice Float?
+  /// Herkunft/Quelle (z.B. "Amazon", "Geschenk von Oma")
+  source        String?
+  /// Status (IN_POSSESSION, SOLD, GIFTED)
+  status        InventoryStatus @default(IN_POSSESSION)
+  /// Foto des Gegenstands (MediaAsset-ID)
+  photoAssetId  String?
+  /// Erstellungszeitpunkt
+  createdAt     DateTime        @default(now())
+  /// Letztes Update
+  updatedAt     DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([category])
+}
+
+/// Lesezeichen: Gespeicherter Link.
+model Bookmark {
+  /// Eindeutige ID (= Entity.id)
+  id          String   @id @default(uuid())
+  /// Besitzer-User
+  userId      String
+  /// URL
+  url         String
+  /// Titel
+  title       String
+  /// Beschreibung (optional)
+  description String?
+  /// Favicon-URL (optional)
+  faviconUrl  String?
+  /// Erstellungszeitpunkt
+  createdAt   DateTime @default(now())
+  /// Letztes Update
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+/// Entity-Link: Verknüpfung zwischen zwei Entitäten.
+/// Ermöglicht beliebige Querverbindungen (z.B. "erwähnt in", "bezieht sich auf").
+model EntityLink {
+  /// Eindeutige ID
+  id        String   @id @default(uuid())
+  /// Quell-Entität (via Entity-Registry)
+  sourceId  String
+  /// Ziel-Entität (via Entity-Registry)
+  targetId  String
+  /// Besitzer-User
+  userId    String
+  /// Art der Verknüpfung (z.B. "mentions", "relates_to", "derives_from")
+  linkKind  String?
+  /// Erstellungszeitpunkt
+  createdAt DateTime @default(now())
+
+  source Entity @relation("EntityLinkSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target Entity @relation("EntityLinkTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId, linkKind])
+  @@index([userId])
+  @@index([targetId])
+}
+
+/// Embedding: Vektor-Embedding für semantische Suche (RAG).
+model Embedding {
+  /// Eindeutige ID
+  id          String   @id @default(uuid())
+  /// Referenz auf die Entität (via Entity-Registry)
+  entityId    String
+  /// Besitzer-User
+  userId      String
+  /// ID des verwendeten Embedding-Modells (z.B. "text-embedding-3-small")
+  modelId     String
+  /// Chunk-Index (falls Inhalt in mehrere Chunks aufgeteilt)
+  chunkIndex  Int      @default(0)
+  /// Vektor als Bytes (z.B. float32[1536] serialisiert)
+  vector      Bytes
+  /// Hash des Quell-Inhalts (für Änderungserkennung)
+  contentHash String?
+  /// Erstellungszeitpunkt
+  createdAt   DateTime @default(now())
+
+  entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([entityId, modelId, chunkIndex])
+  @@index([userId, modelId])
+}
+
+/// Papierkorb: JSON-Snapshot gelöschter Entitäten.
+/// Ermöglicht Wiederherstellung innerhalb von 30 Tagen.
+/// WICHTIG: Sensitive Daten werden NICHT im Papierkorb gespeichert!
+model Trash {
+  /// Eindeutige ID
+  id            String   @id @default(uuid())
+  /// Besitzer-User
+  userId        String
+  /// Typ der gelöschten Entität (als String, nicht Enum)
+  entityType    String
+  /// Original-ID der gelöschten Entität
+  entityId      String
+  /// Titel/Name für Anzeige im Papierkorb
+  entityTitle   String?
+  /// Vollständiger Snapshot als JSON
+  entityData    Json
+  /// Schema-Version zum Zeitpunkt der Löschung (für spätere Migration)
+  schemaVersion Int      @default(1)
+  /// Löschzeitpunkt
+  deletedAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, deletedAt])
+  @@index([entityType])
+}
+
+// =============================================================================
+// KI-ASSISTENTEN
+// =============================================================================
+
+/// Chat-Methode: Benutzerdefinierter KI-Chatbot.
+/// Ähnlich zu Custom GPTs bei ChatGPT.
+model ChatMethod {
+  /// Eindeutige ID
+  id           String   @id @default(uuid())
+  /// Besitzer-User
+  userId       String
+  /// Name des Chatbots (z.B. "Tagebuch-Coach")
+  name         String
+  /// Beschreibung (optional)
+  description  String?
+  /// System-Prompt (definiert Verhalten und Persönlichkeit)
+  systemPrompt String
+  /// Icon (Emoji oder Icon-Name)
+  icon         String?
+  /// Bild-URL für Avatar
+  imageUrl     String?
+  /// Erstellungszeitpunkt
+  createdAt    DateTime @default(now())
+  /// Letztes Update
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
