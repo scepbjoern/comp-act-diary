@@ -14,28 +14,20 @@ export async function GET(req: NextRequest) {
     if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
     if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
-    const last = await prisma.reflection.findFirst({
-      where: { userId: user.id },
-      orderBy: { createdAt: 'desc' },
-      select: { createdAt: true },
-    })
-
-    const firstDay = await prisma.dayEntry.findFirst({
-      where: { userId: user.id },
-      orderBy: { date: 'asc' },
-      select: { date: true },
+    // Reflections not migrated - use TimeBox for first day calculation
+    const firstTimeBox = await prisma.timeBox.findFirst({
+      where: { userId: user.id, kind: 'DAY', localDate: { not: null } },
+      orderBy: { localDate: 'asc' },
+      select: { localDate: true, createdAt: true },
     })
 
     const now = Date.now()
     let due = false
     let daysSince = 0
 
-    if (last) {
-      daysSince = Math.floor((now - last.createdAt.getTime()) / (24 * 60 * 60 * 1000))
-      due = now - last.createdAt.getTime() > SIX_DAYS_MS
-    } else if (firstDay) {
-      daysSince = Math.floor((now - firstDay.date.getTime()) / (24 * 60 * 60 * 1000))
-      due = now - firstDay.date.getTime() > SIX_DAYS_MS
+    if (firstTimeBox) {
+      daysSince = Math.floor((now - firstTimeBox.createdAt.getTime()) / (24 * 60 * 60 * 1000))
+      due = now - firstTimeBox.createdAt.getTime() > SIX_DAYS_MS
     } else {
       due = false
       daysSince = 0

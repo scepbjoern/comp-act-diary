@@ -210,7 +210,7 @@ export default function HeutePage() {
 
   // Photo upload/delete functions are now handled by useDiaryManagement hook
 
-  async function updateDayMeta(patch: Partial<Pick<Day, 'phase' | 'careCategory'>>) {
+  async function updateDayMeta(patch: { dayRating?: number | null }) {
     if (!day) return
     startSaving()
     const res = await fetch(`/api/day/${day.id}`, {
@@ -231,11 +231,12 @@ export default function HeutePage() {
     const res = await fetch(`/api/day/${day.id}/stool`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bristol }),
+      body: JSON.stringify({ score: bristol }),
       credentials: 'same-origin',
     })
     const data = await res.json()
-    setDay(data.day)
+    // Merge with existing day to preserve other fields like symptoms
+    setDay(prev => prev ? { ...prev, stool: data.day?.stool } : prev)
     // Refresh inline analytics so stool sparkline updates immediately
     try {
       const res2 = await fetch(`/api/analytics/inline?to=${date}`, { credentials: 'same-origin' })

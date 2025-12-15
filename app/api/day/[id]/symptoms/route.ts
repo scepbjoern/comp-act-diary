@@ -4,92 +4,151 @@ import { getPrisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// Local SymptomType to avoid build-time dependency on generated Prisma enums
-const SymptomTypes = [
-  'BESCHWERDEFREIHEIT',
-  'ENERGIE',
-  'STIMMUNG',
-  'SCHLAF',
-  'ENTSPANNUNG',
-  'HEISSHUNGERFREIHEIT',
-  'BEWEGUNG',
+/**
+ * Symptoms API - Uses Measurement with MetricDefinition for system symptoms
+ */
+
+const SYSTEM_SYMPTOMS = [
+  { code: 'symptom_beschwerdefreiheit', name: 'Beschwerdefreiheit', icon: '😌' },
+  { code: 'symptom_energie', name: 'Energie', icon: '⚡' },
+  { code: 'symptom_stimmung', name: 'Stimmung', icon: '😊' },
+  { code: 'symptom_schlaf', name: 'Schlaf', icon: '😴' },
+  { code: 'symptom_entspannung', name: 'Entspannung', icon: '🧘' },
+  { code: 'symptom_heisshungerfreiheit', name: 'Heißhungerfreiheit', icon: '🍎' },
+  { code: 'symptom_bewegung', name: 'Bewegung', icon: '🏃' },
 ] as const
-export type SymptomType = typeof SymptomTypes[number]
+
+async function getOrCreateSymptomMetrics(prisma: ReturnType<typeof getPrisma>) {
+  const metrics: Record<string, string> = {}
+  
+  for (const symptom of SYSTEM_SYMPTOMS) {
+    let metric = await prisma.metricDefinition.findFirst({ 
+      where: { code: symptom.code, userId: null } 
+    })
+    if (!metric) {
+      metric = await prisma.metricDefinition.create({
+        data: {
+          code: symptom.code,
+          name: symptom.name,
+          dataType: 'NUMERIC',
+          minValue: 1,
+          maxValue: 10,
+          category: 'symptom',
+          icon: symptom.icon,
+          origin: 'SYSTEM',
+        }
+      })
+    }
+    // Map short name to metric ID (e.g., 'BESCHWERDEFREIHEIT' -> metric.id)
+    const shortName = symptom.code.replace('symptom_', '').toUpperCase()
+    metrics[shortName] = metric.id
+  }
+  
+  return metrics
+}
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const { id } = await context.params
-  const prisma = getPrisma()
-  const body = await req.json().catch(() => ({}))
-  const type = String(body.type || '') as SymptomType
-  const score = Number(body.score)
-  if (!SymptomTypes.includes(type) || !(score >= 1 && score <= 10)) {
-    return NextResponse.json({ error: 'Bad request' }, { status: 400 })
+  try {
+    const { id: dayId } = await context.params
+    const prisma = getPrisma()
+    
+    const body = await req.json().catch(() => ({}))
+    // body.scores is expected as { BESCHWERDEFREIHEIT: 5, ENERGIE: 7, ... }
+    const scores: Record<string, number | null> = body.scores || {}
+    
+    const day = await prisma.dayEntry.findUnique({ 
+      where: { id: dayId },
+      include: { timeBox: true }
+    })
+    if (!day) return NextResponse.json({ error: 'Day not found' }, { status: 404 })
+    if (!day.timeBoxId) return NextResponse.json({ error: 'Day has no timeBox' }, { status: 400 })
+    
+    const metricMap = await getOrCreateSymptomMetrics(prisma)
+    
+    // Process each symptom score
+    for (const [symptomKey, score] of Object.entries(scores)) {
+      const metricId = metricMap[symptomKey]
+      if (!metricId) continue
+      
+      if (score === null || score === undefined) {
+        // Delete measurement
+        await prisma.measurement.deleteMany({
+          where: { metricId, timeBoxId: day.timeBoxId, userId: day.userId }
+        })
+      } else {
+        // Validate score (1-10)
+        const numScore = Number(score)
+        if (numScore < 1 || numScore > 10) continue
+        
+        // Upsert measurement
+        const existing = await prisma.measurement.findFirst({
+          where: { metricId, timeBoxId: day.timeBoxId, userId: day.userId }
+        })
+        
+        if (existing) {
+          await prisma.measurement.update({
+            where: { id: existing.id },
+            data: { valueNum: numScore }
+          })
+        } else {
+          await prisma.measurement.create({
+            data: {
+              metricId,
+              userId: day.userId,
+              timeBoxId: day.timeBoxId,
+              valueNum: numScore,
+              source: 'MANUAL',
+            }
+          })
+        }
+      }
+    }
+    
+    // Return updated symptoms
+    const symptomsOut: Record<string, number | undefined> = {}
+    for (const [key, metricId] of Object.entries(metricMap)) {
+      const m = await prisma.measurement.findFirst({
+        where: { metricId, timeBoxId: day.timeBoxId, userId: day.userId }
+      })
+      if (m?.valueNum !== null && m?.valueNum !== undefined) {
+        symptomsOut[key] = m.valueNum
+      }
+    }
+    
+    return NextResponse.json({ day: { id: day.id, symptoms: symptomsOut } })
+  } catch (err) {
+    console.error('PUT /api/day/[id]/symptoms failed', err)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-
-  const day = await prisma.dayEntry.findUnique({ where: { id } })
-  if (!day) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
-  await prisma.symptomScore.upsert({
-    where: { dayEntryId_type: { dayEntryId: day.id, type } },
-    create: { dayEntryId: day.id, type, score },
-    update: { score },
-  })
-
-  const payload = await buildDayPayload(day.id)
-  return NextResponse.json({ day: payload })
 }
 
 export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const { id } = await context.params
-  const prisma = getPrisma()
-  let type: SymptomType | null = null
   try {
-    const body = await req.json().catch(() => ({})) as any
-    if (body && body.type) type = String(body.type) as SymptomType
-  } catch {}
-  if (!type) {
-    // allow query param fallback: /api/day/[id]/symptoms?type=STIMMUNG
-    try {
-      const url = new URL(req.url)
-      const t = url.searchParams.get('type')
-      if (t) type = String(t) as SymptomType
-    } catch {}
+    const { id: dayId } = await context.params
+    const prisma = getPrisma()
+    
+    const day = await prisma.dayEntry.findUnique({ 
+      where: { id: dayId },
+      include: { timeBox: true }
+    })
+    if (!day) return NextResponse.json({ error: 'Day not found' }, { status: 404 })
+    if (!day.timeBoxId) return NextResponse.json({ error: 'Day has no timeBox' }, { status: 400 })
+    
+    const metricMap = await getOrCreateSymptomMetrics(prisma)
+    const metricIds = Object.values(metricMap)
+    
+    // Delete all symptom measurements for this day
+    await prisma.measurement.deleteMany({
+      where: { 
+        metricId: { in: metricIds }, 
+        timeBoxId: day.timeBoxId, 
+        userId: day.userId 
+      }
+    })
+    
+    return NextResponse.json({ day: { id: day.id, symptoms: {} } })
+  } catch (err) {
+    console.error('DELETE /api/day/[id]/symptoms failed', err)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-  if (!type || !SymptomTypes.includes(type)) {
-    return NextResponse.json({ error: 'Bad request' }, { status: 400 })
-  }
-
-  const day = await prisma.dayEntry.findUnique({ where: { id } })
-  if (!day) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
-  await prisma.symptomScore.deleteMany({ where: { dayEntryId: day.id, type } })
-
-  const payload = await buildDayPayload(day.id)
-  return NextResponse.json({ day: payload })
-}
-
-async function buildDayPayload(dayId: string) {
-  const prisma = getPrisma()
-  const day = await prisma.dayEntry.findUnique({ where: { id: dayId } })
-  if (!day) throw new Error('Day not found')
-  const habits: { id: string; title: string }[] = await prisma.habit.findMany({ where: { isActive: true, OR: [{ userId: null }, { userId: day.userId }] }, orderBy: { sortIndex: 'asc' }, select: { id: true, title: true } })
-  const symptomRows = await prisma.symptomScore.findMany({ where: { dayEntryId: day.id } })
-  const symptoms: Record<string, number | undefined> = {}
-  for (const s of symptomRows) symptoms[s.type] = s.score
-  const stoolRow = await prisma.stoolScore.findUnique({ where: { dayEntryId: day.id } })
-  const tickRows: { habitId: string; checked: boolean }[] = await prisma.habitTick.findMany({ where: { dayEntryId: day.id } })
-  const ticks = habits.map((h: { id: string }) => ({ habitId: h.id, checked: Boolean(tickRows.find((t: { habitId: string; checked: boolean }) => t.habitId === h.id)?.checked) }))
-  // Custom user-defined symptoms
-  const userSymptoms = await (prisma as any).userSymptom.findMany({ where: { userId: day.userId, isActive: true }, orderBy: { sortIndex: 'asc' }, select: { id: true, title: true } })
-  const scores = await (prisma as any).userSymptomScore.findMany({ where: { dayEntryId: day.id } })
-  const scoreById = new Map<string, number>()
-  for (const s of scores) scoreById.set(s.userSymptomId, s.score)
-  const userSymptomsOut = (userSymptoms as any[]).map((u: any) => ({ id: u.id, title: u.title, score: scoreById.get(u.id) }))
-  const dateStr = toYmd(day.date)
-  return { id: day.id, date: dateStr, phase: day.phase, careCategory: day.careCategory, symptoms, stool: stoolRow?.bristol ?? undefined, habitTicks: ticks, userSymptoms: userSymptomsOut }
-}
-
-function toYmd(d: Date) {
-  const dt = new Date(d)
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
 }

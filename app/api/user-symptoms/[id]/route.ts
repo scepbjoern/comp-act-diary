@@ -4,6 +4,10 @@ import { getPrisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+/**
+ * User Symptoms [id] API - Now uses MetricDefinition model
+ */
+
 export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params
   try {
@@ -14,18 +18,18 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
     const body = await req.json().catch(() => ({} as any))
-    const row = await (prisma as any).userSymptom.findUnique({ where: { id } })
+    const row = await prisma.metricDefinition.findUnique({ where: { id } })
     if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     if (row.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const data: any = {}
-    if (typeof body.title === 'string') data.title = String(body.title).trim() || row.title
+    const data: { name?: string; icon?: string | null } = {}
+    if (typeof body.title === 'string') data.name = String(body.title).trim() || row.name
     if (Object.prototype.hasOwnProperty.call(body, 'icon')) {
-      const icon = (typeof body.icon === 'string' ? String(body.icon).trim() : '') || null
-      data.icon = icon
+      data.icon = (typeof body.icon === 'string' ? String(body.icon).trim() : '') || null
     }
-    const updated = await (prisma as any).userSymptom.update({ where: { id }, data, select: { id: true, title: true, icon: true } })
-    return NextResponse.json({ ok: true, symptom: { id: updated.id, title: updated.title, icon: updated.icon ?? null } })
+    
+    const updated = await prisma.metricDefinition.update({ where: { id }, data })
+    return NextResponse.json({ ok: true, symptom: { id: updated.id, title: updated.name, icon: updated.icon ?? null } })
   } catch (err) {
     console.error('PATCH /api/user-symptoms/[id] failed', err)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
@@ -41,13 +45,13 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
     if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
     if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
-    const sym = await (prisma as any).userSymptom.findUnique({ where: { id } })
-    if (!sym) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    if (sym.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const metric = await prisma.metricDefinition.findUnique({ where: { id } })
+    if (!metric) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (metric.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    // Delete scores first due to FK
-    await (prisma as any).userSymptomScore.deleteMany({ where: { userSymptomId: id } })
-    await (prisma as any).userSymptom.delete({ where: { id } })
+    // Delete associated measurements first
+    await prisma.measurement.deleteMany({ where: { metricId: id } })
+    await prisma.metricDefinition.delete({ where: { id } })
     return NextResponse.json({ ok: true, deleted: id })
   } catch (err) {
     console.error('DELETE /api/user-symptoms/[id] failed', err)

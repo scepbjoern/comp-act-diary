@@ -54,14 +54,15 @@ export async function GET(req: NextRequest) {
     // Resolve user (cookie -> demo fallback)
     const cookieUserId = req.cookies.get('userId')?.value
     let user = cookieUserId
-      ? await prisma.user.findUnique({ where: { id: cookieUserId }, include: { settings: true } })
+      ? await prisma.user.findUnique({ where: { id: cookieUserId } })
       : null
     if (!user) {
-      user = await prisma.user.findUnique({ where: { username: 'demo' }, include: { settings: true } })
+      user = await prisma.user.findUnique({ where: { username: 'demo' } })
     }
     if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
-    const weekStartPref: 'mon' | 'sun' = user.settings?.weekStart === 'sun' ? 'sun' : 'mon'
+    // Settings not available in new schema - default to Monday
+    const weekStartPref: 'mon' | 'sun' = 'mon'
 
     let start = fromYmd(fromParam)
     if (!start) start = startOfWeekLocal(new Date(), weekStartPref)
@@ -80,117 +81,151 @@ export async function GET(req: NextRequest) {
     const rangeEndExclusive = new Date(days[6])
     rangeEndExclusive.setDate(rangeEndExclusive.getDate() + 1)
 
-    // Load day entries in range
-    const dayEntries = await prisma.dayEntry.findMany({
+    // Load TimeBoxes in range (new schema)
+    const timeBoxes = await prisma.timeBox.findMany({
       where: {
         userId: user.id,
-        date: { gte: rangeStart, lt: rangeEndExclusive },
+        localDate: { gte: keys[0], lte: keys[6] },
+        kind: 'DAY',
       },
-      select: { id: true, date: true },
+      select: { id: true, localDate: true },
     })
 
     const dayIdByKey = new Map<string, string>()
     const dayKeyById = new Map<string, string>()
-    for (const de of dayEntries) {
-      const key = toYmd(de.date)
-      dayIdByKey.set(key, de.id)
-      dayKeyById.set(de.id, key)
+    for (const tb of timeBoxes) {
+      if (tb.localDate) {
+        dayIdByKey.set(tb.localDate, tb.id)
+        dayKeyById.set(tb.id, tb.localDate)
+      }
     }
-    const dayIds = dayEntries.map((d: { id: string; date: Date }) => d.id)
+    const timeBoxIds = timeBoxes.map((tb) => tb.id)
 
-    // Load symptoms, stool, ticks
-    const [symptomRows, stoolRows, tickRows, activeHabitsCount, customDefs, customScores] = await Promise.all([
-      dayIds.length
-        ? prisma.symptomScore.findMany({
-            where: { dayEntryId: { in: dayIds } },
-            select: { dayEntryId: true, type: true, score: true },
+    // Load habit check-ins
+    const [checkIns, activeHabitsCount] = await Promise.all([
+      timeBoxIds.length
+        ? prisma.habitCheckIn.findMany({ 
+            where: { timeBoxId: { in: timeBoxIds }, status: 'DONE' }, 
+            select: { timeBoxId: true } 
           })
-        : Promise.resolve([] as { dayEntryId: string; type: SymptomKey; score: number }[]),
-      dayIds.length
-        ? prisma.stoolScore.findMany({ where: { dayEntryId: { in: dayIds } }, select: { dayEntryId: true, bristol: true } })
-        : Promise.resolve([] as { dayEntryId: string; bristol: number }[]),
-      dayIds.length
-        ? prisma.habitTick.findMany({ where: { dayEntryId: { in: dayIds }, checked: true }, select: { dayEntryId: true } })
-        : Promise.resolve([] as { dayEntryId: string }[]),
-      prisma.habit.count({ where: { isActive: true, OR: [{ userId: null }, { userId: user.id }] } }),
-      (prisma as any).userSymptom.findMany({ where: { userId: user.id, isActive: true }, orderBy: { sortIndex: 'asc' }, select: { id: true, title: true } }),
-      dayIds.length
-        ? (prisma as any).userSymptomScore.findMany({ where: { dayEntryId: { in: dayIds } }, select: { dayEntryId: true, userSymptomId: true, score: true } })
-        : Promise.resolve([] as { dayEntryId: string; userSymptomId: string; score: number }[]),
+        : Promise.resolve([]),
+      prisma.habit.count({ where: { userId: user.id, isActive: true } }),
     ])
 
-    // Map stool per day
-    const stoolByDayId = new Map<string, number>()
-    for (const r of stoolRows) stoolByDayId.set(r.dayEntryId, r.bristol)
+    // Map done check-ins per timeBox
+    const doneByTimeBoxId = new Map<string, number>()
+    for (const ci of checkIns) doneByTimeBoxId.set(ci.timeBoxId, (doneByTimeBoxId.get(ci.timeBoxId) || 0) + 1)
 
-    // Map done ticks per day
-    const doneByDayId = new Map<string, number>()
-    for (const r of tickRows) doneByDayId.set(r.dayEntryId, (doneByDayId.get(r.dayEntryId) || 0) + 1)
-
-    // Symptoms map: type -> (dayKey -> score)
-    const symptomByTypeByKey = new Map<SymptomKey, Map<string, number>>()
-    for (const t of SYMPTOMS) symptomByTypeByKey.set(t, new Map())
-    for (const r of symptomRows) {
-      const key = dayKeyById.get(r.dayEntryId)
-      if (!key) continue
-      const m = symptomByTypeByKey.get(r.type as SymptomKey)
-      if (m) m.set(key, r.score)
+    // Load symptoms from Measurement
+    const SYSTEM_SYMPTOM_CODES = [
+      'symptom_beschwerdefreiheit',
+      'symptom_energie',
+      'symptom_stimmung',
+      'symptom_schlaf',
+      'symptom_entspannung',
+      'symptom_heisshungerfreiheit',
+      'symptom_bewegung',
+    ]
+    const symptomMetrics = await prisma.metricDefinition.findMany({
+      where: { code: { in: SYSTEM_SYMPTOM_CODES }, userId: null }
+    })
+    const symptomMetricIds = symptomMetrics.map(m => m.id)
+    const symptomMeasurements = timeBoxIds.length > 0
+      ? await prisma.measurement.findMany({
+          where: { metricId: { in: symptomMetricIds }, timeBoxId: { in: timeBoxIds }, userId: user.id },
+          include: { metric: true }
+        })
+      : []
+    
+    // Build symptom data map: timeBoxId -> { KEY: value }
+    const symptomByTimeBox = new Map<string, Record<string, number>>()
+    for (const m of symptomMeasurements) {
+      const tbId = m.timeBoxId
+      if (m.metric && m.valueNum !== null && tbId) {
+        const key = m.metric.code.replace('symptom_', '').toUpperCase()
+        const existing = symptomByTimeBox.get(tbId) || {}
+        existing[key] = m.valueNum
+        symptomByTimeBox.set(tbId, existing)
+      }
     }
-
-    // Build arrays
+    
     const symptoms: Record<SymptomKey, (number | null)[]> = {
-      BESCHWERDEFREIHEIT: [],
-      ENERGIE: [],
-      STIMMUNG: [],
-      SCHLAF: [],
-      ENTSPANNUNG: [],
-      HEISSHUNGERFREIHEIT: [],
-      BEWEGUNG: [],
+      BESCHWERDEFREIHEIT: keys.map(k => { const tb = dayIdByKey.get(k); return tb ? (symptomByTimeBox.get(tb)?.BESCHWERDEFREIHEIT ?? null) : null }),
+      ENERGIE: keys.map(k => { const tb = dayIdByKey.get(k); return tb ? (symptomByTimeBox.get(tb)?.ENERGIE ?? null) : null }),
+      STIMMUNG: keys.map(k => { const tb = dayIdByKey.get(k); return tb ? (symptomByTimeBox.get(tb)?.STIMMUNG ?? null) : null }),
+      SCHLAF: keys.map(k => { const tb = dayIdByKey.get(k); return tb ? (symptomByTimeBox.get(tb)?.SCHLAF ?? null) : null }),
+      ENTSPANNUNG: keys.map(k => { const tb = dayIdByKey.get(k); return tb ? (symptomByTimeBox.get(tb)?.ENTSPANNUNG ?? null) : null }),
+      HEISSHUNGERFREIHEIT: keys.map(k => { const tb = dayIdByKey.get(k); return tb ? (symptomByTimeBox.get(tb)?.HEISSHUNGERFREIHEIT ?? null) : null }),
+      BEWEGUNG: keys.map(k => { const tb = dayIdByKey.get(k); return tb ? (symptomByTimeBox.get(tb)?.BEWEGUNG ?? null) : null }),
     }
 
-    const stool: (number | null)[] = []
-    const habitFulfillment: (number | null)[] = []
-    // Custom symptoms series: id -> (dayKey -> score)
-    const customById: Record<string, Map<string, number>> = {}
-    for (const def of customDefs as any[]) customById[def.id] = new Map<string, number>()
-    for (const r of customScores as any[]) {
-      const key = dayKeyById.get(r.dayEntryId)
-      if (!key) continue
-      const m = customById[r.userSymptomId]
-      if (m) m.set(key, r.score)
+    // Load stool from Measurement
+    const stoolMetric = await prisma.metricDefinition.findFirst({
+      where: { code: 'bristol_stool', userId: null }
+    })
+    const stoolMeasurements = stoolMetric && timeBoxIds.length > 0
+      ? await prisma.measurement.findMany({
+          where: { metricId: stoolMetric.id, timeBoxId: { in: timeBoxIds }, userId: user.id }
+        })
+      : []
+    const stoolByTimeBox = new Map<string, number>()
+    for (const m of stoolMeasurements) {
+      if (m.valueNum !== null && m.timeBoxId) stoolByTimeBox.set(m.timeBoxId, m.valueNum)
     }
-    const wellBeingIndex: (number | null)[] = []
+    const stool: (number | null)[] = keys.map(k => {
+      const tb = dayIdByKey.get(k)
+      return tb ? (stoolByTimeBox.get(tb) ?? null) : null
+    })
+    
+    // Calculate wellBeingIndex as average of all symptoms for each day
+    const wellBeingIndex: (number | null)[] = keys.map(k => {
+      const tb = dayIdByKey.get(k)
+      if (!tb) return null
+      const daySymptoms = symptomByTimeBox.get(tb)
+      if (!daySymptoms) return null
+      const values = Object.values(daySymptoms)
+      if (values.length === 0) return null
+      const avg = values.reduce((a, b) => a + b, 0) / values.length
+      return Number(avg.toFixed(2))
+    })
 
-    for (const key of keys) {
-      // Symptoms
-      const dayValues: number[] = []
-      for (const t of SYMPTOMS) {
-        const v = symptomByTypeByKey.get(t)?.get(key)
-        symptoms[t].push(v ?? null)
-        if (typeof v === 'number') dayValues.push(v)
+    // Habit fulfillment series
+    const habitFulfillment: (number | null)[] = keys.map((key) => {
+      const tbId = dayIdByKey.get(key)
+      if (activeHabitsCount > 0 && tbId) {
+        const done = doneByTimeBoxId.get(tbId) || 0
+        return Number((done / activeHabitsCount).toFixed(3))
       }
-      // Index
-      if (dayValues.length > 0) {
-        const avg = dayValues.reduce((a, b) => a + b, 0) / dayValues.length
-        wellBeingIndex.push(Number(avg.toFixed(2)))
-      } else {
-        wellBeingIndex.push(null)
-      }
-      // Stool (treat 99 as "kein Stuhl" → null)
-      const dayId = dayIdByKey.get(key)
-      const sv = dayId ? stoolByDayId.get(dayId) ?? null : null
-      stool.push(sv === 99 ? null : sv)
-      // Habits
-      if (activeHabitsCount > 0 && dayId) {
-        const done = doneByDayId.get(dayId) || 0
-        habitFulfillment.push(Number((done / activeHabitsCount).toFixed(3)))
-      } else {
-        habitFulfillment.push(null)
+      return null
+    })
+
+    // Load custom/user symptoms
+    const userMetrics = await prisma.metricDefinition.findMany({
+      where: { userId: user.id, category: 'user_symptom' }
+    })
+    const userMetricIds = userMetrics.map(m => m.id)
+    const userSymptomMeasurements = userMetricIds.length > 0 && timeBoxIds.length > 0
+      ? await prisma.measurement.findMany({
+          where: { metricId: { in: userMetricIds }, timeBoxId: { in: timeBoxIds }, userId: user.id }
+        })
+      : []
+    const customByTimeBox = new Map<string, Map<string, number>>()
+    for (const m of userSymptomMeasurements) {
+      if (m.timeBoxId && m.valueNum !== null) {
+        const inner = customByTimeBox.get(m.timeBoxId) || new Map()
+        inner.set(m.metricId, m.valueNum)
+        customByTimeBox.set(m.timeBoxId, inner)
       }
     }
+    const customDefs = userMetrics.map(m => ({ id: m.id, title: m.name }))
+    const customSeries: Record<string, (number | null)[]> = {}
+    for (const metric of userMetrics) {
+      customSeries[metric.id] = keys.map(k => {
+        const tb = dayIdByKey.get(k)
+        return tb ? (customByTimeBox.get(tb)?.get(metric.id) ?? null) : null
+      })
+    }
 
-    const collator = new Intl.Collator('de-DE', { sensitivity: 'base' })
-    const sortedDefs = (customDefs as any[]).slice().sort((a: any, b: any) => collator.compare(a.title, b.title))
     const payload = {
       weekStart: toYmd(days[0]),
       days: keys,
@@ -199,8 +234,8 @@ export async function GET(req: NextRequest) {
       stool,
       habitFulfillment,
       customSymptoms: {
-        defs: sortedDefs.map((d: any) => ({ id: d.id, title: d.title })),
-        series: Object.fromEntries(sortedDefs.map((d: any) => [d.id, keys.map((k: string) => customById[d.id]?.get(k) ?? null)])),
+        defs: customDefs,
+        series: customSeries,
       },
     }
 

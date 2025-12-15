@@ -15,22 +15,22 @@ export async function GET(req: NextRequest) {
     user = await prisma.user.findUnique({ where: { username: 'demo' } })
   }
   if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
-  const settings = await prisma.userSettings.findUnique({ where: { userId: user.id } })
+  // UserSettings not in new schema - return defaults
   return NextResponse.json({
     user: {
       id: user.id,
       username: user.username,
       displayName: user.displayName,
-      profileImageUrl: (user as any).profileImageUrl ?? null,
-      settings: settings ? {
-        theme: settings.theme,
-        timeFormat24h: settings.timeFormat24h,
-        weekStart: settings.weekStart,
-        autosaveEnabled: settings.autosaveEnabled,
-        autosaveIntervalSec: settings.autosaveIntervalSec,
-        summaryModel: settings.summaryModel ?? DEFAULT_SUMMARY_MODEL,
-        summaryPrompt: settings.summaryPrompt ?? DEFAULT_SUMMARY_PROMPT,
-      } : null,
+      profileImageUrl: null,
+      settings: {
+        theme: 'dark',
+        timeFormat24h: true,
+        weekStart: 'mon',
+        autosaveEnabled: true,
+        autosaveIntervalSec: 5,
+        summaryModel: DEFAULT_SUMMARY_MODEL,
+        summaryPrompt: DEFAULT_SUMMARY_PROMPT,
+      },
     },
   })
 }
@@ -93,40 +93,23 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    let updatedSettings = await prisma.userSettings.findUnique({ where: { userId: user.id } })
-    if (Object.keys(settingsPatch).length > 0) {
-      updatedSettings = await prisma.userSettings.upsert({
-        where: { userId: user.id },
-        create: {
-          userId: user.id,
-          theme: settingsPatch.theme || 'dark',
-          autosaveEnabled: settingsPatch.autosaveEnabled ?? true,
-          autosaveIntervalSec: settingsPatch.autosaveIntervalSec ?? 5,
-          weekStart: 'mon',
-          timeFormat24h: true,
-          summaryModel: settingsPatch.summaryModel ?? DEFAULT_SUMMARY_MODEL,
-          summaryPrompt: settingsPatch.summaryPrompt ?? DEFAULT_SUMMARY_PROMPT,
-        },
-        update: settingsPatch,
-      })
-    }
-
+    // UserSettings not in new schema - return defaults
     return NextResponse.json({
       ok: true,
       user: {
         id: updatedUser.id,
         username: updatedUser.username,
         displayName: updatedUser.displayName,
-        profileImageUrl: (updatedUser as any).profileImageUrl ?? null,
-        settings: updatedSettings ? {
-          theme: updatedSettings.theme,
-          timeFormat24h: updatedSettings.timeFormat24h,
-          weekStart: updatedSettings.weekStart,
-          autosaveEnabled: updatedSettings.autosaveEnabled,
-          autosaveIntervalSec: updatedSettings.autosaveIntervalSec,
-          summaryModel: updatedSettings.summaryModel ?? DEFAULT_SUMMARY_MODEL,
-          summaryPrompt: updatedSettings.summaryPrompt ?? DEFAULT_SUMMARY_PROMPT,
-        } : null,
+        profileImageUrl: null,
+        settings: {
+          theme: settingsPatch.theme || 'dark',
+          timeFormat24h: true,
+          weekStart: 'mon',
+          autosaveEnabled: settingsPatch.autosaveEnabled ?? true,
+          autosaveIntervalSec: settingsPatch.autosaveIntervalSec ?? 5,
+          summaryModel: settingsPatch.summaryModel ?? DEFAULT_SUMMARY_MODEL,
+          summaryPrompt: settingsPatch.summaryPrompt ?? DEFAULT_SUMMARY_PROMPT,
+        },
       },
     })
   } catch (err) {

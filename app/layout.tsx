@@ -52,7 +52,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       username: true, 
       displayName: true,
       profileImageUrl: true,
-      settings: { select: { theme: true } } 
     } 
   }) : null
   if (!user) {
@@ -63,14 +62,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         username: true,
         displayName: true,
         profileImageUrl: true,
-        settings: { select: { theme: true } },
       },
     })
   }
   
-  // Prefer DB theme; fall back to cookie if DB not present. Normalize and default to 'dark'
+  // Get theme from cookie (settings table removed in new schema)
   const themeCookie = cookieStore.get('theme')?.value || ''
-  const t = (user?.settings?.theme || themeCookie || '').toLowerCase()
+  const t = (themeCookie || '').toLowerCase()
   const theme: 'dark' | 'bright' = (t === 'bright' || t === 'light') ? 'bright' : 'dark'
   const version = (pkg as unknown as { version?: string }).version ?? '0.0.0'
 

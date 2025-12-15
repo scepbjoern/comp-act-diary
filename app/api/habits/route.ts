@@ -12,24 +12,17 @@ export async function GET(req: NextRequest) {
   if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
   if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
-  const habits = await (prisma as any).habit.findMany({
-    where: { isActive: true, OR: [{ userId: null }, { userId: user.id }] },
-    orderBy: { sortIndex: 'asc' },
+  const habits = await prisma.habit.findMany({
+    where: { userId: user.id, isActive: true },
+    orderBy: { sortOrder: 'asc' },
     select: { id: true, title: true, userId: true, icon: true },
   })
-  const overrides = await (prisma as any).habitIcon?.findMany?.({ where: { userId: user.id, habitId: { in: habits.map((h: any) => h.id) } } }) || []
-  const byHabit = new Map<string, string | null>((overrides as any[]).map((o: any) => [o.habitId, o.icon ?? null]))
-  const list = habits.map((h: any) => {
-    let icon: string | null
-    if (h.userId) {
-      icon = h.icon ?? null
-    } else if (byHabit.has(h.id)) {
-      icon = byHabit.get(h.id) ?? null
-    } else {
-      icon = DEFAULT_HABIT_ICONS[h.title] ?? null
-    }
-    return { id: h.id, title: h.title, userId: h.userId, icon: icon ?? null }
-  })
+  const list = habits.map((h) => ({
+    id: h.id,
+    title: h.title,
+    userId: h.userId,
+    icon: h.icon ?? DEFAULT_HABIT_ICONS[h.title] ?? null
+  }))
   return NextResponse.json({ habits: list })
 }
 
@@ -44,8 +37,12 @@ export async function POST(req: NextRequest) {
   if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
   if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
-  const last = await prisma.habit.findFirst({ where: { OR: [{ userId: null }, { userId: user.id }] }, orderBy: { sortIndex: 'desc' }, select: { sortIndex: true } })
-  const sortIndex = (last?.sortIndex ?? 0) + 1
-  const habit = await (prisma as any).habit.create({ data: { userId: user.id, title, icon, isActive: true, sortIndex }, select: { id: true, title: true, userId: true, icon: true } })
+  const last = await prisma.habit.findFirst({ where: { userId: user.id }, orderBy: { sortOrder: 'desc' }, select: { sortOrder: true } })
+  const sortOrder = (last?.sortOrder ?? 0) + 1
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  const habit = await prisma.habit.create({ 
+    data: { userId: user.id, title, slug, icon, isActive: true, sortOrder }, 
+    select: { id: true, title: true, userId: true, icon: true } 
+  })
   return NextResponse.json({ ok: true, habit })
 }

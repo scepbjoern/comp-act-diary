@@ -4,48 +4,98 @@ import { getPrisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const { id } = await context.params
-  const prisma = getPrisma()
-  const body = await req.json().catch(() => ({}))
-  const bristol = Number(body.bristol)
-  if (!((bristol >= 1 && bristol <= 7) || bristol === 99)) return NextResponse.json({ error: 'Bad request' }, { status: 400 })
+/**
+ * Stool API - Uses Measurement with MetricDefinition code='bristol_stool'
+ */
 
-  const day = await prisma.dayEntry.findUnique({ where: { id } })
-  if (!day) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+const STOOL_METRIC_CODE = 'bristol_stool'
 
-  await prisma.stoolScore.upsert({
-    where: { dayEntryId: day.id },
-    create: { dayEntryId: day.id, bristol },
-    update: { bristol },
+async function getOrCreateStoolMetric(prisma: ReturnType<typeof getPrisma>) {
+  let metric = await prisma.metricDefinition.findFirst({ 
+    where: { code: STOOL_METRIC_CODE, userId: null } 
   })
-
-  const payload = await buildDayPayload(day.id)
-  return NextResponse.json({ day: payload })
+  if (!metric) {
+    metric = await prisma.metricDefinition.create({
+      data: {
+        code: STOOL_METRIC_CODE,
+        name: 'Bristol-Stuhlform',
+        dataType: 'NUMERIC',
+        minValue: 1,
+        maxValue: 7,
+        category: 'health',
+        icon: '💩',
+        origin: 'SYSTEM',
+      }
+    })
+  }
+  return metric
 }
 
-async function buildDayPayload(dayId: string) {
-  const prisma = getPrisma()
-  const day = await prisma.dayEntry.findUnique({ where: { id: dayId } })
-  if (!day) throw new Error('Day not found')
-  const habits: { id: string; title: string }[] = await prisma.habit.findMany({ where: { isActive: true, OR: [{ userId: null }, { userId: day.userId }] }, orderBy: { sortIndex: 'asc' }, select: { id: true, title: true } })
-  const symptomRows = await prisma.symptomScore.findMany({ where: { dayEntryId: day.id } })
-  const symptoms: Record<string, number | undefined> = {}
-  for (const s of symptomRows) symptoms[s.type] = s.score
-  const stoolRow = await prisma.stoolScore.findUnique({ where: { dayEntryId: day.id } })
-  const tickRows: { habitId: string; checked: boolean }[] = await prisma.habitTick.findMany({ where: { dayEntryId: day.id } })
-  const ticks = habits.map((h: { id: string }) => ({ habitId: h.id, checked: Boolean(tickRows.find((t: { habitId: string; checked: boolean }) => t.habitId === h.id)?.checked) }))
-  // Custom user-defined symptoms
-  const userSymptoms = await (prisma as any).userSymptom.findMany({ where: { userId: day.userId, isActive: true }, orderBy: { sortIndex: 'asc' }, select: { id: true, title: true } })
-  const scores = await (prisma as any).userSymptomScore.findMany({ where: { dayEntryId: day.id } })
-  const scoreById = new Map<string, number>()
-  for (const s of scores) scoreById.set(s.userSymptomId, s.score)
-  const userSymptomsOut = (userSymptoms as any[]).map((u: any) => ({ id: u.id, title: u.title, score: scoreById.get(u.id) }))
-  const dateStr = toYmd(day.date)
-  return { id: day.id, date: dateStr, phase: day.phase, careCategory: day.careCategory, symptoms, stool: stoolRow?.bristol ?? undefined, habitTicks: ticks, userSymptoms: userSymptomsOut }
-}
-
-function toYmd(d: Date) {
-  const dt = new Date(d)
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const { id: dayId } = await context.params
+    const prisma = getPrisma()
+    
+    const body = await req.json().catch(() => ({}))
+    const score = typeof body.score === 'number' ? body.score : null
+    
+    // Get day entry with timeBox
+    const day = await prisma.dayEntry.findUnique({ 
+      where: { id: dayId },
+      include: { timeBox: true }
+    })
+    if (!day) return NextResponse.json({ error: 'Day not found' }, { status: 404 })
+    if (!day.timeBoxId) return NextResponse.json({ error: 'Day has no timeBox' }, { status: 400 })
+    
+    const metric = await getOrCreateStoolMetric(prisma)
+    
+    if (score === null) {
+      // Delete existing measurement
+      await prisma.measurement.deleteMany({
+        where: { metricId: metric.id, timeBoxId: day.timeBoxId, userId: day.userId }
+      })
+    } else {
+      // Validate score (1-7 Bristol scale)
+      if (score < 1 || score > 7) {
+        return NextResponse.json({ error: 'Score must be 1-7' }, { status: 400 })
+      }
+      
+      // Upsert measurement
+      const existing = await prisma.measurement.findFirst({
+        where: { metricId: metric.id, timeBoxId: day.timeBoxId, userId: day.userId }
+      })
+      
+      if (existing) {
+        await prisma.measurement.update({
+          where: { id: existing.id },
+          data: { valueNum: score }
+        })
+      } else {
+        await prisma.measurement.create({
+          data: {
+            metricId: metric.id,
+            userId: day.userId,
+            timeBoxId: day.timeBoxId,
+            valueNum: score,
+            source: 'MANUAL',
+          }
+        })
+      }
+    }
+    
+    // Return updated day payload
+    const stoolMeasurement = await prisma.measurement.findFirst({
+      where: { metricId: metric.id, timeBoxId: day.timeBoxId, userId: day.userId }
+    })
+    
+    return NextResponse.json({ 
+      day: { 
+        id: day.id, 
+        stool: stoolMeasurement?.valueNum ?? undefined 
+      } 
+    })
+  } catch (err) {
+    console.error('PUT /api/day/[id]/stool failed', err)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
 }

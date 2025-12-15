@@ -43,20 +43,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing audioFileId' }, { status: 400 })
     }
 
-    // Get audio file from database
+    // Get media asset from database (replaces AudioFile)
     const prisma = getPrisma()
-    const audioFile = await prisma.audioFile.findUnique({
+    const mediaAsset = await prisma.mediaAsset.findUnique({
       where: { id: audioFileId }
     })
 
-    if (!audioFile) {
-      console.error('ERROR: Audio file not found:', audioFileId)
+    if (!mediaAsset) {
+      console.error('ERROR: Media asset not found:', audioFileId)
       return NextResponse.json({ error: 'Audio file not found' }, { status: 404 })
+    }
+
+    if (!mediaAsset.filePath) {
+      console.error('ERROR: Media asset has no file path:', audioFileId)
+      return NextResponse.json({ error: 'Audio file has no path' }, { status: 404 })
     }
 
     // Check if file exists on disk
     const uploadsDir = getUploadsDir()
-    const fullPath = path.join(uploadsDir, audioFile.filePath)
+    const fullPath = path.join(uploadsDir, mediaAsset.filePath)
 
     if (!existsSync(fullPath)) {
       console.error('ERROR: Audio file not found on disk:', fullPath)
@@ -65,11 +70,11 @@ export async function POST(req: NextRequest) {
 
     // Read the audio file
     const audioBuffer = await readFile(fullPath)
-    const extension = path.extname(audioFile.fileName).slice(1) || 'm4a'
-    const mimeType = audioFile.mimeType || `audio/${extension}`
+    const extension = path.extname(mediaAsset.filePath).slice(1) || 'm4a'
+    const mimeType = mediaAsset.mimeType || `audio/${extension}`
 
     console.log('Audio file loaded:', { 
-      fileName: audioFile.fileName, 
+      filePath: mediaAsset.filePath, 
       fileSize: audioBuffer.length, 
       mimeType,
       extension 
@@ -216,21 +221,14 @@ export async function POST(req: NextRequest) {
     // Clean up temporary chunk files
     await cleanupChunks(chunks, fullPath)
 
-    // Update all notes that use this audio file with the new transcription
-    const updatedNotes = await prisma.dayNote.updateMany({
-      where: { audioFileId },
-      data: { 
-        text: transcribedText,
-        originalTranscript: transcribedText // Store as original transcript
-      }
-    })
-
-    console.log('Updated notes count:', updatedNotes.count)
+    // Note: In the new schema, JournalEntry content would need to be updated
+    // via MediaAttachment lookup. For now, just return the transcription.
+    // The frontend handles updating the note content.
+    console.log('Transcription complete, returning result')
 
     const result = {
       text: transcribedText,
       audioFileId,
-      updatedNotesCount: updatedNotes.count,
       model
     }
     

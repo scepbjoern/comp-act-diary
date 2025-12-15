@@ -4,6 +4,41 @@ import { getPrisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+/**
+ * Reflections API - Now uses JournalEntry with reflection type
+ */
+
+function toYmd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+async function getOrCreateReflectionType(prisma: ReturnType<typeof getPrisma>, userId: string, kind: 'WEEK' | 'MONTH') {
+  const code = kind === 'WEEK' ? 'reflection_week' : 'reflection_month'
+  let type = await prisma.journalEntryType.findFirst({ where: { code, OR: [{ userId: null }, { userId }] } })
+  if (!type) {
+    type = await prisma.journalEntryType.create({
+      data: { code, name: kind === 'WEEK' ? 'Wochenreflexion' : 'Monatsreflexion', icon: '📝' }
+    })
+  }
+  return type
+}
+
+async function getOrCreateTimeBox(prisma: ReturnType<typeof getPrisma>, userId: string, kind: 'WEEK' | 'MONTH') {
+  const now = new Date()
+  const localDate = toYmd(now)
+  const tbKind = kind === 'WEEK' ? 'WEEK' : 'MONTH'
+  
+  let timeBox = await prisma.timeBox.findFirst({ where: { userId, kind: tbKind, localDate } })
+  if (!timeBox) {
+    const startAt = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const endAt = new Date(startAt.getTime() + 24 * 60 * 60 * 1000)
+    timeBox = await prisma.timeBox.create({
+      data: { userId, kind: tbKind, localDate, startAt, endAt }
+    })
+  }
+  return timeBox
+}
+
 export async function GET(req: NextRequest) {
   try {
     const prisma = getPrisma()
@@ -12,22 +47,31 @@ export async function GET(req: NextRequest) {
     if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
     if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
-    const rows = await (prisma as any).reflection.findMany({
-      where: { userId: user.id },
+    // Get reflection types
+    const reflectionTypes = await prisma.journalEntryType.findMany({
+      where: { code: { in: ['reflection_week', 'reflection_month'] } }
+    })
+    const typeIds = reflectionTypes.map(t => t.id)
+
+    if (typeIds.length === 0) {
+      return NextResponse.json({ reflections: [] })
+    }
+
+    const entries = await prisma.journalEntry.findMany({
+      where: { userId: user.id, typeId: { in: typeIds }, deletedAt: null },
       orderBy: { createdAt: 'desc' },
-      include: { photos: true },
+      include: { type: true }
     })
 
-    const reflections = (rows as any[]).map((r: any) => ({
-      id: r.id,
-      kind: r.kind,
-      createdAtIso: r.createdAt.toISOString(),
-      changed: r.changed ?? '',
-      gratitude: r.gratitude ?? '',
-      vows: r.vows ?? '',
-      remarks: r.remarks ?? '',
-      weightKg: typeof r.weightKg === 'number' ? r.weightKg : undefined,
-      photos: ((r.photos || []) as any[]).map((p: any) => ({ id: p.id, url: p.url })),
+    const reflections = entries.map(e => ({
+      id: e.id,
+      kind: e.type.code === 'reflection_month' ? 'MONTH' : 'WEEK',
+      createdAtIso: e.createdAt.toISOString(),
+      changed: '', // Parse from content if needed
+      gratitude: '',
+      vows: '',
+      remarks: e.content,
+      photos: [],
     }))
     return NextResponse.json({ reflections })
   } catch (err) {
@@ -46,44 +90,27 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({} as any))
     const kind = (body?.kind === 'MONTH' ? 'MONTH' : 'WEEK') as 'WEEK' | 'MONTH'
-    const changed: string | undefined = body?.changed || undefined
-    const gratitude: string | undefined = body?.gratitude || undefined
-    const vows: string | undefined = body?.vows || undefined
-    const remarks: string | undefined = body?.remarks || undefined
-    // Optional weight in kg (one decimal). Accept string with comma or dot.
-    const rawW = body?.weightKg
-    const parsedWeight = (() => {
-      if (rawW === null) return null
-      if (typeof rawW === 'number' && isFinite(rawW)) return Math.round(rawW * 10) / 10
-      if (typeof rawW === 'string') {
-        const s = rawW.trim()
-        if (s === '') return null
-        const n = Number(s.replace(',', '.'))
-        if (!isNaN(n) && isFinite(n)) return Math.round(n * 10) / 10
-      }
-      return undefined
-    })()
+    
+    // Build content from reflection fields
+    const parts: string[] = []
+    if (body?.changed) parts.push(`**Was hat sich verändert?**\n${body.changed}`)
+    if (body?.gratitude) parts.push(`**Wofür bin ich dankbar?**\n${body.gratitude}`)
+    if (body?.vows) parts.push(`**Meine Vorsätze**\n${body.vows}`)
+    if (body?.remarks) parts.push(`**Bemerkungen**\n${body.remarks}`)
+    const content = parts.join('\n\n') || 'Reflexion'
 
-    const data: any = { userId: user.id, kind, changed, gratitude, vows, remarks }
-    if (parsedWeight !== undefined) data.weightKg = parsedWeight // undefined => not provided; null => explicit clear (unused for POST)
+    const type = await getOrCreateReflectionType(prisma, user.id, kind)
+    const timeBox = await getOrCreateTimeBox(prisma, user.id, kind)
 
-    let created: any
-    try {
-      created = await (prisma as any).reflection.create({ data })
-    } catch (err: any) {
-      // Fallback if Prisma client is not yet generated with weightKg
-      if (data.weightKg !== undefined) {
-        try {
-          const fallback = { ...data }
-          delete (fallback as any).weightKg
-          created = await (prisma as any).reflection.create({ data: fallback })
-        } catch (err2) {
-          throw err2
-        }
-      } else {
-        throw err
+    const created = await prisma.journalEntry.create({
+      data: {
+        userId: user.id,
+        typeId: type.id,
+        timeBoxId: timeBox.id,
+        content,
+        title: kind === 'WEEK' ? 'Wochenreflexion' : 'Monatsreflexion',
       }
-    }
+    })
 
     return NextResponse.json({ ok: true, reflection: { id: created.id } })
   } catch (err) {

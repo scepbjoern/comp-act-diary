@@ -2,6 +2,7 @@ import { Icon } from '@/components/Icon'
 import { DaySettings } from '@/components/DaySettings'
 import { SymptomsSection } from '@/components/SymptomsSection'
 import { StoolSection } from '@/components/StoolSection'
+import { WeightSection } from '@/components/WeightSection'
 import { HabitsSection } from '@/components/HabitsSection'
 import { MealNotesSection } from '@/components/MealNotesSection'
 import type { Day, Habit, DayNote, InlineData } from '@/types/day'
@@ -25,7 +26,7 @@ interface DarmkurSectionProps {
   saving: boolean
   savedAt: number | null
   onToggleCollapse: () => void
-  onUpdateDayMeta: (patch: Partial<Pick<Day, 'phase' | 'careCategory'>>) => void
+  onUpdateDayMeta: (patch: { dayRating?: number | null }) => void
   onSetDraftSymptom: (type: string, score: number) => void
   onSetDraftUserSymptom: (id: string, score: number) => void
   onClearDraftSymptom: (type: string) => void
@@ -126,6 +127,8 @@ export function DarmkurSection({
             inlineData={inlineData} 
             onUpdateStool={onUpdateStool} 
           />
+
+          <WeightSection day={day} />
 
           <HabitsSection 
             day={day} 

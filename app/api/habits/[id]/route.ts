@@ -23,12 +23,12 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   }
   if (habit.userId && habit.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const data: { title?: string; isActive?: boolean; sortIndex?: number } = {}
+  const data: { title?: string; isActive?: boolean; sortOrder?: number } = {}
   if (typeof body.title === 'string') data.title = String(body.title).trim() || habit.title
   if (typeof body.isActive === 'boolean') data.isActive = body.isActive
-  if (body.sortIndex !== undefined) {
-    const si = Number(body.sortIndex)
-    if (Number.isFinite(si)) data.sortIndex = si
+  if (body.sortOrder !== undefined || body.sortIndex !== undefined) {
+    const si = Number(body.sortOrder ?? body.sortIndex)
+    if (Number.isFinite(si)) data.sortOrder = si
   }
 
   // Handle icon update: for user-owned habits, store on Habit; for standard habits, store per-user override via HabitIcon
@@ -37,15 +37,15 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
 
   let updated
   if (Object.keys(data).length > 0) {
-    updated = await (prisma as any).habit.update({ where: { id }, data, select: { id: true, title: true, isActive: true, sortIndex: true } })
+    updated = await prisma.habit.update({ where: { id }, data, select: { id: true, title: true, isActive: true, sortOrder: true } })
   } else {
-    updated = await (prisma as any).habit.findUnique({ where: { id }, select: { id: true, title: true, isActive: true, sortIndex: true } })
+    updated = await prisma.habit.findUnique({ where: { id }, select: { id: true, title: true, isActive: true, sortOrder: true } })
   }
 
   if (iconProvided) {
     if (habit.userId) {
       // Directly update custom habit
-      const u2 = await (prisma as any).habit.update({ where: { id }, data: { icon: iconVal }, select: { id: true, title: true, isActive: true, sortIndex: true, icon: true } })
+      const u2 = await prisma.habit.update({ where: { id }, data: { icon: iconVal }, select: { id: true, title: true, isActive: true, sortOrder: true, icon: true } })
       return NextResponse.json({ ok: true, habit: u2 })
     } else {
       // Standard habit: if empty, delete override to fall back to defaults; else upsert override
@@ -79,8 +79,8 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ id: 
   if (!habit.userId) return NextResponse.json({ error: 'Cannot delete standard habit' }, { status: 403 })
   if (habit.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  // Delete dependent ticks (if any) to avoid FK violations, then the habit
-  await prisma.habitTick.deleteMany({ where: { habitId: id } })
+  // Delete dependent check-ins (if any) to avoid FK violations, then the habit
+  await prisma.habitCheckIn.deleteMany({ where: { habitId: id } })
   await prisma.habit.delete({ where: { id } })
   return NextResponse.json({ ok: true, deleted: id })
 }

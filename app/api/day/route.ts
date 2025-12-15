@@ -5,19 +5,22 @@ import { DEFAULT_HABIT_ICONS, DEFAULT_SYMPTOM_ICONS } from '@/lib/default-icons'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// Local enums to avoid build-time dependency on generated Prisma enums
-const _Phases = ['PHASE_1', 'PHASE_2', 'PHASE_3'] as const
-export type Phase = typeof _Phases[number]
-const _CareCategories = ['SANFT', 'MEDIUM', 'INTENSIV'] as const
-export type CareCategory = typeof _CareCategories[number]
-const _NoteTypes = ['MEAL', 'REFLECTION', 'DIARY'] as const
-export type NoteType = typeof _NoteTypes[number]
+// Local enums für JournalEntry-Typen (Mapping zu alten NoteTypes)
+const NoteTypeToCode: Record<string, string> = {
+  'MEAL': 'meal',
+  'REFLECTION': 'daily_reflection', 
+  'DIARY': 'diary'
+}
+const CodeToNoteType: Record<string, string> = {
+  'meal': 'MEAL',
+  'daily_reflection': 'REFLECTION',
+  'diary': 'DIARY'
+}
 
 export async function GET(req: NextRequest) {
   const prisma = getPrisma()
   const { searchParams } = new URL(req.url)
   const dateStr = searchParams.get('date') ?? toYmdLocal(new Date())
-  const { start, end } = getDayRange(dateStr)
 
   // Resolve user by cookie; fallback to demo user
   const cookieUserId = req.cookies.get('userId')?.value
@@ -29,109 +32,173 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
   }
 
-  // Ensure DayEntry exists for the date
-  let day = await prisma.dayEntry.findFirst({ where: { userId: user.id, date: { gte: start, lt: end } } })
-  if (!day) {
-    const prev = await prisma.dayEntry.findFirst({
-      where: { userId: user.id, date: { lt: start } },
-      orderBy: { date: 'desc' },
-      select: { careCategory: true, phase: true },
-    })
-    day = await prisma.dayEntry.create({
+  // Find or create TimeBox for this date
+  let timeBox = await prisma.timeBox.findFirst({ 
+    where: { userId: user.id, kind: 'DAY', localDate: dateStr } 
+  })
+  if (!timeBox) {
+    const { start, end } = getDayRange(dateStr)
+    timeBox = await prisma.timeBox.create({
       data: {
         userId: user.id,
-        date: start,
-        phase: (prev?.phase ?? 'PHASE_1') as Phase,
-        careCategory: (prev?.careCategory ?? 'SANFT') as CareCategory,
+        kind: 'DAY',
+        startAt: start,
+        endAt: end,
+        timezone: 'Europe/Zurich',
+        localDate: dateStr,
       },
     })
   }
 
-  // Load habits (standard + user)
-  const _habits = await (prisma as any).habit.findMany({
-    where: { isActive: true, OR: [{ userId: null }, { userId: user.id }] },
-    orderBy: { sortIndex: 'asc' },
+  // Find or create DayEntry linked to TimeBox
+  let day = await prisma.dayEntry.findFirst({ 
+    where: { userId: user.id, timeBoxId: timeBox.id } 
+  })
+  if (!day) {
+    day = await prisma.dayEntry.create({
+      data: {
+        userId: user.id,
+        timeBoxId: timeBox.id,
+      },
+    })
+  }
+
+  // Load habits for this user
+  const _habits = await prisma.habit.findMany({
+    where: { userId: user.id, isActive: true },
+    orderBy: { sortOrder: 'asc' },
     select: { id: true, title: true, userId: true, icon: true },
   })
-  // Resolve per-user overrides for standard-habit icons
-  const overrides = await (prisma as any).habitIcon.findMany({ where: { userId: user.id, habitId: { in: _habits.map((h: any) => h.id) } } })
-  const iconByHabit = new Map<string, string | null>(overrides.map((o: any) => [o.habitId, o.icon ?? null]))
-  const habits = (_habits as any[]).map((h: any) => {
-    let icon: string | null
-    if (h.userId) {
-      icon = h.icon ?? null
-    } else if (iconByHabit.has(h.id)) {
-      // respect explicit per-user override, including null (cleared)
-      icon = iconByHabit.get(h.id) ?? null
-    } else {
-      icon = DEFAULT_HABIT_ICONS[h.title] ?? null
-    }
-    return { id: h.id, title: h.title, userId: h.userId, icon }
-  })
-
-  // Load symptom scores
-  const symptomRows = await prisma.symptomScore.findMany({ where: { dayEntryId: day.id } })
-  const symptoms: Record<string, number | undefined> = {}
-  for (const s of symptomRows) symptoms[s.type] = s.score
-
-  // Load stool
-  const stoolRow = await prisma.stoolScore.findUnique({ where: { dayEntryId: day.id } })
-
-  // Load ticks
-  const tickRows: { habitId: string; checked: boolean }[] = await prisma.habitTick.findMany({ where: { dayEntryId: day.id } })
-  const ticks = habits.map((h: { id: string }) => {
-    const t = tickRows.find((x: { habitId: string; checked: boolean }) => x.habitId === h.id)
-    return { habitId: h.id, checked: Boolean(t?.checked) }
-  })
-
-  // Load notes incl. tech capture time and photos
-  const noteRows = await prisma.dayNote.findMany({
-    where: { dayEntryId: day.id },
-    orderBy: { occurredAt: 'asc' },
-    include: { 
-      photos: true,
-      audioFile: true,
-    },
-  })
-  const notes = noteRows.map((n: any) => ({
-    id: n.id,
-    dayId: n.dayEntryId,
-    type: (n.type as unknown as NoteType),
-    title: n.title ?? null,
-    time: n.occurredAt?.toISOString().slice(11, 16),
-    techTime: n.createdAt?.toISOString().slice(11, 16),
-    occurredAtIso: n.occurredAt?.toISOString(),
-    createdAtIso: n.createdAt?.toISOString(),
-    text: n.text ?? '',
-    originalTranscript: n.originalTranscript ?? null,
-    audioFilePath: n.audioFile?.filePath ?? null,
-    audioFileId: n.audioFile?.id ?? null,
-    keepAudio: n.keepAudio ?? true,
-    photos: (n.photos || []).map((p: any) => ({ id: p.id, url: p.filePath })),
+  const habits = _habits.map((h) => ({
+    id: h.id,
+    title: h.title,
+    userId: h.userId,
+    icon: h.icon ?? DEFAULT_HABIT_ICONS[h.title] ?? null
   }))
-  // Load user-defined symptoms and their scores for this day
-  const userSyms = await (prisma as any).userSymptom.findMany({ where: { userId: user.id, isActive: true }, orderBy: { sortIndex: 'asc' } })
-  const userScores = await (prisma as any).userSymptomScore.findMany({ where: { dayEntryId: day.id } })
-  const scoreById = new Map<string, number>()
-  for (const r of userScores) scoreById.set(r.userSymptomId, r.score)
-  const userSymptoms = (userSyms as any[]).map((u: any) => ({ id: u.id, title: u.title, icon: u.icon ?? null, score: scoreById.get(u.id) }))
 
-  // Load per-user icons for standard symptoms
-  const symIconRows = await (prisma as any).symptomIcon.findMany({ where: { userId: user.id } })
-  // Start with defaults, then apply user overrides (including explicit clearing to null)
+  // Load habit check-ins (replaces habitTick)
+  const checkInRows = await prisma.habitCheckIn.findMany({ 
+    where: { timeBoxId: timeBox.id } 
+  })
+  const ticks = habits.map((h) => {
+    const ci = checkInRows.find((x) => x.habitId === h.id)
+    return { habitId: h.id, checked: ci?.status === 'DONE' }
+  })
+
+  // Load JournalEntries (replaces DayNote)
+  const journalRows = await prisma.journalEntry.findMany({
+    where: { timeBoxId: timeBox.id, deletedAt: null },
+    orderBy: { createdAt: 'asc' },
+    include: { type: true },
+  })
+  
+  // Load MediaAttachments for journal entries
+  const journalIds = journalRows.map(j => j.id)
+  const attachments = journalIds.length > 0 
+    ? await prisma.mediaAttachment.findMany({
+        where: { entityId: { in: journalIds } },
+        include: { asset: true }
+      })
+    : []
+  const attachmentsByEntry = new Map<string, typeof attachments>()
+  for (const att of attachments) {
+    const list = attachmentsByEntry.get(att.entityId) || []
+    list.push(att)
+    attachmentsByEntry.set(att.entityId, list)
+  }
+
+  // Map JournalEntry to old DayNote format for API compatibility
+  const notes = journalRows.map((j) => {
+    const entryAttachments = attachmentsByEntry.get(j.id) || []
+    const audioAtt = entryAttachments.find(a => a.asset.mimeType?.startsWith('audio/'))
+    const photoAtts = entryAttachments.filter(a => a.asset.mimeType?.startsWith('image/'))
+    
+    return {
+      id: j.id,
+      dayId: day.id,
+      type: CodeToNoteType[j.type.code] || 'DIARY',
+      title: j.title ?? null,
+      time: j.createdAt?.toISOString().slice(11, 16),
+      techTime: j.createdAt?.toISOString().slice(11, 16),
+      occurredAtIso: j.createdAt?.toISOString(),
+      createdAtIso: j.createdAt?.toISOString(),
+      text: j.content ?? '',
+      originalTranscript: null, // Not stored in new schema
+      audioFilePath: audioAtt?.asset.filePath ?? null,
+      audioFileId: audioAtt?.asset.id ?? null,
+      keepAudio: true,
+      photos: photoAtts.map((p) => ({ id: p.asset.id, url: p.asset.filePath || '' })),
+    }
+  })
+
+  // Load symptoms from Measurement
+  const SYSTEM_SYMPTOM_CODES = [
+    'symptom_beschwerdefreiheit',
+    'symptom_energie',
+    'symptom_stimmung',
+    'symptom_schlaf',
+    'symptom_entspannung',
+    'symptom_heisshungerfreiheit',
+    'symptom_bewegung',
+  ]
+  const symptoms: Record<string, number | undefined> = {}
+  const symptomMetrics = await prisma.metricDefinition.findMany({
+    where: { code: { in: SYSTEM_SYMPTOM_CODES }, userId: null }
+  })
+  const symptomMetricIds = symptomMetrics.map(m => m.id)
+  const symptomMeasurements = await prisma.measurement.findMany({
+    where: { metricId: { in: symptomMetricIds }, timeBoxId: timeBox.id, userId: user.id },
+    include: { metric: true }
+  })
+  for (const m of symptomMeasurements) {
+    if (m.metric && m.valueNum !== null) {
+      const key = m.metric.code.replace('symptom_', '').toUpperCase()
+      symptoms[key] = m.valueNum
+    }
+  }
+  
+  // Load stool from Measurement
+  let stool: number | undefined
+  const stoolMetric = await prisma.metricDefinition.findFirst({
+    where: { code: 'bristol_stool', userId: null }
+  })
+  if (stoolMetric) {
+    const stoolM = await prisma.measurement.findFirst({
+      where: { metricId: stoolMetric.id, timeBoxId: timeBox.id, userId: user.id }
+    })
+    stool = stoolM?.valueNum ?? undefined
+  }
+  
+  // Load user symptoms from Measurement
+  const userSymptoms: { id: string; title: string; icon: string | null; score?: number }[] = []
+  const userMetrics = await prisma.metricDefinition.findMany({
+    where: { userId: user.id, category: 'user_symptom' }
+  })
+  for (const metric of userMetrics) {
+    const m = await prisma.measurement.findFirst({
+      where: { metricId: metric.id, timeBoxId: timeBox.id, userId: user.id }
+    })
+    userSymptoms.push({
+      id: metric.id,
+      title: metric.name,
+      icon: metric.icon ?? null,
+      score: m?.valueNum ?? undefined
+    })
+  }
+  
   const symptomIcons: Record<string, string | null> = { ...DEFAULT_SYMPTOM_ICONS }
-  for (const r of symIconRows as any[]) symptomIcons[r.type] = r.icon ?? null
 
   const payload = {
     day: {
       id: day.id,
       date: dateStr,
-      phase: day.phase,
-      careCategory: day.careCategory,
+      timeBoxId: timeBox.id,
       symptoms,
-      stool: stoolRow?.bristol ?? undefined,
+      stool,
       habitTicks: ticks,
       userSymptoms,
+      dayRating: day.dayRating,
+      aiSummary: day.aiSummary,
     },
     habits,
     notes,

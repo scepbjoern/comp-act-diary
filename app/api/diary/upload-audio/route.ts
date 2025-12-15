@@ -301,26 +301,34 @@ export async function POST(req: NextRequest) {
 
     console.log('Creating database record...')
     
-    // Create AudioFile record in database
+    // Create MediaAsset record in database (replaces AudioFile)
     const prisma = getPrisma()
     const mimeType = file.type || (extension === 'webm' ? 'audio/webm' : extension === 'm4a' ? 'audio/m4a' : 'audio/mpeg')
     
+    // Get user from cookie
+    const cookieUserId = req.cookies.get('userId')?.value
+    let user = cookieUserId ? await prisma.user.findUnique({ where: { id: cookieUserId } }) : null
+    if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
+    if (!user) {
+      return NextResponse.json({ error: 'No user found' }, { status: 401 })
+    }
+    
     try {
-      const audioFile = await prisma.audioFile.create({
+      const mediaAsset = await prisma.mediaAsset.create({
         data: {
+          userId: user.id,
           filePath: relativeFilePath,
-          fileName: filename,
           mimeType,
-          sizeBytes: fileSizeBytes,
+          duration: audioDuration > 0 ? audioDuration : null,
         }
       })
       
-      console.log('Database record created successfully, ID:', audioFile.id)
+      console.log('MediaAsset record created successfully, ID:', mediaAsset.id)
       
       const result = {
         text: transcribedText,
-        audioFileId: audioFile.id,
-        audioFilePath: relativeFilePath, // Keep for backward compatibility
+        audioFileId: mediaAsset.id, // Keep name for backward compatibility
+        audioFilePath: relativeFilePath,
         keepAudio,
         fileSize: fileSizeBytes,
         filename,

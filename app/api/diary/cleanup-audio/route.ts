@@ -21,35 +21,38 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Missing audioFileId' }, { status: 400 })
     }
 
-    // Get audio file from database
+    // Get media asset from database (replaces AudioFile)
     const prisma = getPrisma()
-    const audioFile = await prisma.audioFile.findUnique({
+    const mediaAsset = await prisma.mediaAsset.findUnique({
       where: { id: audioFileId }
     })
 
-    if (!audioFile) {
-      console.error('ERROR: Audio file not found:', audioFileId)
+    if (!mediaAsset) {
+      console.error('ERROR: Media asset not found:', audioFileId)
       return NextResponse.json({ error: 'Audio file not found' }, { status: 404 })
     }
 
-    // Check if this audio file is referenced by any notes
-    const referencedNotes = await prisma.dayNote.findMany({
-      where: { audioFileId }
+    // Check if this media asset is referenced by any attachments
+    const referencedAttachments = await prisma.mediaAttachment.findMany({
+      where: { assetId: audioFileId }
     })
 
-    if (referencedNotes.length > 0) {
-      console.log('Audio file is still referenced by notes, not deleting:', audioFileId)
+    if (referencedAttachments.length > 0) {
+      console.log('Media asset is still referenced by attachments, not deleting:', audioFileId)
       return NextResponse.json({ 
         error: 'Audio file is still in use',
-        referencedBy: referencedNotes.length 
+        referencedBy: referencedAttachments.length 
       }, { status: 409 })
     }
 
     // Delete the physical file
     const uploadsDir = getUploadsDir()
-    const fullPath = path.join(uploadsDir, audioFile.filePath)
+    if (!mediaAsset.filePath) {
+      console.log('Media asset has no file path, skipping file deletion')
+    }
+    const fullPath = mediaAsset.filePath ? path.join(uploadsDir, mediaAsset.filePath) : null
 
-    if (existsSync(fullPath)) {
+    if (fullPath && existsSync(fullPath)) {
       await unlink(fullPath)
       console.log('Physical audio file deleted:', fullPath)
     } else {
@@ -57,7 +60,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     // Delete the database record
-    await prisma.audioFile.delete({
+    await prisma.mediaAsset.delete({
       where: { id: audioFileId }
     })
 

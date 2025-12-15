@@ -37,31 +37,26 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
   }
 
-  // Only days that actually have data: any of notes (notesList), symptoms, stool, habit ticks
-  const rows = await prisma.dayEntry.findMany({
+  // Load TimeBoxes with data (JournalEntries, HabitCheckIns, or Measurements)
+  const timeBoxes = await prisma.timeBox.findMany({
     where: {
       userId: user.id,
-      date: { gte: start, lt: end },
+      localDate: { gte: toYmdLocal(start), lt: toYmdLocal(end) },
+      kind: 'DAY',
       OR: [
-        { notesList: { some: {} } },
-        { symptoms: { some: {} } },
-        { habitTicks: { some: {} } },
-        { stool: { isNot: null } },
+        { journalEntries: { some: {} } },
+        { habitCheckIns: { some: {} } },
+        { measurements: { some: {} } },
       ],
     },
-    select: { date: true },
-    orderBy: { date: 'asc' },
+    select: { localDate: true },
+    orderBy: { localDate: 'asc' },
   })
 
-  const days = rows.map((r: { date: Date }) => toYmdLocal(r.date))
+  const days = timeBoxes.filter(tb => tb.localDate).map((tb) => tb.localDate as string)
 
-  // Reflection entries within the same month window (based on creation date)
-  const reflRows = await (prisma as any).reflection.findMany({
-    where: { userId: user.id, createdAt: { gte: start, lt: end } },
-    select: { createdAt: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  const reflectionDays = Array.from(new Set((reflRows as any[]).map((r: { createdAt: Date }) => toYmdLocal(r.createdAt))))
+  // Reflections not migrated - return empty for now
+  const reflectionDays: string[] = []
 
   return NextResponse.json({ days, reflectionDays })
 }

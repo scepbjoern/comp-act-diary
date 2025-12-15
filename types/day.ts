@@ -1,16 +1,21 @@
 /**
  * Day-related types
+ * 
+ * Nach Schema-Migration: DayEntry ist jetzt mit TimeBox verknüpft.
+ * phase/careCategory wurden entfernt (waren Darmkur-spezifisch).
  */
 
 export type Day = {
   id: string
-  date: string
-  phase: 'PHASE_1' | 'PHASE_2' | 'PHASE_3'
-  careCategory: 'SANFT' | 'MEDIUM' | 'INTENSIV'
+  date: string // aus TimeBox.localDate
+  timeBoxId?: string // Referenz auf TimeBox
+  // phase und careCategory wurden entfernt (Schema-Migration)
   symptoms: Record<string, number | undefined>
   stool?: number
   habitTicks: { habitId: string; checked: boolean }[]
   userSymptoms?: { id: string; title: string; icon?: string | null; score?: number }[]
+  dayRating?: number | null
+  aiSummary?: string | null
 }
 
 export type Habit = { 

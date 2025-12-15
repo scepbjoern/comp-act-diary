@@ -4,6 +4,11 @@ import { getPrisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+/**
+ * User Symptoms API - Now uses MetricDefinition model
+ * Custom user-defined symptoms are stored as MetricDefinition with category='symptom'
+ */
+
 export async function GET(req: NextRequest) {
   try {
     const prisma = getPrisma()
@@ -12,8 +17,11 @@ export async function GET(req: NextRequest) {
     if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
     if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
-    const rows = await (prisma as any).userSymptom.findMany({ where: { userId: user.id, isActive: true }, orderBy: { sortIndex: 'asc' } })
-    const list = (rows as any[]).map((r: any) => ({ id: r.id, title: r.title, icon: r.icon ?? null }))
+    const rows = await prisma.metricDefinition.findMany({ 
+      where: { userId: user.id, category: 'user_symptom' }, 
+      orderBy: { createdAt: 'asc' } 
+    })
+    const list = rows.map(r => ({ id: r.id, title: r.name, icon: r.icon ?? null }))
     return NextResponse.json({ symptoms: list })
   } catch (err) {
     console.error('GET /api/user-symptoms failed', err)
@@ -34,12 +42,24 @@ export async function POST(req: NextRequest) {
     const icon = (typeof body?.icon === 'string' ? String(body.icon).trim() : '') || null
     if (!title) return NextResponse.json({ error: 'Titel erforderlich' }, { status: 400 })
 
-    // Determine next sortIndex
-    const max = await (prisma as any).userSymptom.findFirst({ where: { userId: user.id }, orderBy: { sortIndex: 'desc' }, select: { sortIndex: true } })
-    const sortIndex = (max?.sortIndex ?? 0) + 1
+    // Generate unique code from title
+    const code = 'user_symptom_' + title.toLowerCase()
+      .replace(/[äÄ]/g, 'ae').replace(/[öÖ]/g, 'oe').replace(/[üÜ]/g, 'ue').replace(/ß/g, 'ss')
+      .replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
 
-    const created = await (prisma as any).userSymptom.create({ data: { userId: user.id, title, icon, sortIndex, isActive: true } })
-    return NextResponse.json({ ok: true, symptom: { id: created.id, title: created.title, icon: created.icon ?? null } })
+    const created = await prisma.metricDefinition.create({ 
+      data: { 
+        userId: user.id, 
+        code,
+        name: title, 
+        icon, 
+        category: 'user_symptom',
+        dataType: 'NUMERIC',
+        minValue: 1,
+        maxValue: 10,
+      } 
+    })
+    return NextResponse.json({ ok: true, symptom: { id: created.id, title: created.name, icon: created.icon ?? null } })
   } catch (err) {
     console.error('POST /api/user-symptoms failed', err)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

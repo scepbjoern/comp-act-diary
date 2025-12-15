@@ -30,28 +30,27 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ phot
   if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
   if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
-  const photo = await prisma.photoFile.findUnique({
-    where: { id: photoId },
-    include: { dayNote: { include: { day: true } } },
-  })
-  if (!photo) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (!photo.dayNote || photo.dayNote.day.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  // MediaAsset replaces PhotoFile
+  const asset = await prisma.mediaAsset.findUnique({ where: { id: photoId } })
+  if (!asset) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (asset.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   // Try to remove the physical file as well
-  const filePath = resolveUploadPathFromUrl(photo.filePath)
+  const filePath = asset.filePath ? resolveUploadPathFromUrl(asset.filePath) : null
   let fileDeleted = false
   if (filePath) {
     try {
       await fs.unlink(filePath)
       fileDeleted = true
     } catch (err: any) {
-      // Ignore if file is already missing; log other errors
       if (err && err.code !== 'ENOENT') {
         console.warn('Failed to delete photo file', { filePath, err })
       }
     }
   }
 
-  await prisma.photoFile.delete({ where: { id: photoId } })
+  // Delete attachments first, then asset
+  await prisma.mediaAttachment.deleteMany({ where: { assetId: photoId } })
+  await prisma.mediaAsset.delete({ where: { id: photoId } })
   return NextResponse.json({ ok: true, deleted: photoId, fileDeleted })
 }

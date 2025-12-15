@@ -8,7 +8,7 @@ import type { Day, DayNote, InlineData, Habit } from '@/types/day'
 
 export async function updateDayMeta(
   dayId: string,
-  patch: Partial<Pick<Day, 'phase' | 'careCategory'>>
+  patch: Partial<Pick<Day, 'dayRating'>>
 ): Promise<Day> {
   const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/day/${dayId}`, {
     method: 'PATCH',

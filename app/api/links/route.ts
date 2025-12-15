@@ -4,6 +4,10 @@ import { getPrisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+/**
+ * Links API - Now uses Bookmark model
+ */
+
 export async function GET(req: NextRequest) {
   try {
     const prisma = getPrisma()
@@ -12,8 +16,11 @@ export async function GET(req: NextRequest) {
     if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
     if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
-    const rows = await (prisma as any).userLink.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'asc' } })
-    const links = (rows as any[]).map((r: any) => ({ id: r.id, name: r.name, url: r.url }))
+    const rows = await prisma.bookmark.findMany({ 
+      where: { userId: user.id }, 
+      orderBy: { createdAt: 'asc' } 
+    })
+    const links = rows.map(r => ({ id: r.id, name: r.title, url: r.url }))
     return NextResponse.json({ links })
   } catch (err) {
     console.error('GET /api/links failed', err)
@@ -34,15 +41,17 @@ export async function POST(req: NextRequest) {
     const url = String(body?.url || '').trim()
     if (!name || !url) return NextResponse.json({ error: 'Name und URL erforderlich' }, { status: 400 })
 
-    // Basic URL validation: allow absolute (http/https) or app-relative (starting with '/')
+    // Basic URL validation
     const isAbsolute = /^https?:\/\//i.test(url)
     const isRelative = url.startsWith('/')
     if (!isAbsolute && !isRelative) {
       return NextResponse.json({ error: 'Ungültige URL (erlaubt: http(s) oder /relativ)' }, { status: 400 })
     }
 
-    const created = await (prisma as any).userLink.create({ data: { userId: user.id, name, url } })
-    return NextResponse.json({ ok: true, link: { id: created.id, name: created.name, url: created.url } })
+    const created = await prisma.bookmark.create({ 
+      data: { userId: user.id, title: name, url } 
+    })
+    return NextResponse.json({ ok: true, link: { id: created.id, name: created.title, url: created.url } })
   } catch (err) {
     console.error('POST /api/links failed', err)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

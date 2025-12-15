@@ -4,7 +4,7 @@ import type { Day } from '@/types/day'
 
 interface DaySettingsProps {
   day: Day
-  onUpdateMeta: (patch: Partial<Pick<Day, 'phase' | 'careCategory'>>) => void
+  onUpdateMeta: (patch: { dayRating?: number | null }) => void
   saving: boolean
   savedAt: number | null
 }
@@ -20,34 +20,16 @@ export function DaySettings({ day, onUpdateMeta, saving, savedAt }: DaySettingsP
       </h3>
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-400 inline-flex items-center gap-1">
-          <Icon name="cycle" />
-          <span>Phase</span>
+          <Icon name="star" />
+          <span>Tagesbewertung</span>
         </span>
-        {[1, 2, 3].map(p => {
-          const key = `PHASE_${p}` as Day['phase']
-          return (
-            <button 
-              key={key} 
-              className={`pill ${day.phase === key ? 'active' : ''}`} 
-              onClick={() => onUpdateMeta({ phase: key })}
-            >
-              {p}
-            </button>
-          )
-        })}
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-400 inline-flex items-center gap-1">
-          <Icon name="stairs_2" />
-          <span>Kategorie</span>
-        </span>
-        {(['SANFT', 'MEDIUM', 'INTENSIV'] as const).map(c => (
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(rating => (
           <button 
-            key={c} 
-            className={`pill ${day.careCategory === c ? 'active' : ''}`} 
-            onClick={() => onUpdateMeta({ careCategory: c })}
+            key={rating} 
+            className={`pill ${day.dayRating === rating ? 'active' : ''}`} 
+            onClick={() => onUpdateMeta({ dayRating: rating })}
           >
-            {c.charAt(0) + c.slice(1).toLowerCase()}
+            {rating}
           </button>
         ))}
       </div>

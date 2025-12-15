@@ -12,18 +12,38 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   const checked = Boolean(body.checked)
   if (!habitId || typeof body.checked !== 'boolean') return NextResponse.json({ error: 'Bad request' }, { status: 400 })
 
-  const day = await prisma.dayEntry.findUnique({ where: { id } })
+  const day = await prisma.dayEntry.findUnique({ 
+    where: { id },
+    include: { timeBox: true }
+  })
   if (!day) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!day.timeBoxId) return NextResponse.json({ error: 'Day has no TimeBox' }, { status: 400 })
 
-  // Ensure habit exists (standard or user)
+  // Ensure habit exists
   const habit = await prisma.habit.findUnique({ where: { id: habitId } })
   if (!habit) return NextResponse.json({ error: 'Habit not found' }, { status: 404 })
 
-  await prisma.habitTick.upsert({
-    where: { dayEntryId_habitId: { dayEntryId: day.id, habitId } },
-    create: { dayEntryId: day.id, habitId, checked },
-    update: { checked },
+  // Use HabitCheckIn instead of HabitTick
+  const existingCheckIn = await prisma.habitCheckIn.findFirst({
+    where: { habitId, timeBoxId: day.timeBoxId }
   })
+
+  if (existingCheckIn) {
+    await prisma.habitCheckIn.update({
+      where: { id: existingCheckIn.id },
+      data: { status: checked ? 'DONE' : 'SKIPPED' }
+    })
+  } else {
+    await prisma.habitCheckIn.create({
+      data: {
+        habitId,
+        userId: day.userId,
+        timeBoxId: day.timeBoxId,
+        status: checked ? 'DONE' : 'SKIPPED',
+        occurredAt: new Date()
+      }
+    })
+  }
 
   const payload = await buildDayPayload(day.id)
   return NextResponse.json({ day: payload })
@@ -31,23 +51,43 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
 async function buildDayPayload(dayId: string) {
   const prisma = getPrisma()
-  const day = await prisma.dayEntry.findUnique({ where: { id: dayId } })
+  const day = await prisma.dayEntry.findUnique({ 
+    where: { id: dayId },
+    include: { timeBox: true }
+  })
   if (!day) throw new Error('Day not found')
-  const habits: { id: string; title: string }[] = await prisma.habit.findMany({ where: { isActive: true, OR: [{ userId: null }, { userId: day.userId }] }, orderBy: { sortIndex: 'asc' }, select: { id: true, title: true } })
-  const symptomRows = await prisma.symptomScore.findMany({ where: { dayEntryId: day.id } })
+  
+  const dateStr = day.timeBox?.localDate ?? toYmd(new Date())
+  
+  const habits = await prisma.habit.findMany({ 
+    where: { userId: day.userId, isActive: true }, 
+    orderBy: { sortOrder: 'asc' }, 
+    select: { id: true, title: true } 
+  })
+  
+  const checkIns = day.timeBoxId 
+    ? await prisma.habitCheckIn.findMany({ where: { timeBoxId: day.timeBoxId } })
+    : []
+  const ticks = habits.map((h) => ({ 
+    habitId: h.id, 
+    checked: checkIns.some(ci => ci.habitId === h.id && ci.status === 'DONE') 
+  }))
+  
+  // Symptoms not migrated
   const symptoms: Record<string, number | undefined> = {}
-  for (const s of symptomRows) symptoms[s.type] = s.score
-  const stoolRow = await prisma.stoolScore.findUnique({ where: { dayEntryId: day.id } })
-  const tickRows: { habitId: string; checked: boolean }[] = await prisma.habitTick.findMany({ where: { dayEntryId: day.id } })
-  const ticks = habits.map((h: { id: string }) => ({ habitId: h.id, checked: Boolean(tickRows.find((t: { habitId: string; checked: boolean }) => t.habitId === h.id)?.checked) }))
-  // Custom user-defined symptoms
-  const userSymptoms = await (prisma as any).userSymptom.findMany({ where: { userId: day.userId, isActive: true }, orderBy: { sortIndex: 'asc' }, select: { id: true, title: true } })
-  const scores = await (prisma as any).userSymptomScore.findMany({ where: { dayEntryId: day.id } })
-  const scoreById = new Map<string, number>()
-  for (const s of scores) scoreById.set(s.userSymptomId, s.score)
-  const userSymptomsOut = (userSymptoms as any[]).map((u: any) => ({ id: u.id, title: u.title, score: scoreById.get(u.id) }))
-  const dateStr = toYmd(day.date)
-  return { id: day.id, date: dateStr, phase: day.phase, careCategory: day.careCategory, symptoms, stool: stoolRow?.bristol ?? undefined, habitTicks: ticks, userSymptoms: userSymptomsOut }
+  const userSymptomsOut: { id: string; title: string; score?: number }[] = []
+  
+  return { 
+    id: day.id, 
+    date: dateStr, 
+    timeBoxId: day.timeBoxId,
+    symptoms, 
+    stool: undefined, 
+    habitTicks: ticks, 
+    userSymptoms: userSymptomsOut,
+    dayRating: day.dayRating,
+    aiSummary: day.aiSummary
+  }
 }
 
 function toYmd(d: Date) {

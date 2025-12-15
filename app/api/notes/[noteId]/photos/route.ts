@@ -46,9 +46,10 @@ export async function POST(req: NextRequest, context: { params: Promise<{ noteId
     if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
     if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
-    const note = await prisma.dayNote.findUnique({ where: { id: noteId }, include: { day: true } })
-    if (!note) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    if (note.day.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // JournalEntry replaces DayNote
+    const entry = await prisma.journalEntry.findUnique({ where: { id: noteId } })
+    if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (entry.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const contentType = req.headers.get('content-type') || ''
 
@@ -58,16 +59,24 @@ export async function POST(req: NextRequest, context: { params: Promise<{ noteId
       const body = await req.json().catch(() => ({} as any))
       const url = String(body?.url || '').trim()
       if (!url) return NextResponse.json({ error: 'No url provided' }, { status: 400 })
-      const photo = await prisma.photoFile.create({ 
+      // Create MediaAsset and MediaAttachment
+      const asset = await prisma.mediaAsset.create({ 
         data: { 
-          dayNoteId: noteId, 
+          userId: user.id,
           filePath: url, 
-          fileName: url.split('/').pop() || 'file',
-          mimeType: 'image/jpeg', // Default for URL uploads
-          sizeBytes: 0, // Unknown for URL uploads
+          mimeType: 'image/jpeg',
         }
       })
-      createdPhotos.push({ id: photo.id, url: photo.filePath })
+      await prisma.mediaAttachment.create({
+        data: {
+          assetId: asset.id,
+          entityId: noteId,
+          userId: user.id,
+          role: 'ATTACHMENT',
+          timeBoxId: entry.timeBoxId,
+        }
+      })
+      createdPhotos.push({ id: asset.id, url: asset.filePath || '' })
     } else if (contentType.includes('multipart/form-data')) {
       const form = await req.formData().catch(err => {
         console.error('formData parse failed', err)
@@ -130,16 +139,24 @@ export async function POST(req: NextRequest, context: { params: Promise<{ noteId
           const outPath = path.join(folderPath, fileName)
           await pipeline.toFile(outPath)
           const filePath = `/uploads/${relativePath.replace(/\\/g, '/')}/${fileName}`
-          const photo = await prisma.photoFile.create({ 
+          // Create MediaAsset and MediaAttachment
+          const asset = await prisma.mediaAsset.create({ 
             data: { 
-              dayNoteId: noteId, 
+              userId: user.id,
               filePath, 
-              fileName,
-              mimeType: file.type,
-              sizeBytes: file.size,
+              mimeType: file.type || 'image/webp',
             }
           })
-          createdPhotos.push({ id: photo.id, url: photo.filePath })
+          await prisma.mediaAttachment.create({
+            data: {
+              assetId: asset.id,
+              entityId: noteId,
+              userId: user.id,
+              role: 'ATTACHMENT',
+              timeBoxId: entry.timeBoxId,
+            }
+          })
+          createdPhotos.push({ id: asset.id, url: asset.filePath || '' })
         } catch (err) {
           console.error('Failed to process/upload file', err)
           return NextResponse.json({ error: 'Failed to process file' }, { status: 500 })
@@ -149,26 +166,59 @@ export async function POST(req: NextRequest, context: { params: Promise<{ noteId
       return NextResponse.json({ error: 'Unsupported Content-Type' }, { status: 415 })
     }
 
-    // Return refreshed notes list for the day enriched with photos and tech time
-    const noteRows = await prisma.dayNote.findMany({
-      where: { dayEntryId: note.dayEntryId },
-      orderBy: { occurredAt: 'asc' },
-      include: { photos: true },
-    })
-    const notes = noteRows.map((n: any) => ({
-      id: n.id,
-      dayId: n.dayEntryId,
-      type: n.type,
-      time: n.occurredAt?.toISOString().slice(11, 16),
-      techTime: n.createdAt?.toISOString().slice(11, 16),
-      occurredAtIso: n.occurredAt?.toISOString(),
-      createdAtIso: n.createdAt?.toISOString(),
-      text: n.text ?? '',
-      photos: (n.photos || []).map((p: any) => ({ id: p.id, url: p.filePath })),
-    }))
+    // Return refreshed notes list for the timeBox
+    const notes = await loadNotesForTimeBox(entry.timeBoxId, entry.userId)
     return NextResponse.json({ ok: true, photos: createdPhotos, notes })
   } catch (err) {
     console.error('Photo upload failed', err)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
+}
+
+const CodeToNoteType: Record<string, string> = {
+  'meal': 'MEAL',
+  'daily_reflection': 'REFLECTION',
+  'diary': 'DIARY'
+}
+
+async function loadNotesForTimeBox(timeBoxId: string, dayId: string) {
+  const prisma = getPrisma()
+  
+  const journalRows = await prisma.journalEntry.findMany({
+    where: { timeBoxId, deletedAt: null },
+    orderBy: { createdAt: 'asc' },
+    include: { type: true },
+  })
+  
+  const journalIds = journalRows.map(j => j.id)
+  const attachments = journalIds.length > 0 
+    ? await prisma.mediaAttachment.findMany({
+        where: { entityId: { in: journalIds } },
+        include: { asset: true }
+      })
+    : []
+  const attachmentsByEntry = new Map<string, typeof attachments>()
+  for (const att of attachments) {
+    const list = attachmentsByEntry.get(att.entityId) || []
+    list.push(att)
+    attachmentsByEntry.set(att.entityId, list)
+  }
+
+  return journalRows.map((j) => {
+    const entryAttachments = attachmentsByEntry.get(j.id) || []
+    const photoAtts = entryAttachments.filter(a => a.asset.mimeType?.startsWith('image/'))
+    
+    return {
+      id: j.id,
+      dayId,
+      type: CodeToNoteType[j.type.code] || 'DIARY',
+      title: j.title ?? null,
+      time: j.createdAt?.toISOString().slice(11, 16),
+      techTime: j.createdAt?.toISOString().slice(11, 16),
+      occurredAtIso: j.createdAt?.toISOString(),
+      createdAtIso: j.createdAt?.toISOString(),
+      text: j.content ?? '',
+      photos: photoAtts.map((p) => ({ id: p.asset.id, url: p.asset.filePath || '' })),
+    }
+  })
 }

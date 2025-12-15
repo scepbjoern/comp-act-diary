@@ -14,38 +14,38 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
   try {
-    // Get all diary notes for the user with improved text
-    const notes = await prisma.dayNote.findMany({
-      where: {
-        day: {
-          userId: user.id
-        },
-        type: 'DIARY',
-        // Only include notes that have text (improved or original)
-        OR: [
-          { text: { not: null } },
-          { originalTranscript: { not: null } }
-        ]
-      },
-      include: {
-        day: {
-          select: {
-            date: true
-          }
-        }
-      },
-      orderBy: {
-        day: {
-          date: 'desc'
-        }
-      }
+    // Get diary-type JournalEntryType
+    const diaryType = await prisma.journalEntryType.findFirst({
+      where: { code: 'diary', userId: null }
     })
 
+    if (!diaryType) {
+      return NextResponse.json({ notes: [] })
+    }
+
+    // Get all diary journal entries for the user
+    const entries = await prisma.journalEntry.findMany({
+      where: {
+        userId: user.id,
+        typeId: diaryType.id,
+        deletedAt: null,
+        NOT: { content: '' }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    // Load TimeBoxes for localDate
+    const timeBoxIds = [...new Set(entries.map(e => e.timeBoxId).filter(Boolean))]
+    const timeBoxes = timeBoxIds.length > 0
+      ? await prisma.timeBox.findMany({ where: { id: { in: timeBoxIds } }, select: { id: true, localDate: true } })
+      : []
+    const localDateById = new Map(timeBoxes.map(tb => [tb.id, tb.localDate]))
+
     // Format the notes for context
-    const formattedNotes = notes.map((note: any) => ({
-      date: note.day.date,
-      text: note.text || note.originalTranscript || '', // Use improved text first, fallback to original
-      occurredAt: note.occurredAt
+    const formattedNotes = entries.map((entry) => ({
+      date: localDateById.get(entry.timeBoxId) || entry.createdAt.toISOString().slice(0, 10),
+      text: entry.content || '',
+      occurredAt: entry.createdAt
     }))
 
     return NextResponse.json({ notes: formattedNotes })

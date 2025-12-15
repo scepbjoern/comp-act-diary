@@ -34,29 +34,33 @@ async function gatherSummaryContext(dayId: string): Promise<SummaryContext> {
   
   const day = await prisma.dayEntry.findUnique({
     where: { id: dayId },
-    include: {
-      user: { 
-        include: { 
-          settings: true 
-        } 
-      },
-      notesList: {
-        where: { type: 'DIARY' },
-        orderBy: { occurredAt: 'asc' }
-      }
-    }
+    include: { timeBox: true }
   })
   
   if (!day) throw new Error('Day not found')
+  if (!day.timeBoxId) throw new Error('Day has no TimeBox')
+  
+  // Load JournalEntries for this TimeBox with type 'diary'
+  const diaryType = await prisma.journalEntryType.findFirst({
+    where: { code: 'diary', userId: null }
+  })
+  
+  const entries = diaryType ? await prisma.journalEntry.findMany({
+    where: { 
+      timeBoxId: day.timeBoxId, 
+      typeId: diaryType.id,
+      deletedAt: null 
+    },
+    orderBy: { createdAt: 'asc' }
+  }) : []
   
   return {
-    diaryNotes: day.notesList.map(n => ({
-      id: n.id,
-      title: n.title,
-      text: n.text || '',
-      occurredAt: n.occurredAt?.toISOString()
+    diaryNotes: entries.map(e => ({
+      id: e.id,
+      title: e.title,
+      text: e.content || '',
+      occurredAt: e.createdAt?.toISOString()
     }))
-    // Future: Add more data sources
   }
 }
 
@@ -113,28 +117,21 @@ export async function POST(
     // Get user settings
     const day = await prisma.dayEntry.findUnique({
       where: { id: dayId },
-      include: { 
-        user: { 
-          include: { 
-            settings: true 
-          } 
-        },
-        summary: true
-      }
+      include: { user: true }
     })
     
     if (!day) {
       return NextResponse.json({ error: 'Day not found' }, { status: 404 })
     }
     
-    // Check if summary exists and force is not set
-    if (day.summary && !force) {
+    // Check if summary exists and force is not set (aiSummary is now on DayEntry)
+    if (day.aiSummary && !force) {
       return NextResponse.json({
         summary: {
-          content: day.summary.content,
-          model: day.summary.model,
-          generatedAt: day.summary.generatedAt.toISOString(),
-          sources: day.summary.sources
+          content: day.aiSummary,
+          model: 'unknown',
+          generatedAt: day.updatedAt.toISOString(),
+          sources: []
         }
       })
     }
@@ -150,26 +147,9 @@ export async function POST(
       }, { status: 400 })
     }
     
-    // Get user settings for model and prompt
-    const dayWithSettings = await prisma.dayEntry.findUnique({
-      where: { id: dayId },
-      include: { 
-        user: { 
-          include: { 
-            settings: true 
-          } 
-        }
-      }
-    })
-    
-    if (!dayWithSettings) {
-      return NextResponse.json({ error: 'Day not found' }, { status: 404 })
-    }
-    
-    // Build prompt
-    console.log('User settings found:', dayWithSettings.user.settings)
-    const summaryPrompt = dayWithSettings.user.settings?.summaryPrompt || 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"'
-    const summaryModel = dayWithSettings.user.settings?.summaryModel || DEFAULT_SUMMARY_MODEL
+    // Build prompt (settings not available in new schema, use defaults)
+    const summaryPrompt = 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"'
+    const summaryModel = DEFAULT_SUMMARY_MODEL
     
     console.log('Summary model being used:', summaryModel)
     const contextText = buildContextText(context)
@@ -197,33 +177,20 @@ export async function POST(
       return NextResponse.json({ error: 'Empty summary generated' }, { status: 500 })
     }
     
-    // Save or update summary
+    // Save summary to DayEntry.aiSummary
     const sources = buildSourceIdentifiers(context)
     
-    const summary = await prisma.daySummary.upsert({
-      where: { dayEntryId: dayId },
-      create: {
-        dayEntryId: dayId,
-        content: summaryContent,
-        model: summaryModel,
-        prompt: summaryPrompt,
-        sources
-      },
-      update: {
-        content: summaryContent,
-        model: summaryModel,
-        prompt: summaryPrompt,
-        sources,
-        generatedAt: new Date()
-      }
+    await prisma.dayEntry.update({
+      where: { id: dayId },
+      data: { aiSummary: summaryContent }
     })
     
     return NextResponse.json({
       summary: {
-        content: summary.content,
-        model: summary.model,
-        generatedAt: summary.generatedAt.toISOString(),
-        sources: summary.sources
+        content: summaryContent,
+        model: summaryModel,
+        generatedAt: new Date().toISOString(),
+        sources
       }
     })
   } catch (err) {
@@ -247,11 +214,11 @@ export async function GET(
     const { id: dayId } = await params
     const prisma = getPrisma()
     
-    const summary = await prisma.daySummary.findUnique({
-      where: { dayEntryId: dayId }
+    const day = await prisma.dayEntry.findUnique({
+      where: { id: dayId }
     })
     
-    if (!summary) {
+    if (!day?.aiSummary) {
       return NextResponse.json({ 
         summary: null,
         message: 'No summary generated yet'
@@ -260,10 +227,10 @@ export async function GET(
     
     return NextResponse.json({
       summary: {
-        content: summary.content,
-        model: summary.model,
-        generatedAt: summary.generatedAt.toISOString(),
-        sources: summary.sources
+        content: day.aiSummary,
+        model: 'unknown',
+        generatedAt: day.updatedAt.toISOString(),
+        sources: []
       }
     })
   } catch (err) {
@@ -284,8 +251,9 @@ export async function DELETE(
     const { id: dayId } = await params
     const prisma = getPrisma()
     
-    await prisma.daySummary.deleteMany({
-      where: { dayEntryId: dayId }
+    await prisma.dayEntry.update({
+      where: { id: dayId },
+      data: { aiSummary: null }
     })
     
     return NextResponse.json({ ok: true })

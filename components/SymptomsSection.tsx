@@ -66,7 +66,7 @@ export function SymptomsSection({
               <NumberPills
                 min={1}
                 max={10}
-                value={clearedSymptoms.has(type) ? undefined : (draftSymptoms[type] ?? day.symptoms[type])}
+                value={clearedSymptoms.has(type) ? undefined : (draftSymptoms[type] ?? day.symptoms?.[type])}
                 onChange={n => onSetDraftSymptom(type, n)}
                 onClear={() => onClearDraftSymptom(type)}
                 ariaLabel={SYMPTOM_LABELS[type]}

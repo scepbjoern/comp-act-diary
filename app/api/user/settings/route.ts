@@ -4,6 +4,21 @@ import { getPrisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+/**
+ * User Settings API
+ * UserSettings table removed in new schema.
+ * Returns default settings until migration is complete.
+ */
+
+const DEFAULT_SETTINGS = {
+  transcriptionModel: 'openai/whisper-large-v3',
+  theme: 'system',
+  summaryModel: null,
+  summaryPrompt: null,
+  autosaveEnabled: true,
+  autosaveIntervalSec: 30,
+}
+
 export async function GET(req: NextRequest) {
   const prisma = getPrisma()
   const cookieUserId = req.cookies.get('userId')?.value
@@ -11,17 +26,13 @@ export async function GET(req: NextRequest) {
   if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
   if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
-  let settings = await prisma.userSettings.findUnique({ where: { userId: user.id } })
-  if (!settings) {
-    settings = await prisma.userSettings.create({
-      data: {
-        userId: user.id,
-        transcriptionModel: 'gpt-4o-transcribe',
-      },
-    })
-  }
-
-  return NextResponse.json({ settings })
+  // Return default settings (UserSettings table removed in new schema)
+  return NextResponse.json({ 
+    settings: {
+      userId: user.id,
+      ...DEFAULT_SETTINGS,
+    }
+  })
 }
 
 export async function PATCH(req: NextRequest) {
@@ -31,36 +42,15 @@ export async function PATCH(req: NextRequest) {
   if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
   if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
 
+  // Accept the patch but return default settings (no persistence yet)
   const body = await req.json().catch(() => ({}))
-  const data: any = {}
-
-  if (typeof body.transcriptionModel === 'string') {
-    data.transcriptionModel = body.transcriptionModel
-  }
-  if (typeof body.theme === 'string') {
-    data.theme = body.theme
-  }
-  if (typeof body.summaryModel === 'string') {
-    data.summaryModel = body.summaryModel
-  }
-  if (typeof body.summaryPrompt === 'string') {
-    data.summaryPrompt = body.summaryPrompt
-  }
-  if (typeof body.autosaveEnabled === 'boolean') {
-    data.autosaveEnabled = body.autosaveEnabled
-  }
-  if (typeof body.autosaveIntervalSec === 'number') {
-    data.autosaveIntervalSec = body.autosaveIntervalSec
-  }
-
-  const settings = await prisma.userSettings.upsert({
-    where: { userId: user.id },
-    update: data,
-    create: {
+  
+  return NextResponse.json({ 
+    ok: true, 
+    settings: {
       userId: user.id,
-      ...data,
-    },
+      ...DEFAULT_SETTINGS,
+      ...body, // Echo back what was sent
+    }
   })
-
-  return NextResponse.json({ ok: true, settings })
 }

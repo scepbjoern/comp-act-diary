@@ -114,32 +114,51 @@ export function useSymptomManagement(
     onSavingChange(true)
     
     try {
-      await Promise.all([
-        ...entries.map(([type, score]) => fetch(`/api/day/${day.id}/symptoms`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type, score }),
-          credentials: 'same-origin',
-        }).then(r => r.json()).catch(() => ({}))),
-        ...userEntries.map(([userSymptomId, score]) => fetch(`/api/day/${day.id}/user-symptoms`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userSymptomId, score }),
-          credentials: 'same-origin',
-        }).then(r => r.json()).catch(() => ({}))),
-        ...cleared.map((type) => fetch(`/api/day/${day.id}/symptoms`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type }),
-          credentials: 'same-origin',
-        }).then(r => r.json()).catch(() => ({}))),
-        ...clearedUser.map((userSymptomId) => fetch(`/api/day/${day.id}/user-symptoms`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userSymptomId }),
-          credentials: 'same-origin',
-        }).then(r => r.json()).catch(() => ({}))),
-      ])
+      // Build scores object for system symptoms (includes cleared as null)
+      const scores: Record<string, number | null> = {}
+      for (const [type, score] of entries) {
+        scores[type] = score
+      }
+      for (const type of cleared) {
+        scores[type] = null
+      }
+      
+      // Build scores object for user symptoms
+      const userScores: Record<string, number | null> = {}
+      for (const [id, score] of userEntries) {
+        userScores[id] = score
+      }
+      for (const id of clearedUser) {
+        userScores[id] = null
+      }
+      
+      const promises: Promise<unknown>[] = []
+      
+      // Save system symptoms in one request
+      if (Object.keys(scores).length > 0) {
+        promises.push(
+          fetch(`/api/day/${day.id}/symptoms`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scores }),
+            credentials: 'same-origin',
+          }).then(r => r.json()).catch(() => ({}))
+        )
+      }
+      
+      // Save user symptoms in one request
+      if (Object.keys(userScores).length > 0) {
+        promises.push(
+          fetch(`/api/day/${day.id}/user-symptoms`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scores: userScores }),
+            credentials: 'same-origin',
+          }).then(r => r.json()).catch(() => ({}))
+        )
+      }
+      
+      await Promise.all(promises)
       
       // Clear drafts after successful save
       setDraftSymptoms({})
