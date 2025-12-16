@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS "JournalEntry" (
   "timeBoxId" TEXT NOT NULL,
   title TEXT,
   content TEXT NOT NULL,
+  "originalTranscript" TEXT,
   "aiSummary" TEXT,
   "isSensitive" BOOLEAN NOT NULL DEFAULT false,
   "deletedAt" TIMESTAMP(3),
@@ -204,15 +205,15 @@ VALUES
   (gen_random_uuid()::text, NULL, 'daily_note', 'Tagesnotiz', 'Allgemeine Notiz zum Tag', '📝', 1, NOW(), NOW()),
   (gen_random_uuid()::text, NULL, 'meal', 'Mahlzeit', 'Dokumentation einer Mahlzeit', '🍽️', 2, NOW(), NOW()),
   (gen_random_uuid()::text, NULL, 'daily_reflection', 'Tagesreflexion', 'Strukturierte Tagesreflexion', '🌅', 3, NOW(), NOW()),
-  (gen_random_uuid()::text, NULL, 'weekly_review', 'Wochenreflexion', 'Wöchentliche Reflexion', '📅', 4, NOW(), NOW()),
-  (gen_random_uuid()::text, NULL, 'monthly_review', 'Monatsreflexion', 'Monatliche Reflexion', '📆', 5, NOW(), NOW()),
+  (gen_random_uuid()::text, NULL, 'reflection_week', 'Wochenreflexion', 'Wöchentliche Reflexion', '📅', 4, NOW(), NOW()),
+  (gen_random_uuid()::text, NULL, 'reflection_month', 'Monatsreflexion', 'Monatliche Reflexion', '📆', 5, NOW(), NOW()),
   (gen_random_uuid()::text, NULL, 'diary', 'Tagebuch', 'Freier Tagebucheintrag', '📖', 6, NOW(), NOW());
 
 -- =============================================================================
 -- TEIL 6: JournalEntry aus DayNote
 -- =============================================================================
 
-INSERT INTO "JournalEntry" (id, "userId", "typeId", "timeBoxId", title, content, "isSensitive", "createdAt", "updatedAt")
+INSERT INTO "JournalEntry" (id, "userId", "typeId", "timeBoxId", title, content, "originalTranscript", "isSensitive", "createdAt", "updatedAt")
 SELECT 
   jem.new_journal_entry_id,
   de."userId",
@@ -223,10 +224,13 @@ SELECT
   END,
   dem.new_time_box_id,
   dn.title,
+  -- content: verbessertes Transkript + Reflexionsfelder
   COALESCE(dn.text, '') || 
     CASE WHEN drf.changed IS NOT NULL THEN E'\n\n## Was hat sich verändert?\n' || drf.changed ELSE '' END ||
     CASE WHEN drf.gratitude IS NOT NULL THEN E'\n\n## Wofür bin ich dankbar?\n' || drf.gratitude ELSE '' END ||
     CASE WHEN drf.vows IS NOT NULL THEN E'\n\n## Vorsätze\n' || drf.vows ELSE '' END,
+  -- originalTranscript: separates Feld für das unbearbeitete Transkript
+  dn."originalTranscript",
   false,
   dn."createdAt",
   NOW()
@@ -241,16 +245,40 @@ INSERT INTO "Entity" (id, "userId", type, "createdAt", "updatedAt")
 SELECT id, "userId", 'JOURNAL_ENTRY', "createdAt", NOW()
 FROM "JournalEntry";
 
+-- TimeBox für Reflections erstellen (WEEK/MONTH TimeBoxes)
+CREATE TEMP TABLE reflection_timebox_mapping AS
+SELECT 
+  r.id AS reflection_id,
+  gen_random_uuid()::text AS new_time_box_id,
+  r."userId",
+  r.kind,
+  r."createdAt"
+FROM "Reflection" r;
+
+INSERT INTO "TimeBox" (id, "userId", kind, "startAt", "endAt", timezone, "localDate", "createdAt", "updatedAt")
+SELECT 
+  rtm.new_time_box_id,
+  rtm."userId",
+  CASE rtm.kind::text WHEN 'WEEK' THEN 'WEEK' WHEN 'MONTH' THEN 'MONTH' ELSE 'CUSTOM' END,
+  DATE_TRUNC(CASE rtm.kind::text WHEN 'WEEK' THEN 'week' WHEN 'MONTH' THEN 'month' ELSE 'day' END, rtm."createdAt"),
+  DATE_TRUNC(CASE rtm.kind::text WHEN 'WEEK' THEN 'week' WHEN 'MONTH' THEN 'month' ELSE 'day' END, rtm."createdAt") + 
+    CASE rtm.kind::text WHEN 'WEEK' THEN INTERVAL '7 days' WHEN 'MONTH' THEN INTERVAL '1 month' ELSE INTERVAL '1 day' END,
+  'Europe/Zurich',
+  TO_CHAR(rtm."createdAt", 'YYYY-MM-DD'),
+  rtm."createdAt",
+  NOW()
+FROM reflection_timebox_mapping rtm;
+
 -- JournalEntry aus Reflection
 INSERT INTO "JournalEntry" (id, "userId", "typeId", "timeBoxId", title, content, "isSensitive", "createdAt", "updatedAt")
 SELECT 
   gen_random_uuid()::text,
   r."userId",
   CASE r.kind::text
-    WHEN 'WEEK' THEN (SELECT id FROM "JournalEntryType" WHERE code = 'weekly_review' AND "userId" IS NULL)
-    WHEN 'MONTH' THEN (SELECT id FROM "JournalEntryType" WHERE code = 'monthly_review' AND "userId" IS NULL)
+    WHEN 'WEEK' THEN (SELECT id FROM "JournalEntryType" WHERE code = 'reflection_week' AND "userId" IS NULL)
+    WHEN 'MONTH' THEN (SELECT id FROM "JournalEntryType" WHERE code = 'reflection_month' AND "userId" IS NULL)
   END,
-  NULL,
+  rtm.new_time_box_id,
   CASE r.kind::text WHEN 'WEEK' THEN 'Wochenreflexion' WHEN 'MONTH' THEN 'Monatsreflexion' END || ' ' || TO_CHAR(r."createdAt", 'YYYY-MM-DD'),
   COALESCE(r.remarks, '') ||
     CASE WHEN r.changed IS NOT NULL THEN E'\n\n## Was hat sich verändert?\n' || r.changed ELSE '' END ||
@@ -260,7 +288,8 @@ SELECT
   false,
   r."createdAt",
   NOW()
-FROM "Reflection" r;
+FROM "Reflection" r
+JOIN reflection_timebox_mapping rtm ON rtm.reflection_id = r.id;
 
 -- =============================================================================
 -- TEIL 7: MediaAsset aus AudioFile

@@ -432,8 +432,10 @@ model JournalEntry {
   timeBoxId   String
   /// Titel (optional)
   title       String?
-  /// Inhalt (Markdown)
+  /// Inhalt (Markdown) - bei Audio-Einträgen das verbesserte Transkript
   content     String
+  /// Original-Transkript (unbearbeitet, direkt von Speech-to-Text)
+  originalTranscript String?
   /// KI-generierte Zusammenfassung (optional)
   aiSummary   String?
   /// Enthält sensible Daten? (für Verschlüsselung/biometrischen Schutz)
