@@ -115,8 +115,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Install ffmpeg for audio chunking (required for long audio transcription)
-RUN apk add --no-cache ffmpeg
+# Install ffmpeg for audio chunking + postgresql-client for migrations
+RUN apk add --no-cache ffmpeg postgresql-client
 
 # Phase 9: Copy standalone Next.js output (much smaller than full node_modules)
 # Standalone includes only the minimal runtime dependencies
