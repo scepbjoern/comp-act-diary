@@ -56,14 +56,38 @@ docker logs <app-container> | grep -A 50 "V2-MIGRATION"
 
 Erwartete Ausgabe:
 ```
+[entrypoint] RUN_V2_MIGRATION=true
+[entrypoint] MIGRATION_MARKER exists: no
 [entrypoint] === V2-MIGRATION GESTARTET ===
 [entrypoint] Führe PRODUCTION_001_complete_migration.sql aus...
 [entrypoint] PRODUCTION_001 abgeschlossen.
+[entrypoint] Leere _prisma_migrations Tabelle...
 [entrypoint] Wende Prisma Schema an (db push)...
 [entrypoint] Prisma Schema angewendet.
 [entrypoint] Führe PRODUCTION_002_post_prisma.sql aus...
 [entrypoint] PRODUCTION_002 abgeschlossen.
 [entrypoint] === V2-MIGRATION ABGESCHLOSSEN ===
+```
+
+### Troubleshooting: V2-Migration startet nicht
+
+Wenn die Logs zeigen:
+```
+[entrypoint] RUN_V2_MIGRATION=false
+```
+
+Dann wurde die Umgebungsvariable **nicht korrekt gesetzt**. Prüfe in Portainer:
+
+1. **Stack → Environment variables** (nicht Container Environment!)
+2. Exakt so eingeben: `RUN_V2_MIGRATION=true` (ohne Anführungszeichen, ohne Leerzeichen)
+3. **Update the stack** klicken (nicht nur Redeploy)
+
+**Alternative:** Direkt in der `docker-compose.yml` hinzufügen:
+```yaml
+services:
+  app:
+    environment:
+      - RUN_V2_MIGRATION=true
 ```
 
 ### Schritt 5: Umgebungsvariable zurücksetzen

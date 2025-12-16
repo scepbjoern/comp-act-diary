@@ -1,12 +1,14 @@
 #!/bin/sh
-# Robust startup: wait for DB to be ready, apply schema/migrations, then start the app
+# Robust startup: wait for DB to be ready, apply schema via db push, then start the app
 # Assumes DATABASE_URL is set (docker-compose provides it)
+#
+# Strategie: Wir verwenden ausschließlich "prisma db push" statt Migrationen.
+# Das ist einfacher für ein Dev+Prod Setup und reicht völlig aus.
 
 set -eu
 
 RETRY_DELAY="${RETRY_DELAY:-3}"
 SCHEMA_PATH="${SCHEMA_PATH:-prisma/schema.prisma}"
-MIGRATIONS_DIR="${MIGRATIONS_DIR:-prisma/migrations}"
 MANUAL_MIGRATIONS_DIR="${MANUAL_MIGRATIONS_DIR:-prisma/migrations/manual}"
 MIGRATION_MARKER="/app/.migration_v2_complete"
 
@@ -38,6 +40,8 @@ extract_db_info() {
 
 log "Starting with DATABASE_URL=${DATABASE_URL:-<unset>}"
 log "Running as: $(whoami) (uid=$(id -u) gid=$(id -g))"
+log "RUN_V2_MIGRATION=${RUN_V2_MIGRATION:-false}"
+log "MIGRATION_MARKER exists: $([ -f "$MIGRATION_MARKER" ] && echo 'yes' || echo 'no')"
 # Prisma-Version (nicht kritisch, aber hilfreich beim Debuggen)
 if ./node_modules/.bin/prisma --version >/dev/null 2>&1; then
   # Zeile ohne Zeilenumbrueche loggen
@@ -70,6 +74,11 @@ if [ "${RUN_V2_MIGRATION:-false}" = "true" ] && [ ! -f "$MIGRATION_MARKER" ]; th
     log "WARNUNG: PRODUCTION_001_complete_migration.sql nicht gefunden!"
   fi
   
+  # Nach V2: _prisma_migrations zurücksetzen für sauberen Start
+  log "Setze _prisma_migrations zurück für sauberen Start..."
+  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+    -c "TRUNCATE TABLE \"_prisma_migrations\" RESTART IDENTITY;" 2>/dev/null || log "(Tabelle existiert noch nicht - OK)"
+  
   # Prisma Schema anwenden
   log "Wende Prisma Schema an (db push)..."
   ./node_modules/.bin/prisma db push --accept-data-loss --schema="$SCHEMA_PATH"
@@ -91,25 +100,15 @@ if [ "${RUN_V2_MIGRATION:-false}" = "true" ] && [ ! -f "$MIGRATION_MARKER" ]; th
   log "Marker erstellt: $MIGRATION_MARKER"
   log "Setze RUN_V2_MIGRATION=false im nächsten Deploy, um diese Meldung zu vermeiden."
 else
+  # Normaler Start: Schema mit db push synchronisieren
   if [ -f "$MIGRATION_MARKER" ]; then
     log "V2-Migration bereits durchgeführt (Marker: $MIGRATION_MARKER)"
   fi
   
-  # 1) Ausstehende Migrationen deployen (OHNE --skip-generate)
-  run_with_retry \
-    "./node_modules/.bin/prisma migrate deploy --schema=\"$SCHEMA_PATH\"" \
-    "migrate deploy fehlgeschlagen oder DB nicht bereit."
-fi
-
-# 2) Schema-Sync mit db push (nur für Development, nie in Production!)
-# Setze ENABLE_DB_PUSH=true nur lokal, wenn du Schema-Änderungen ohne Migration testen willst
-if [ "${ENABLE_DB_PUSH:-false}" = "true" ]; then
-  log "WARNUNG: db push aktiviert (Development-Modus) – kann Daten löschen!"
+  log "Wende Prisma Schema an (db push)..."
   run_with_retry \
     "./node_modules/.bin/prisma db push --skip-generate --accept-data-loss --schema=\"$SCHEMA_PATH\"" \
     "db push fehlgeschlagen oder DB nicht bereit."
-else
-  log "db push übersprungen (Production-Modus) – nur Migrationen werden angewendet."
 fi
 
 log "DB-Schema sichergestellt. Starte App..."
