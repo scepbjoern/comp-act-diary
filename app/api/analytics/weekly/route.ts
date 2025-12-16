@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 // Symptom enum names from Prisma schema
-const SYMPTOMS = [
+const _SYMPTOMS = [
   'BESCHWERDEFREIHEIT',
   'ENERGIE',
   'STIMMUNG',
@@ -15,7 +15,7 @@ const SYMPTOMS = [
   'BEWEGUNG',
 ] as const
 
-type SymptomKey = typeof SYMPTOMS[number]
+type SymptomKey = typeof _SYMPTOMS[number]
 
 function toYmd(d: Date): string {
   const dt = new Date(d)
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
       keys.push(toYmd(d))
     }
 
-    const rangeStart = new Date(days[0])
+    const _rangeStart = new Date(days[0])
     const rangeEndExclusive = new Date(days[6])
     rangeEndExclusive.setDate(rangeEndExclusive.getDate() + 1)
 

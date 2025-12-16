@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 // Local enums für JournalEntry-Typen (Mapping zu alten NoteTypes)
-const NoteTypeToCode: Record<string, string> = {
+const _NoteTypeToCode: Record<string, string> = {
   'MEAL': 'meal',
   'REFLECTION': 'daily_reflection', 
   'DIARY': 'diary'
@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
       occurredAtIso: j.createdAt?.toISOString(),
       createdAtIso: j.createdAt?.toISOString(),
       text: j.content ?? '',
-      originalTranscript: null, // Not stored in new schema
+      originalTranscript: j.originalTranscript ?? null,
       audioFilePath: audioAtt?.asset.filePath ?? null,
       audioFileId: audioAtt?.asset.id ?? null,
       keepAudio: true,

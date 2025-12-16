@@ -54,6 +54,7 @@ interface DiarySectionProps {
   onHandleRetranscribe: (noteId: string, model: string) => Promise<void>
   onGenerateTitle: () => Promise<void>
   onOriginalPreserved: (orig: string) => void
+  onUpdateNoteContent: (noteId: string, newContent: string) => Promise<boolean>
 }
 
 export function DiarySection({
@@ -98,6 +99,7 @@ export function DiarySection({
   onHandleRetranscribe,
   onGenerateTitle,
   onOriginalPreserved,
+  onUpdateNoteContent,
 }: DiarySectionProps) {
   return (
     <div className="card p-4 md:p-4 p-2 space-y-3">
@@ -211,6 +213,8 @@ export function DiarySection({
               if (audioFileId) {
                 onNewDiaryAudioFileIdChange(audioFileId)
               }
+              // Set original transcript when first transcribing
+              onOriginalPreserved(text)
               onEditorKeyIncrement()
             }}
             className="text-gray-300 hover:text-gray-100"
@@ -226,6 +230,8 @@ export function DiarySection({
               if (audioFileId) {
                 onNewDiaryAudioFileIdChange(audioFileId)
               }
+              // Set original transcript when first transcribing
+              onOriginalPreserved(text)
               onEditorKeyIncrement()
             }}
             compact
@@ -246,6 +252,7 @@ export function DiarySection({
           
           <ImproveTextButton
             text={newDiaryText}
+            sourceTranscript={originalDiaryText}
             onImprovedText={(t) => {
               onNewDiaryTextChange(t)
               // Defer key increment to ensure state is updated first
@@ -302,6 +309,7 @@ export function DiarySection({
         onViewPhoto={onViewPhoto}
         onDeleteAudio={onDeleteAudio}
         onRetranscribe={onHandleRetranscribe}
+        onUpdateContent={onUpdateNoteContent}
       />
       
       <SaveIndicator saving={saving} savedAt={savedAt} />

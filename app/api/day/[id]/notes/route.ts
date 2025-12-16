@@ -35,6 +35,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   const text = String(body?.text || '').trim()
   const title = body?.title ? String(body.title).trim() : null
   const audioFileId = body?.audioFileId ?? null
+  const originalTranscript = body?.originalTranscript ? String(body.originalTranscript).trim() : null
   
   if (!NoteTypes.includes(type)) return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
   if (!text) return NextResponse.json({ error: 'Text required' }, { status: 400 })
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       timeBoxId: day.timeBoxId,
       title,
       content: text,
+      originalTranscript,
     },
   })
 
@@ -128,7 +130,7 @@ async function loadNotesForTimeBox(timeBoxId: string, dayId: string) {
       occurredAtIso: j.createdAt?.toISOString(),
       createdAtIso: j.createdAt?.toISOString(),
       text: j.content ?? '',
-      originalTranscript: null,
+      originalTranscript: j.originalTranscript ?? null,
       audioFilePath: audioAtt?.asset.filePath ?? null,
       audioFileId: audioAtt?.asset.id ?? null,
       keepAudio: true,

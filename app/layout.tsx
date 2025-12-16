@@ -89,7 +89,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <meta name="color-scheme" content={theme === 'dark' ? 'dark' : 'light'} />
         <link rel="manifest" href="/manifest.webmanifest" crossOrigin="use-credentials" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0..200&display=block"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0..200&display=swap"
           rel="stylesheet"
         />
         <link rel="preload" href="/icons/logo_32.png" as="image" />

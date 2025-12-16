@@ -9,15 +9,18 @@ import { TablerIcon } from './TablerIcon'
  * - Opens a dialog to improve text using AI
  * - Calls onImprovedText when user accepts the improved text
  * - Optionally calls onOriginalPreserved to save the original text before improvement
+ * - If sourceTranscript is provided, it will ALWAYS use that for improvement (not the current text)
  */
 export function ImproveTextButton(props: {
   text: string
+  /** The true original transcript (unedited). If provided, LLM always improves from this. */
+  sourceTranscript?: string | null
   onImprovedText: (improvedText: string) => void
   onOriginalPreserved?: (originalText: string) => void
   title?: string
   className?: string
 }) {
-  const { text, onImprovedText, onOriginalPreserved, title = 'Text mit KI verbessern', className } = props
+  const { text, sourceTranscript, onImprovedText, onOriginalPreserved, title = 'Text mit KI verbessern', className } = props
   const [showDialog, setShowDialog] = useState(false)
 
   function handleAccept(improvedText: string) {
@@ -58,6 +61,7 @@ export function ImproveTextButton(props: {
       {showDialog && (
         <TextImprovementDialog
           originalText={text}
+          sourceTranscript={sourceTranscript}
           onAccept={handleAccept}
           onCancel={() => setShowDialog(false)}
         />

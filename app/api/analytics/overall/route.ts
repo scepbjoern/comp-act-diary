@@ -4,7 +4,7 @@ import { getPrisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const SYMPTOMS = [
+const _SYMPTOMS = [
   'BESCHWERDEFREIHEIT',
   'ENERGIE',
   'STIMMUNG',
@@ -14,9 +14,9 @@ const SYMPTOMS = [
   'BEWEGUNG',
 ] as const
 
-type SymptomKey = typeof SYMPTOMS[number]
+type SymptomKey = typeof _SYMPTOMS[number]
 
-function toYmd(d: Date): string {
+function _toYmd(d: Date): string {
   const dt = new Date(d)
   const y = dt.getFullYear()
   const m = String(dt.getMonth() + 1).padStart(2, '0')

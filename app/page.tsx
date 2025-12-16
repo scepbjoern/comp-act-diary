@@ -73,7 +73,6 @@ export default function HeutePage() {
     newDiaryText,
     newDiaryTitle,
     newDiaryAudioFileId,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     newDiaryOriginalTranscript,
     newDiaryTime,
     editorKey,
@@ -91,6 +90,7 @@ export default function HeutePage() {
     startEditNote,
     cancelEditNote,
     saveEditNote,
+    updateNoteContent,
     deleteNote,
     deleteAudio,
     uploadPhotos,
@@ -471,6 +471,7 @@ export default function HeutePage() {
             onHandleRetranscribe={handleRetranscribe}
             onGenerateTitle={handleGenerateTitle}
             onOriginalPreserved={(orig) => _setNewDiaryOriginalTranscript(orig)}
+            onUpdateNoteContent={updateNoteContent}
           />
 
           <DarmkurSection

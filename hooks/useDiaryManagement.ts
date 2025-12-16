@@ -97,6 +97,26 @@ export function useDiaryManagement(
     }
   }, [editingTitle, editingText, editingTime, cancelEditNote])
 
+  // Update note content directly (for restoring original transcript)
+  const updateNoteContent = useCallback(async (noteId: string, newContent: string) => {
+    try {
+      const res = await fetch(`/api/notes/${noteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: newContent }),
+        credentials: 'same-origin',
+      })
+      const data = await res.json()
+      if (data?.notes) setNotes(data.notes)
+      onToast('Inhalt aktualisiert', 'success')
+      return true
+    } catch (e) {
+      console.error('Update note content failed', e)
+      onToast('Aktualisieren fehlgeschlagen', 'error')
+      return false
+    }
+  }, [onToast])
+
   // Delete note
   const deleteNote = useCallback(async (noteId: string) => {
     if (!window.confirm('Tagebucheintrag wirklich löschen? Audio wird ebenfalls gelöscht.')) return false
@@ -378,6 +398,7 @@ export function useDiaryManagement(
     startEditNote,
     cancelEditNote,
     saveEditNote,
+    updateNoteContent,
     deleteNote,
     deleteAudio,
     uploadPhotos,

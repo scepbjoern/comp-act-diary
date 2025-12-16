@@ -35,11 +35,17 @@ const DEFAULT_PROMPTS: ImprovementPrompt[] = [
 ]
 
 export function TextImprovementDialog(props: {
+  /** The current text content (may be already improved) */
   originalText: string
+  /** The true original transcript (unedited, from speech-to-text). If provided, this is used for improvement. */
+  sourceTranscript?: string | null
   onAccept: (improvedText: string) => void
   onCancel: () => void
 }) {
-  const { originalText, onAccept, onCancel } = props
+  const { originalText, sourceTranscript, onAccept, onCancel } = props
+  
+  // Use sourceTranscript if available, otherwise fall back to originalText
+  const textToImprove = sourceTranscript || originalText
 
   const defaultModels = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_LLM_MODELS)
     ? String(process.env.NEXT_PUBLIC_LLM_MODELS).split(',').map(s => s.trim()).filter(Boolean)
@@ -76,7 +82,8 @@ export function TextImprovementDialog(props: {
       const res = await fetch('/api/improve-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: originalText, prompt: customPrompt, model }),
+        // Always use textToImprove (sourceTranscript if available, otherwise originalText)
+        body: JSON.stringify({ text: textToImprove, prompt: customPrompt, model }),
         credentials: 'same-origin',
       })
       const data = await res.json()
@@ -92,7 +99,7 @@ export function TextImprovementDialog(props: {
     } finally {
       setLoading(false)
     }
-  }, [originalText, customPrompt, model])
+  }, [textToImprove, customPrompt, model])
 
   const handleAddPrompt = () => {
     if (!newPromptName.trim() || !newPromptText.trim()) return

@@ -6,9 +6,9 @@ import { MicrophoneButton } from './MicrophoneButton'
 import { ImproveTextButton } from './ImproveTextButton'
 import { CameraPicker } from './CameraPicker'
 import { AudioPlayerH5 } from './AudioPlayerH5'
-import { RetranscribeButton } from './RetranscribeButton'
 import { RichTextEditor } from './RichTextEditor'
 import { MarkdownRenderer } from './MarkdownRenderer'
+import { OriginalTranscriptPanel } from './OriginalTranscriptPanel'
 
 type DayNote = {
   id: string
@@ -45,6 +45,7 @@ interface DiaryEntriesAccordionProps {
   onViewPhoto: (noteId: string, index: number) => void
   onDeleteAudio?: (id: string) => void
   onRetranscribe?: (noteId: string, newText: string) => void
+  onUpdateContent?: (noteId: string, newContent: string) => void
 }
 
 export function DiaryEntriesAccordion({
@@ -64,7 +65,8 @@ export function DiaryEntriesAccordion({
   onDeletePhoto,
   onViewPhoto,
   onDeleteAudio,
-  onRetranscribe
+  onRetranscribe,
+  onUpdateContent
 }: DiaryEntriesAccordionProps) {
   const fmtHMLocal = (iso?: string) => {
     if (!iso) return ''
@@ -148,18 +150,6 @@ export function DiaryEntriesAccordion({
                   </>
                 )}
                 
-                {/* Re-transcribe button for audio entries */}
-                {n.audioFileId && onRetranscribe && (
-                  <>
-                    {/* Debug: Show audioFileId */}
-                    <div className="text-xs text-gray-500">Audio: {n.audioFileId.substring(0, 8)}...</div>
-                    <RetranscribeButton
-                      audioFileId={n.audioFileId}
-                      onRetranscribed={(newText) => onRetranscribe(n.id, newText)}
-                      disabled={editingNoteId === n.id}
-                    />
-                  </>
-                )}
               </div>
               
               {editingNoteId === n.id ? (
@@ -218,6 +208,7 @@ export function DiaryEntriesAccordion({
                       />
                       <ImproveTextButton
                         text={editingText}
+                        sourceTranscript={n.originalTranscript}
                         onImprovedText={(t) => onTextChange(t)}
                         className="text-gray-300 hover:text-gray-100 text-xs"
                       />
@@ -228,40 +219,44 @@ export function DiaryEntriesAccordion({
                 <MarkdownRenderer markdown={n.text} />
               )}
               
-              {/* Audio section */}
+              {/* Audio section - compact with inline delete */}
               {n.audioFilePath && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <TablerIcon name="microphone-filled" size={16} className="text-green-500" />
-                      Audio-Aufnahme
-                    </span>
-                    <button 
-                      className="btn btn-ghost btn-xs text-red-400 hover:text-red-300"
-                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); onDeleteAudio?.(n.id); }}
-                      title="Audio löschen"
-                    >
-                      <TablerIcon name="trash" size={16} />
-                      <span className="md:inline hidden ml-1">Audio löschen</span>
-                    </button>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1">
+                    <AudioPlayerH5 
+                      audioFilePath={n.audioFilePath} 
+                      compact
+                    />
                   </div>
-                  <AudioPlayerH5 
-                    audioFilePath={n.audioFilePath} 
-                    compact
-                  />
+                  <button 
+                    className="btn btn-ghost btn-xs text-red-400 hover:text-red-300"
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); onDeleteAudio?.(n.id); }}
+                    title="Audio löschen"
+                  >
+                    <TablerIcon name="trash" size={16} />
+                  </button>
                 </div>
               )}
               
-              {/* Original transcript */}
-              {n.originalTranscript && (
-                <details className="text-xs">
-                  <summary className="cursor-pointer text-gray-400 hover:text-gray-300">
-                    Original-Transkript anzeigen
-                  </summary>
-                  <div className="mt-1 p-2 rounded bg-slate-900/50 text-gray-200 whitespace-pre-wrap">
-                    {n.originalTranscript}
-                  </div>
-                </details>
+              {/* Original transcript - lazy loaded with edit capability */}
+              {(n.audioFileId || n.originalTranscript) && (
+                <OriginalTranscriptPanel
+                  noteId={n.id}
+                  initialTranscript={n.originalTranscript}
+                  audioFileId={n.audioFileId}
+                  onRestoreToContent={(text) => {
+                    if (editingNoteId === n.id) {
+                      onTextChange(text)
+                    } else if (onUpdateContent) {
+                      onUpdateContent(n.id, text)
+                    }
+                  }}
+                  onOriginalUpdated={(_newOriginal) => {
+                    // Update the note's originalTranscript in local state
+                    // This is handled by the parent component
+                  }}
+                  onRetranscribe={onRetranscribe}
+                />
               )}
               
               {/* Photos - includes both uploaded photos and images from markdown */}

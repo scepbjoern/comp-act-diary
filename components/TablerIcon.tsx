@@ -27,6 +27,7 @@ import {
   IconX,
   IconChevronDown,
   IconChevronUp,
+  IconChevronRight,
   IconCalendar,
   IconChartBar,
   IconLogout,
@@ -132,6 +133,14 @@ const iconMap: Record<string, typeof IconSettings> = {
   restore: IconRestore,
   eye: IconEye,
   'arrow-back-up': IconArrowBackUp,
+  
+  // Chevrons for collapsible panels
+  'chevron-down': IconChevronDown,
+  'chevron-right': IconChevronRight,
+  'chevron-up': IconChevronUp,
+  
+  // File icons
+  'file-text': IconFileText,
 }
 
 interface TablerIconProps {
