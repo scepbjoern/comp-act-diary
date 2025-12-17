@@ -364,7 +364,7 @@ docker compose exec db psql -U compactdiary -d comp-act-diary -c "\dt"
 Der `backup_db` Container erstellt automatisch Backups:
 - **Intervall:** Alle 8 Stunden (konfigurierbar via `BACKUP_FREQUENCY`)
 - **Aufbewahrung:** 3 neueste (konfigurierbar via `BACKUP_NUM_KEEP`)
-- **Speicherort:** `${DB_BACKUP_PATH}` (z.B. `/opt/comp-act-diary/backups`)
+- **Speicherort:** `${DB_BACKUP_PATH}` (z.B. `/dockerdata-slow/db_dumps/diary/comp-act-diary_db_dump/`)
 
 ### Backup-Status prüfen
 
@@ -387,7 +387,7 @@ docker compose exec db pg_dump -U compactdiary -d comp-act-diary -Fc \
   -f /tmp/manual_backup.dump
 
 # Aus Container kopieren
-docker cp comp-act-diary-db-1:/tmp/manual_backup.dump ./manual_backup.dump
+docker cp compact-diary-db:/tmp/manual_backup.dump ./manual_backup.dump
 ```
 
 ### Restore
@@ -400,9 +400,10 @@ docker compose stop app
 docker compose exec db psql -U compactdiary -c "DROP DATABASE \"comp-act-diary\""
 docker compose exec db psql -U compactdiary -c "CREATE DATABASE \"comp-act-diary\""
 
-# 3. Backup einspielen
-docker compose exec -T db pg_restore -U compactdiary -d comp-act-diary \
-  < /opt/comp-act-diary/backups/dump_2024-12-17_08-00-00.dump
+# 3. Neuestes Backup finden und einspielen
+LATEST=$(ls -t /dockerdata-slow/db_dumps/diary/comp-act-diary_db_dump/*.dump | head -1)
+echo "Restore von: $LATEST"
+docker compose exec -T db pg_restore -U compactdiary -d comp-act-diary < "$LATEST"
 
 # 4. App wieder starten
 docker compose up -d app
@@ -484,24 +485,20 @@ docker compose -f docker-compose.test.yml logs -f test-db
 docker compose -f docker-compose.test.yml ps
 ```
 
-#### 3. Backup einspielen
+#### 3. Backup einspielen (automatisch neuestes)
 
 ```bash
 # Verfügbare Backups im Container anzeigen
 docker compose -f docker-compose.test.yml exec test-db ls -la /backups/
 
-# Neuestes Backup finden
+# Neuestes Backup automatisch finden und einspielen
 LATEST_BACKUP=$(docker compose -f docker-compose.test.yml exec test-db \
   sh -c "ls -t /backups/*.dump 2>/dev/null | head -1")
 echo "Neuestes Backup: $LATEST_BACKUP"
 
-# Backup wiederherstellen
+# Backup wiederherstellen (automatisch mit neuestem)
 docker compose -f docker-compose.test.yml exec test-db \
-  pg_restore -U postgres -d comp-act-diary --clean --if-exists /backups/dump_YYYY-MM-DD_HH-MM-SS.dump
-
-# Alternative: Wenn pg_restore fehlschlägt wegen leerer DB
-docker compose -f docker-compose.test.yml exec test-db \
-  pg_restore -U postgres -d comp-act-diary --no-owner /backups/dump_YYYY-MM-DD_HH-MM-SS.dump
+  sh -c "pg_restore -U postgres -d comp-act-diary --no-owner \$(ls -t /backups/*.dump | head -1)"
 ```
 
 #### 4. Test-App prüfen
@@ -511,10 +508,25 @@ docker compose -f docker-compose.test.yml exec test-db \
 docker compose -f docker-compose.test.yml logs -f test-app
 
 # Im Browser öffnen
-# http://<LXC-IP>:3099
+# http://192.168.188.170:3099
 
 # Oder curl-Test
 curl -I http://localhost:3099
+```
+
+#### 4.1 Diarium-Import im Test-Stack
+
+```bash
+# 1) Neuesten Diarium-Export auf dem Host finden (Pfad anpassen falls nötig)
+LATEST_DIARIUM=$(ls -t /dockerdata-slow/db_dumps/diary/comp-act-diary_db_dump/*.json 2>/dev/null | head -1)
+echo "Neuster Diarium-Export: $LATEST_DIARIUM"
+
+# 2) In den Test-App-Container kopieren
+docker cp "$LATEST_DIARIUM" compact-diary-test-app:/app/uploads/diarium.json
+
+# 3) Import im Test-App-Container ausführen
+docker compose -f docker-compose.test.yml exec test-app \
+  npx tsx scripts/import-diarium.ts /app/uploads/diarium.json
 ```
 
 #### 5. Test-Stack komplett löschen
@@ -543,10 +555,9 @@ cd /opt/stacks/comp-act-diary/deploy
 docker compose -f docker-compose.test.yml up -d
 sleep 10  # Warten auf DB
 
-# 2. Backup einspielen (Dateiname anpassen!)
+# 2. Neuestes Backup automatisch einspielen
 docker compose -f docker-compose.test.yml exec test-db \
-  pg_restore -U postgres -d comp-act-diary --no-owner \
-  /backups/dump_2024-12-17_08-00-00.dump
+  sh -c "pg_restore -U postgres -d comp-act-diary --no-owner \$(ls -t /backups/*.dump | head -1)"
 
 # 3. Testen (Browser: http://<IP>:3099)
 docker compose -f docker-compose.test.yml logs test-app

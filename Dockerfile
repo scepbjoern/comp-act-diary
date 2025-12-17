@@ -135,6 +135,7 @@ COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public
 COPY --from=build --chown=node:node /app/prisma ./prisma
+COPY --from=build --chown=node:node /app/scripts ./scripts
 COPY --from=build --chown=node:node /app/deploy/entrypoint.sh ./entrypoint.sh
 
 # Copy Prisma CLI and dependencies for migrations (not included in standalone)
@@ -144,7 +145,7 @@ COPY --from=build --chown=node:node /app/node_modules/prisma ./node_modules/pris
 
 # Install Prisma directly in Alpine to ensure all runtime files (WASM, engines) are available
 # Run as root, then fix ownership of only the new files
-RUN npm install prisma@6.19.0 --no-save \
+RUN npm install prisma@6.19.0 tsx@4.16.2 typescript@5.5.4 --no-save \
  && chown -R node:node /app/node_modules
 
 # Ensure entrypoint is executable and create writable uploads directory
