@@ -68,7 +68,7 @@ export function RetranscribeButton({ audioFileId, onRetranscribed, disabled = fa
       </button>
       
       {showModelSelector && (
-        <div className="absolute bottom-full left-0 mb-1 bg-surface border border-slate-700 rounded shadow-lg z-50 p-2 min-w-[200px]">
+        <div className="absolute top-full right-0 mt-1 bg-surface border border-slate-700 rounded shadow-lg z-50 p-2 min-w-[200px]">
           <div className="text-xs text-gray-400 mb-2">Modell auswählen:</div>
           
           <div className="space-y-1">

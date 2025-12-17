@@ -140,8 +140,21 @@ export function OriginalTranscriptPanel(props: {
               <span>Lade Original-Transkript...</span>
             </div>
           ) : !transcript ? (
-            <div className="text-sm text-base-content/50 italic py-2">
-              Kein Original-Transkript vorhanden
+            <div className="space-y-2">
+              <div className="text-sm text-base-content/50 italic py-2">
+                Kein Original-Transkript vorhanden
+              </div>
+              {/* Re-transcribe button even without transcript */}
+              {audioFileId && onRetranscribe && (
+                <RetranscribeButton
+                  audioFileId={audioFileId}
+                  onRetranscribed={(newText) => {
+                    setTranscript(newText)
+                    setHasLoaded(true)
+                    onRetranscribe(noteId, newText)
+                  }}
+                />
+              )}
             </div>
           ) : isEditing ? (
             /* Edit mode */

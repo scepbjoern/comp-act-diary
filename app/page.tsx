@@ -15,6 +15,7 @@ import { DiarySection } from '@/components/DiarySection'
 import { DaySummary } from '@/components/DaySummary'
 import { DarmkurSection } from '@/components/DarmkurSection'
 import { ResetDaySection } from '@/components/ResetDaySection'
+import { DebugDayPanel } from '@/components/DebugDayPanel'
 import { PhotoViewerModal } from '@/components/PhotoViewerModal'
 import { ymd } from '@/lib/date-utils'
 import type { Day, InlineData } from '@/types/day'
@@ -28,6 +29,12 @@ export default function HeutePage() {
   const [mealText, setMealText] = useState('')
   const { saving, savedAt, startSaving, doneSaving} = useSaveIndicator()
   const [reflectionDue, setReflectionDue] = useState<{ due: boolean; daysSince: number } | null>(null)
+  const [debugData, setDebugData] = useState<{
+    taggings: { id: string; taxonomyName: string; entityType: string }[]
+    contacts: { id: string; name: string }[]
+    locations: { id: string; name: string; lat?: number; lng?: number }[]
+    measurements: { id: string; metricName: string; value: number; unit?: string }[]
+  } | null>(null)
   const { toasts, push, dismiss } = useToasts()
   
   // UI State Hook
@@ -137,6 +144,7 @@ export default function HeutePage() {
       setHabits(data.habits)
       setNotes(data.notes ?? [])
       setSymptomIcons(data.symptomIcons || {})
+      setDebugData(data.debugData || null)
       // Prefill current time (HH:MM) when date changes or page loads
       const now = new Date()
       const hh = String(now.getHours()).padStart(2, '0')
@@ -262,6 +270,7 @@ export default function HeutePage() {
         if (data?.notes) setNotes(data.notes)
         if (data?.habits) setHabits(data.habits)
         if (data?.symptomIcons) setSymptomIcons(data.symptomIcons)
+      if (data?.debugData) setDebugData(data.debugData)
       } catch {}
       // Refresh inline analytics so symptom sparklines update immediately
       try {
@@ -513,6 +522,8 @@ export default function HeutePage() {
             onMealTextChange={setMealText}
             onAddMealNote={addMealNote}
           />
+
+          <DebugDayPanel debugData={debugData} />
 
           <ResetDaySection onResetDay={handleResetDay} />
         </>

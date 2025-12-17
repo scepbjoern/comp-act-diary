@@ -63,6 +63,7 @@ services:
       NEXT_PUBLIC_TOGETHERAI_LLM_MODEL: ${NEXT_PUBLIC_TOGETHERAI_LLM_MODEL:-openai/gpt-oss-20b}
       NEXT_PUBLIC_LLM_MODELS: ${NEXT_PUBLIC_LLM_MODELS:-openai/gpt-oss-20b,openai/gpt-oss-120b,mistralai/Mistral-7B-Instruct-v0.3,meta-llama/Llama-4-Scout-17B-16E-Instruct}
       # optional: NEXT_TELEMETRY_DISABLED: "1"
+      SYNC_SCHEMA: ${SYNC_SCHEMA:-false} 
     depends_on:
       - db
     ports:

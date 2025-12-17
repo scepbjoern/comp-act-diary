@@ -188,6 +188,64 @@ export async function GET(req: NextRequest) {
   
   const symptomIcons: Record<string, string | null> = { ...DEFAULT_SYMPTOM_ICONS }
 
+  // DEBUG: Load taggings, contacts, locations, measurements for this day
+  const debugTaggings = await prisma.tagging.findMany({
+    where: {
+      userId: user.id,
+      entity: {
+        type: 'JOURNAL_ENTRY',
+        id: { in: journalIds }
+      }
+    },
+    include: { taxonomy: true }
+  })
+  
+  const debugMeasurements = await prisma.measurement.findMany({
+    where: { timeBoxId: timeBox.id, userId: user.id },
+    include: { metric: true }
+  })
+  
+  // Filter out system symptom measurements for debug display
+  const nonSymptomMeasurements = debugMeasurements.filter(m => 
+    !m.metric.code.startsWith('symptom_') && m.metric.code !== 'bristol_stool'
+  )
+  
+  // Load LocationVisits for this day
+  const debugLocationVisits = await prisma.locationVisit.findMany({
+    where: { timeBoxId: timeBox.id, userId: user.id },
+    include: { location: true }
+  })
+  
+  // Load Interactions for this day to get contacts
+  const debugInteractions = await prisma.interaction.findMany({
+    where: { timeBoxId: timeBox.id, userId: user.id },
+    include: { contact: true }
+  })
+  
+  const debugData = {
+    taggings: debugTaggings.map(t => ({
+      id: t.id,
+      taxonomyName: t.taxonomy.shortName,
+      entityType: 'JournalEntry'
+    })),
+    contacts: debugInteractions.map(i => ({
+      id: i.contact.id,
+      name: i.contact.name
+    })),
+    locations: debugLocationVisits.map(lv => ({
+      id: lv.location.id,
+      name: lv.location.name,
+      lat: lv.location.lat ?? undefined,
+      lng: lv.location.lng ?? undefined
+    })),
+    measurements: nonSymptomMeasurements.map(m => ({
+      id: m.id,
+      metricName: m.metric.name,
+      value: m.valueNum ?? 0,
+      unit: m.metric.unit ?? undefined
+    }))
+  }
+
   const payload = {
     day: {
       id: day.id,
@@ -203,6 +261,7 @@ export async function GET(req: NextRequest) {
     habits,
     notes,
     symptomIcons,
+    debugData,
   }
 
   return NextResponse.json(payload)

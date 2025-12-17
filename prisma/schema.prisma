@@ -155,6 +155,32 @@ enum SyncProviderType {
   LAST_FM         /// Last.fm Scrobbling
 }
 
+/// Art einer Interaktion mit einem Kontakt
+enum InteractionKind {
+  GENERAL   /// Allgemeine Erwähnung/Bezug (z.B. Import)
+  CALL      /// Telefonat
+  VIDEO     /// Videoanruf
+  MEETING   /// Persönliches Treffen
+  MESSAGE   /// Textnachricht (SMS, Chat)
+  EMAIL     /// E-Mail
+  LETTER    /// Brief
+  SOCIAL    /// Social Media Interaktion
+}
+
+/// Art eines POI (Point of Interest)
+enum PoiType {
+  HOME       /// Zuhause
+  WORK       /// Arbeitsplatz
+  RESTAURANT /// Restaurant/Café
+  SHOP       /// Geschäft
+  LANDMARK   /// Sehenswürdigkeit
+  TRANSPORT  /// Verkehrsmittel (Bahnhof, Flughafen)
+  NATURE     /// Natur (Park, Wald, See)
+  SPORT      /// Sportstätte
+  HEALTH     /// Gesundheit (Arzt, Krankenhaus)
+  OTHER      /// Sonstiges
+}
+
 // =============================================================================
 // KERN-SYSTEM
 // =============================================================================
@@ -200,6 +226,7 @@ model User {
   personRelations       PersonRelation[]
   interactions          Interaction[]
   locations             Location[]
+  locationVisits        LocationVisit[]
   mediaAssets           MediaAsset[]
   mediaAttachments      MediaAttachment[]
   metricDefinitions     MetricDefinition[]
@@ -294,6 +321,7 @@ model TimeBox {
   calendarEvents      CalendarEvent[]
   consumptions        Consumption[]
   entryTimeBoxes      EntryTimeBox[]
+  locationVisits      LocationVisit[]
 
   /// Pro User und Tag nur eine DAY-TimeBox
   @@unique([userId, kind, localDate])
@@ -430,6 +458,8 @@ model JournalEntry {
   templateId  String?
   /// Zeitraum, zu dem der Eintrag gehört (DAY für Tagesnotiz, WEEK für Wochenreflexion, etc.)
   timeBoxId   String
+  /// Ort, an dem der Eintrag erstellt wurde (optional)
+  locationId  String?
   /// Titel (optional)
   title       String?
   /// Inhalt (Markdown) - bei Audio-Einträgen das verbesserte Transkript
@@ -451,11 +481,14 @@ model JournalEntry {
   type     JournalEntryType @relation(fields: [typeId], references: [id])
   template JournalTemplate? @relation(fields: [templateId], references: [id])
   timeBox  TimeBox          @relation(fields: [timeBoxId], references: [id])
+  location Location?        @relation(fields: [locationId], references: [id])
 
   exerciseSessions ExerciseSession[]
+  locationVisits   LocationVisit[]
 
   @@index([userId, typeId])
   @@index([timeBoxId])
+  @@index([locationId])
   @@index([deletedAt])
 }
 
@@ -820,18 +853,22 @@ model Contact {
   relationshipLevel Int?
   /// Archiviert?
   isArchived        Boolean   @default(false)
+  /// Wohnort (optional)
+  locationId        String?
   /// Erstellungszeitpunkt
   createdAt         DateTime  @default(now())
   /// Letztes Update
   updatedAt         DateTime  @updatedAt
 
   user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location     Location?        @relation(fields: [locationId], references: [id])
   relationsAsA PersonRelation[] @relation("PersonA")
   relationsAsB PersonRelation[] @relation("PersonB")
   interactions Interaction[]
 
   @@unique([userId, slug])
   @@index([userId, isArchived])
+  @@index([locationId])
 }
 
 /// Personenbeziehung: Beziehung zwischen zwei Kontakten.
@@ -875,8 +912,8 @@ model Interaction {
   userId     String
   /// Zeitraum (optional)
   timeBoxId  String?
-  /// Art der Interaktion (z.B. "call", "meeting", "message")
-  kind       String
+  /// Art der Interaktion
+  kind       InteractionKind @default(GENERAL)
   /// Notizen (optional)
   notes      String?
   /// Zeitpunkt der Interaktion
@@ -912,8 +949,8 @@ model Location {
   country    String?
   /// Stadt (optional)
   city       String?
-  /// POI-Typ (z.B. "restaurant", "home", "landmark")
-  poiType    String?
+  /// POI-Typ
+  poiType    PoiType?
   /// Favorit?
   isFavorite Boolean  @default(false)
   /// Notizen (optional)
@@ -923,10 +960,45 @@ model Location {
   /// Letztes Update
   updatedAt  DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  journalEntries JournalEntry[]
+  contacts       Contact[]
+  visits         LocationVisit[]
 
   @@unique([userId, slug])
   @@index([userId, isFavorite])
+}
+
+/// Ortsbesuch: Verknüpft einen Ort mit einem Zeitraum und optional einem JournalEntry.
+/// Ermöglicht M:N-Beziehung zwischen Locations und TimeBoxes/JournalEntries.
+model LocationVisit {
+  /// Eindeutige ID
+  id             String    @id @default(uuid())
+  /// Besitzer-User
+  userId         String
+  /// Besuchter Ort
+  locationId     String
+  /// Zeitraum (Tag/Woche/Monat/Custom)
+  timeBoxId      String
+  /// Optional: Verknüpfter JournalEntry
+  journalEntryId String?
+  /// Ankunftszeit (optional)
+  arrivedAt      DateTime?
+  /// Abfahrtszeit (optional)
+  departedAt     DateTime?
+  /// Notizen zum Besuch (optional)
+  notes          String?
+  /// Erstellungszeitpunkt
+  createdAt      DateTime  @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location     Location      @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  timeBox      TimeBox       @relation(fields: [timeBoxId], references: [id], onDelete: Cascade)
+  journalEntry JournalEntry? @relation(fields: [journalEntryId], references: [id], onDelete: SetNull)
+
+  @@index([userId, timeBoxId])
+  @@index([locationId])
+  @@index([journalEntryId])
 }
 
 // =============================================================================

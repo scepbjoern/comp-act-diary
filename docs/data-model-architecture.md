@@ -42,16 +42,19 @@ Dieses Dokument beschreibt die finale Architektur des Datenmodells für die Comp
 │  ───────────────  │             │  ───────────────  │             │      ORTE         │
 │                   │             │                   │             │  ───────────────  │
 │  JournalEntryType │             │  ActValue         │             │  Contact          │
-│        │          │             │      │            │             │      │            │
-│        ▼          │             │      ▼            │             │      ▼            │
-│  JournalTemplate  │             │  ActGoal          │             │  PersonRelation   │
-│        │          │             │      │            │             │  Interaction      │
-│        ▼          │             │      ├────────┐   │             │                   │
-│  JournalEntry     │             │      ▼        ▼   │             │  Location         │
-│  (timeBoxId,      │             │   Habit    Reward │             │                   │
-│   content,        │             │      │            │             │                   │
-│   isSensitive)    │             │      ▼            │             │                   │
-│                   │             │  HabitCheckIn     │             │                   │
+│        │          │             │      │            │             │  (locationId)     │
+│        ▼          │             │      ▼            │             │      │            │
+│  JournalTemplate  │             │  ActGoal          │             │      ▼            │
+│        │          │             │      │            │             │  PersonRelation   │
+│        ▼          │             │      ├────────┐   │             │  Interaction      │
+│  JournalEntry ────┼─────────────┼──────┼────────┼───┼─────────────┼► LocationVisit    │
+│  (timeBoxId,      │             │      ▼        ▼   │             │  (timeBoxId,      │
+│   content,        │             │   Habit    Reward │             │   journalEntryId?)│
+│   isSensitive)    │             │      │            │             │      │            │
+│                   │             │      ▼            │             │      ▼            │
+│                   │             │  HabitCheckIn     │             │  Location         │
+│                   │             │                   │             │  (lat, lng,       │
+│                   │             │                   │             │   poiType)        │
 └───────────────────┘             └───────────────────┘             └───────────────────┘
         │                                   │                                   │
         └───────────────────────────────────┼───────────────────────────────────┘
@@ -183,10 +186,11 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 
 | Entität | Wichtigste Attribute | Beziehungen |
 |---------|---------------------|-------------|
-| **Contact** | id (=Entity.id), userId, slug, name, nickname?, email?, phone?, notes?, birthday?, firstMetAt?, relationshipLevel?, isArchived | 1:N zu PersonRelation, 1:N zu Interaction |
+| **Contact** | id (=Entity.id), userId, slug, name, nickname?, email?, phone?, notes?, birthday?, firstMetAt?, relationshipLevel?, isArchived, **locationId?** | 1:N zu PersonRelation, 1:N zu Interaction, **N:1 zu Location (Wohnort)** |
 | **PersonRelation** | id, personAId, personBId, relationType, validFrom?, validTo? | N:1 zu Contact (beide Seiten) |
-| **Interaction** | id, contactId, userId, timeBoxId?, kind, notes?, occurredAt | N:1 zu Contact, N:1 zu TimeBox |
-| **Location** | id (=Entity.id), userId, slug, name, lat?, lng?, address?, country?, city?, poiType?, isFavorite, notes? | - |
+| **Interaction** | id, contactId, userId, timeBoxId?, kind (Enum: GENERAL/CALL/VIDEO/MEETING/MESSAGE/EMAIL/LETTER/SOCIAL), notes?, occurredAt | N:1 zu Contact, N:1 zu TimeBox |
+| **Location** | id (=Entity.id), userId, slug, name, lat?, lng?, address?, country?, city?, poiType (Enum: HOME/WORK/RESTAURANT/...), isFavorite, notes? | **1:N zu Contact, 1:N zu LocationVisit** |
+| **LocationVisit** | id, userId, locationId, timeBoxId, journalEntryId?, arrivedAt?, departedAt?, notes? | **N:1 zu Location, N:1 zu TimeBox, N:1 zu JournalEntry (optional)** |
 
 ### 3.8 Medien
 
@@ -343,6 +347,29 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 - Prisma-kompatibel via Middleware
 - Verschiedene Keys pro Sensitivitätsstufe möglich
 - Biometrischer Unlock gibt zweiten Key frei
+
+### 4.12 LocationVisit als M:N-Brücke
+
+**Entscheidung:** `LocationVisit` als Join-Tabelle zwischen Location, TimeBox und optional JournalEntry. Zusätzlich `Contact.locationId` für Wohnorte.
+
+**Begründung:**
+- M:N zwischen Location und TimeBox: Ein Tag kann mehrere Orte haben, ein Ort kann an mehreren Tagen besucht werden
+- M:N zwischen Location und JournalEntry: Ein Eintrag kann mehrere Orte referenzieren
+- `journalEntryId` optional: Ortsbesuche können auch ohne JournalEntry erfasst werden
+- `arrivedAt`/`departedAt` für Zeitstempel des Besuchs
+- Kartenansicht: Einfache Query `WHERE timeBoxId IN (...)` für beliebige Zeiträume
+- `Contact.locationId` für Wohnort-Zuordnung (1:1)
+
+### 4.13 Enums für begrenzte Wertebereiche
+
+**Entscheidung:** Verwendung von Prisma-Enums für Felder mit begrenztem, stabilen Wertebereich.
+
+**Begründung:**
+- `InteractionKind`: GENERAL, CALL, VIDEO, MEETING, MESSAGE, EMAIL, LETTER, SOCIAL
+- `PoiType`: HOME, WORK, RESTAURANT, SHOP, LANDMARK, TRANSPORT, NATURE, SPORT, HEALTH, OTHER
+- Type-Safety auf DB- und Application-Ebene
+- Verhindert Tippfehler und inkonsistente Daten
+- Migrationen nur bei echten Schema-Änderungen nötig
 
 ---
 

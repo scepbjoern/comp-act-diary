@@ -34,13 +34,26 @@ npm run dev
 
 ### 3. Deployen (Production)
 
+**Wichtig:** Schema-Sync ist standardmäßig deaktiviert, um Datenverlust zu vermeiden.
+
 ```bash
 git add .
 git commit -m "Schema: <Beschreibung der Änderung>"
 git push
 ```
 
-Der `entrypoint.sh` führt automatisch `prisma db push` bei jedem Start aus.
+**Bei Schema-Änderungen:** Setze `SYNC_SCHEMA=true` in `docker-compose.yml`:
+
+```yaml
+services:
+  app:
+    environment:
+      - SYNC_SCHEMA=true  # Nach erfolgreichem Deploy entfernen!
+```
+
+Nach dem Redeploy und Prüfung:
+1. `SYNC_SCHEMA=true` wieder entfernen
+2. Erneut deployen (oder Container neu starten)
 
 ---
 
@@ -73,10 +86,17 @@ docker exec <db-container> pg_dump -U postgres -d "comp-act-diary" > backup_$(da
 ## Dateien
 
 | Datei | Zweck |
-|-------|-------|
+|-------|---------|
 | `prisma/schema.prisma` | Schema-Definition |
-| `deploy/entrypoint.sh` | Führt `db push` bei Container-Start aus |
-| `prisma/migrations/manual/` | Einmalige manuelle Skripte (V2-Migration) |
+| `deploy/entrypoint.sh` | Wartet auf DB, optional Schema-Sync |
+| `deploy/docker-compose.yml` | Container-Konfiguration mit Umgebungsvariablen |
+
+### Umgebungsvariablen
+
+| Variable | Default | Beschreibung |
+|----------|---------|---------------|
+| `SYNC_SCHEMA` | `false` | Wenn `true`, führt `prisma db push` beim Start aus |
+| `SCHEMA_PATH` | `prisma/schema.prisma` | Pfad zum Prisma-Schema |
 
 ---
 
