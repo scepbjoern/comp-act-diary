@@ -373,10 +373,10 @@ Der `backup_db` Container erstellt automatisch Backups:
 docker compose logs backup_db
 
 # Vorhandene Backups auflisten
-ls -lah /opt/comp-act-diary/backups/
+ls -lah /dockerdata-slow/db_dumps/diary/comp-act-diary_db_dump/
 
 # Neuestes Backup
-ls -t /opt/comp-act-diary/backups/*.dump | head -1
+ls -t /dockerdata-slow/db_dumps/diary/comp-act-diary_db_dump/*.dump | head -1
 ```
 
 ### Manuelles Backup
@@ -407,6 +407,158 @@ docker compose exec -T db pg_restore -U compactdiary -d comp-act-diary \
 # 4. App wieder starten
 docker compose up -d app
 ```
+
+### Backup-Verifikation mit temporärem Test-Stack
+
+Um sicherzustellen, dass ein Backup wirklich funktioniert, kannst du einen komplett separaten Stack hochfahren, das Backup einspielen und testen. Dieser Stack nutzt ein temporäres Docker-Volume (kein Bind-Mount) und kann danach spurlos gelöscht werden.
+
+#### 1. Test-Compose-Datei erstellen
+
+```bash
+# Im deploy-Verzeichnis eine Test-Datei erstellen
+cat > /opt/stacks/comp-act-diary/deploy/docker-compose.test.yml << 'EOF'
+version: "3.9"
+
+services:
+  test-db:
+    image: postgres:16-alpine
+    container_name: compact-diary-test-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      # Temporäres Volume statt Bind-Mount
+      - test-db-data:/var/lib/postgresql/data
+      # Backup-Verzeichnis read-only einbinden
+      - ${DB_BACKUP_PATH}:/backups:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - test-network
+
+  test-app:
+    container_name: compact-diary-test-app
+    image: deploy-app:latest
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@test-db:5432/${POSTGRES_DB}?schema=public
+      SYNC_SCHEMA: "false"
+    ports:
+      - "3099:3000"
+    depends_on:
+      test-db:
+        condition: service_healthy
+    volumes:
+      - test-uploads:/app/uploads
+    networks:
+      - test-network
+
+volumes:
+  test-db-data:
+    # Temporäres Volume - wird mit docker compose down -v gelöscht
+  test-uploads:
+
+networks:
+  test-network:
+    name: compact-diary-test-network
+EOF
+```
+
+#### 2. Test-Stack starten
+
+```bash
+cd /opt/stacks/comp-act-diary/deploy
+
+# Test-Stack hochfahren (nutzt .env für Credentials)
+docker compose -f docker-compose.test.yml up -d
+
+# Warten bis DB ready
+docker compose -f docker-compose.test.yml logs -f test-db
+# (Ctrl+C wenn "database system is ready to accept connections")
+
+# Status prüfen
+docker compose -f docker-compose.test.yml ps
+```
+
+#### 3. Backup einspielen
+
+```bash
+# Verfügbare Backups im Container anzeigen
+docker compose -f docker-compose.test.yml exec test-db ls -la /backups/
+
+# Neuestes Backup finden
+LATEST_BACKUP=$(docker compose -f docker-compose.test.yml exec test-db \
+  sh -c "ls -t /backups/*.dump 2>/dev/null | head -1")
+echo "Neuestes Backup: $LATEST_BACKUP"
+
+# Backup wiederherstellen
+docker compose -f docker-compose.test.yml exec test-db \
+  pg_restore -U postgres -d comp-act-diary --clean --if-exists /backups/dump_YYYY-MM-DD_HH-MM-SS.dump
+
+# Alternative: Wenn pg_restore fehlschlägt wegen leerer DB
+docker compose -f docker-compose.test.yml exec test-db \
+  pg_restore -U postgres -d comp-act-diary --no-owner /backups/dump_YYYY-MM-DD_HH-MM-SS.dump
+```
+
+#### 4. Test-App prüfen
+
+```bash
+# App-Logs prüfen
+docker compose -f docker-compose.test.yml logs -f test-app
+
+# Im Browser öffnen
+# http://<LXC-IP>:3099
+
+# Oder curl-Test
+curl -I http://localhost:3099
+```
+
+#### 5. Test-Stack komplett löschen
+
+```bash
+cd /opt/stacks/comp-act-diary/deploy
+
+# Container UND Volumes löschen (-v ist wichtig!)
+docker compose -f docker-compose.test.yml down -v
+
+# Prüfen dass alles weg ist
+docker compose -f docker-compose.test.yml ps
+docker volume ls | grep test
+
+# Optional: Test-Compose-Datei löschen
+rm docker-compose.test.yml
+```
+
+#### Zusammenfassung Test-Workflow
+
+```bash
+# Komplett-Skript für schnellen Test
+cd /opt/stacks/comp-act-diary/deploy
+
+# 1. Hochfahren
+docker compose -f docker-compose.test.yml up -d
+sleep 10  # Warten auf DB
+
+# 2. Backup einspielen (Dateiname anpassen!)
+docker compose -f docker-compose.test.yml exec test-db \
+  pg_restore -U postgres -d comp-act-diary --no-owner \
+  /backups/dump_2024-12-17_08-00-00.dump
+
+# 3. Testen (Browser: http://<IP>:3099)
+docker compose -f docker-compose.test.yml logs test-app
+
+# 4. Aufräumen
+docker compose -f docker-compose.test.yml down -v
+```
+
+**Wichtig:**
+- Der Test-Stack läuft auf **Port 3099** (nicht 3000), um Konflikte zu vermeiden
+- Das `-v` bei `down -v` ist essentiell - ohne wird das Volume nicht gelöscht!
+- Die Test-Compose-Datei kann im Repo bleiben oder jedes Mal neu erstellt werden
 
 ---
 

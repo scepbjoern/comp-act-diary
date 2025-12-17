@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  test-db:
+    image: postgres:16-alpine
+    container_name: compact-diary-test-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      # Temporäres Volume statt Bind-Mount
+      - test-db-data:/var/lib/postgresql/data
+      # Backup-Verzeichnis read-only einbinden
+      - ${DB_BACKUP_PATH}:/backups:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - test-network
+
+  test-app:
+    container_name: compact-diary-test-app
+    image: deploy-app:latest
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@test-db:5432/${POSTGRES_DB}?schema=public
+      SYNC_SCHEMA: "false"
+    ports:
+      - "3099:3000"
+    depends_on:
+      test-db:
+        condition: service_healthy
+    volumes:
+      - test-uploads:/app/uploads
+    networks:
+      - test-network
+
+volumes:
+  test-db-data:
+    # Temporäres Volume - wird mit docker compose down -v gelöscht
+  test-uploads:
+
+networks:
+  test-network:
+    name: compact-diary-test-network
