@@ -73,6 +73,13 @@ docker compose restart app
 docker compose restart db
 ```
 
+**Container-Namen:**
+- App: `compact-diary-app`
+- Datenbank: `compact-diary-db`
+- Backup: `compact-diary-db-backup`
+
+Diese Namen sind in `docker-compose.yml` mit `container_name` fest definiert.
+
 ---
 
 ## 2. Deployment-Varianten
@@ -89,7 +96,15 @@ git pull origin main
 
 # Nur App-Container neu bauen und starten
 cd deploy
+# Variante 1: Zwei Schritte (mehr Kontrolle)
+docker compose build app
+docker compose up -d app  # --force-recreate nicht nötig!
+
+# Variante 2: Ein Befehl (schneller)
 docker compose up -d --build app
+
+# Optional: Alte Images direkt aufräumen
+docker image prune -f
 ```
 
 **Dauer:** ~1-3 Minuten (bei unverändertem package.json)  
@@ -114,6 +129,9 @@ git pull origin main
 cd deploy
 docker compose build --no-cache app
 docker compose up -d --force-recreate app
+
+# Optional: Nach Rebuild gründlich aufräumen
+docker builder prune -f
 ```
 
 **Dauer:** ~5-15 Minuten  
