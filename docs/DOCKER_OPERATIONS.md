@@ -514,21 +514,6 @@ docker compose -f docker-compose.test.yml logs -f test-app
 curl -I http://localhost:3099
 ```
 
-#### 4.1 Diarium-Import im Test-Stack
-
-```bash
-# 1) Neuesten Diarium-Export auf dem Host finden (Pfad anpassen falls nötig)
-LATEST_DIARIUM=$(ls -t /dockerdata-slow/db_dumps/diary/comp-act-diary_db_dump/*.json 2>/dev/null | head -1)
-echo "Neuster Diarium-Export: $LATEST_DIARIUM"
-
-# 2) In den Test-App-Container kopieren
-docker cp "$LATEST_DIARIUM" compact-diary-test-app:/app/uploads/diarium.json
-
-# 3) Import im Test-App-Container ausführen
-docker compose -f docker-compose.test.yml exec test-app \
-  npx tsx scripts/import-diarium.ts /app/uploads/diarium.json
-```
-
 #### 5. Test-Stack komplett löschen
 
 ```bash
