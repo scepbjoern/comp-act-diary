@@ -115,40 +115,42 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Install ffmpeg for audio chunking + postgresql-client for migrations
-RUN apk add --no-cache ffmpeg postgresql-client
-
-# Phase 9: Copy standalone Next.js output (much smaller than full node_modules)
-# Standalone includes only the minimal runtime dependencies
-COPY --from=build /app/.next/standalone ./
-COPY --from=build /app/.next/static ./.next/static
-COPY --from=build /app/public ./public
-COPY --from=build /app/prisma ./prisma
-COPY --from=build /app/deploy/entrypoint.sh ./entrypoint.sh
-
-# Copy Prisma CLI and dependencies for migrations (not included in standalone)
-COPY --from=build /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
-COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=build /app/node_modules/prisma ./node_modules/prisma
-
-# Install Prisma directly in Alpine to ensure all runtime files (WASM, engines) are available
-RUN npm install prisma@6.19.0 --no-save
-
-# Ensure entrypoint is executable and create writable uploads directory
-RUN chmod +x ./entrypoint.sh \
- && mkdir -p /app/uploads \
- && chown -R node:node /app
-
-# Set user UID/GID dynamically if provided (for host permissions)
+# Set user UID/GID dynamically BEFORE copying files
+# This allows --chown to use the correct user from the start
 ARG UID=1000
 ARG GID=1000
 RUN if [ "$UID" != "1000" ] || [ "$GID" != "1000" ]; then \
     deluser node 2>/dev/null || true && \
     delgroup node 2>/dev/null || true && \
     addgroup -g $GID node && \
-    adduser -u $UID -G node -s /bin/sh -D node && \
-    chown -R node:node /app; \
+    adduser -u $UID -G node -s /bin/sh -D node; \
   fi
+
+# Install ffmpeg for audio chunking + postgresql-client for migrations
+RUN apk add --no-cache ffmpeg postgresql-client
+
+# Phase 9: Copy standalone Next.js output with correct ownership
+# Using --chown avoids slow chown -R on OverlayFS (saves ~15-20 minutes!)
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /app/prisma ./prisma
+COPY --from=build --chown=node:node /app/deploy/entrypoint.sh ./entrypoint.sh
+
+# Copy Prisma CLI and dependencies for migrations (not included in standalone)
+COPY --from=build --chown=node:node /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+COPY --from=build --chown=node:node /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=build --chown=node:node /app/node_modules/prisma ./node_modules/prisma
+
+# Install Prisma directly in Alpine to ensure all runtime files (WASM, engines) are available
+# Run as root, then fix ownership of only the new files
+RUN npm install prisma@6.19.0 --no-save \
+ && chown -R node:node /app/node_modules
+
+# Ensure entrypoint is executable and create writable uploads directory
+RUN chmod +x ./entrypoint.sh \
+ && mkdir -p /app/uploads \
+ && chown node:node /app/uploads
 
 USER node
 EXPOSE 3000
