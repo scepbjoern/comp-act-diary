@@ -14,6 +14,7 @@ import { streamText, convertToModelMessages } from 'ai'
 import { createTogetherAI } from '@ai-sdk/togetherai'
 import { NextRequest } from 'next/server'
 import { getPrisma } from '@/lib/prisma'
+import { DEFAULT_MODEL_ID } from '@/lib/llmModels'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Use the provided model ID or fallback to default
-    const selectedModelId = modelId || 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo'
+    const selectedModelId = modelId || DEFAULT_MODEL_ID
 
     // Stream the response using the Vercel AI SDK
     // The system prompt from the selected ChatMethod is injected here

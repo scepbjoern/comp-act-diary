@@ -243,6 +243,7 @@ model User {
   entryTimeBoxes        EntryTimeBox[]
   trashItems            Trash[]
   chatMethods           ChatMethod[]
+  improvementPrompts    ImprovementPrompt[]
 }
 
 /// Entity-Registry: Zentrale Tabelle für FK-basierte Polymorphie.
@@ -1500,6 +1501,31 @@ model Trash {
 // =============================================================================
 // KI-ASSISTENTEN
 // =============================================================================
+
+/// Verbesserungsanweisung: Template für Textverbesserungen.
+/// Speichert benutzerdefinierte Prompts für die KI-Textverbesserung.
+model ImprovementPrompt {
+  /// Eindeutige ID
+  id        String   @id @default(uuid())
+  /// Besitzer-User
+  userId    String
+  /// Name der Anweisung (z.B. "Grammatik & Struktur")
+  name      String
+  /// Anweisungstext (Prompt für die KI)
+  prompt    String
+  /// Ist dies ein System-Prompt? (kann nicht gelöscht werden)
+  isSystem  Boolean  @default(false)
+  /// Sortierreihenfolge
+  sortOrder Int      @default(0)
+  /// Erstellungszeitpunkt
+  createdAt DateTime @default(now())
+  /// Letztes Update
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sortOrder])
+}
 
 /// Chat-Methode: Benutzerdefinierter KI-Chatbot.
 /// Ähnlich zu Custom GPTs bei ChatGPT.

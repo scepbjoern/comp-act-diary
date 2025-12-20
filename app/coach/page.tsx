@@ -24,19 +24,14 @@ import { DefaultChatTransport } from 'ai'
 import { TablerIcon } from '@/components/TablerIcon'
 import { MicrophoneButton } from '@/components/MicrophoneButton'
 
+import { DEFAULT_LLM_MODELS, DEFAULT_MODEL_ID, LLMModel } from '@/lib/llmModels'
+
 type ChatMethod = {
   id: string
   name: string
   systemPrompt: string
   createdAt: string
   updatedAt: string
-}
-
-type TogetherModel = {
-  id: string
-  name: string
-  inputCost: string
-  outputCost: string
 }
 
 export default function CoachPage() {
@@ -54,52 +49,9 @@ export default function CoachPage() {
   const [input, setInput] = useState('')
   const [loadingDiary, setLoadingDiary] = useState(false)
 
-  // Together AI models with costs
-  const [togetherModels] = useState<TogetherModel[]>([
-    {
-      id: 'openai/gpt-oss-120b',
-      name: 'GPT-OSS-120B',
-      inputCost: '$0.15',
-      outputCost: '$0.60'
-    },
-    {
-      id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
-      name: 'Llama-3.3-70B-Instruct-Turbo',
-      inputCost: '$0.88',
-      outputCost: '$0.88'
-    },
-    {
-      id: 'deepcogito/cogito-v2-preview-llama-405B',
-      name: 'Cogito-v2-Preview-Llama-405B',
-      inputCost: '$3.50',
-      outputCost: '$3.50'
-    },
-    {
-      id: 'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8',
-      name: 'Llama-4-Maverick-17B-128E-Instruct-FP8',
-      inputCost: '$0.27',
-      outputCost: '$0.85'
-    },
-    {
-      id: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo',
-      name: 'Meta-Llama-3.1-405B-Instruct-Turbo',
-      inputCost: '$3.50',
-      outputCost: '$3.50'
-    },
-    {
-      id: 'deepseek-ai/DeepSeek-R1',
-      name: 'DeepSeek-R1',
-      inputCost: '$3.00',
-      outputCost: '$7.00'
-    },
-    {
-      id: 'moonshotai/Kimi-K2-Thinking',
-      name: 'Kimi-K2-Thinking',
-      inputCost: '$1.20',
-      outputCost: '$4.00'
-    }
-  ])
-  const [selectedModelId, setSelectedModelId] = useState<string>('meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo')
+  // Custom models loaded from user settings
+  const [customModels, setCustomModels] = useState<LLMModel[]>([])
+  const [selectedModelId, setSelectedModelId] = useState<string>(DEFAULT_MODEL_ID)
   
   const { messages, sendMessage, status, setMessages } = useChat({
     transport: new DefaultChatTransport({
@@ -118,16 +70,27 @@ export default function CoachPage() {
   const loadChatMethods = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await fetch('/api/coach/methods')
-      const data = await res.json()
-      setChatMethods(data.methods || [])
+      const [methodsRes, meRes] = await Promise.all([
+        fetch('/api/coach/methods'),
+        fetch('/api/me')
+      ])
+      
+      const methodsData = await methodsRes.json()
+      setChatMethods(methodsData.methods || [])
+      
+      if (meRes.ok) {
+        const meData = await meRes.json()
+        if (meData.user?.settings?.customModels) {
+          setCustomModels(meData.user.settings.customModels)
+        }
+      }
       
       // Auto-select first method if available
-      if (data.methods && data.methods.length > 0 && !selectedMethodId) {
-        setSelectedMethodId(data.methods[0].id)
+      if (methodsData.methods && methodsData.methods.length > 0 && !selectedMethodId) {
+        setSelectedMethodId(methodsData.methods[0].id)
       }
     } catch (error) {
-      console.error('Failed to load chat methods:', error)
+      console.error('Failed to load data:', error)
     } finally {
       setLoading(false)
     }
@@ -292,7 +255,7 @@ export default function CoachPage() {
             className="select select-bordered flex-1 max-w-xs"
             title="Together AI Modell auswählen"
           >
-            {togetherModels.map(model => (
+            {DEFAULT_LLM_MODELS.concat(customModels).map(model => (
               <option key={model.id} value={model.id}>
                 {model.name} ({model.inputCost} input / {model.outputCost} output)
               </option>

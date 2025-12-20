@@ -3,36 +3,17 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { MicrophoneButton } from './MicrophoneButton'
 import { TablerIcon } from './TablerIcon'
+import { DEFAULT_LLM_MODELS, DEFAULT_MODEL_ID, LLMModel } from '@/lib/llmModels'
 
 type ImprovementPrompt = {
   id: string
   name: string
   prompt: string
+  isSystem?: boolean
 }
 
-// Default prompts for text improvement
-const DEFAULT_PROMPTS: ImprovementPrompt[] = [
-  {
-    id: 'grammar',
-    name: 'Grammatik & Struktur',
-    prompt: 'Verbessere diesen Text grammatikalisch. Bilde Abschnitte mit Überschriften. Gib alles formatiert als Markdown zurück.'
-  },
-  {
-    id: 'formal',
-    name: 'Formell umformulieren',
-    prompt: 'Formuliere diesen Text in einem formelleren, professionellen Stil um. Behalte die Kernaussagen bei.'
-  },
-  {
-    id: 'summary',
-    name: 'Zusammenfassen',
-    prompt: 'Fasse diesen Text in wenigen Sätzen zusammen. Behalte die wichtigsten Punkte bei.'
-  },
-  {
-    id: 'expand',
-    name: 'Erweitern & Detail',
-    prompt: 'Erweitere diesen Text mit mehr Details und Beispielen, ohne die ursprüngliche Aussage zu verändern.'
-  }
-]
+// Add cache-buster for development
+const CACHE_BUSTER = Date.now()
 
 export function TextImprovementDialog(props: {
   /** The current text content (may be already improved) */
@@ -47,31 +28,62 @@ export function TextImprovementDialog(props: {
   // Use sourceTranscript if available, otherwise fall back to originalText
   const textToImprove = sourceTranscript || originalText
 
-  const defaultModels = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_LLM_MODELS)
-    ? String(process.env.NEXT_PUBLIC_LLM_MODELS).split(',').map(s => s.trim()).filter(Boolean)
-    : ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'mistralai/Mistral-7B-Instruct-v0.3', 'meta-llama/Llama-4-Scout-17B-16E-Instruct']
-
-  const [prompts, setPrompts] = useState<ImprovementPrompt[]>(DEFAULT_PROMPTS)
-  const [selectedPromptId, setSelectedPromptId] = useState<string>(DEFAULT_PROMPTS[0].id)
-  const [customPrompt, setCustomPrompt] = useState(DEFAULT_PROMPTS[0].prompt)
-  const [model, setModel] = useState<string>(
-    (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_TOGETHERAI_LLM_MODEL)
-      || (typeof process !== 'undefined' && process.env?.TOGETHERAI_LLM_MODEL)
-      || defaultModels[0]
-  )
+  const [prompts, setPrompts] = useState<ImprovementPrompt[]>([])
+  const [selectedPromptId, setSelectedPromptId] = useState<string>('')
+  const [customPrompt, setCustomPrompt] = useState('')
+  const [originalPromptText, setOriginalPromptText] = useState('')
+  const [model, setModel] = useState<string>(DEFAULT_MODEL_ID)
+  const [customModels, setCustomModels] = useState<LLMModel[]>([])
   const [improvedText, setImprovedText] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingPrompts, setLoadingPrompts] = useState(true)
+  const [savingPrompt, setSavingPrompt] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasImproved, setHasImproved] = useState(false)
   const [showAddPrompt, setShowAddPrompt] = useState(false)
   const [newPromptName, setNewPromptName] = useState('')
-  const [newPromptText, setNewPromptText] = useState('')
+
+  // Check if current prompt has been modified
+  const isPromptModified = customPrompt !== originalPromptText
+
+  // Load prompts from API on mount
+  useEffect(() => {
+    async function loadPrompts() {
+      try {
+        const [promptsRes, meRes] = await Promise.all([
+          fetch('/api/improvement-prompts'),
+          fetch('/api/me')
+        ])
+        
+        const promptsData = await promptsRes.json()
+        if (promptsData.prompts && promptsData.prompts.length > 0) {
+          setPrompts(promptsData.prompts)
+          setSelectedPromptId(promptsData.prompts[0].id)
+          setCustomPrompt(promptsData.prompts[0].prompt)
+          setOriginalPromptText(promptsData.prompts[0].prompt)
+        }
+
+        if (meRes.ok) {
+          const meData = await meRes.json()
+          if (meData.user?.settings?.customModels) {
+            setCustomModels(meData.user.settings.customModels)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load data:', err)
+      } finally {
+        setLoadingPrompts(false)
+      }
+    }
+    loadPrompts()
+  }, [])
 
   // Update custom prompt when selected prompt changes
   useEffect(() => {
     const selected = prompts.find(p => p.id === selectedPromptId)
     if (selected) {
       setCustomPrompt(selected.prompt)
+      setOriginalPromptText(selected.prompt)
     }
   }, [selectedPromptId, prompts])
 
@@ -82,7 +94,6 @@ export function TextImprovementDialog(props: {
       const res = await fetch('/api/improve-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // Always use textToImprove (sourceTranscript if available, otherwise originalText)
         body: JSON.stringify({ text: textToImprove, prompt: customPrompt, model }),
         credentials: 'same-origin',
       })
@@ -93,28 +104,94 @@ export function TextImprovementDialog(props: {
       } else {
         setError('Keine Verbesserung möglich')
       }
-    } catch (error) {
-      console.error('Failed to improve text:', error)
+    } catch (err) {
+      console.error('Failed to improve text:', err)
       setError('Fehler bei der Textverbesserung')
     } finally {
       setLoading(false)
     }
   }, [textToImprove, customPrompt, model])
 
-  const handleAddPrompt = () => {
-    if (!newPromptName.trim() || !newPromptText.trim()) return
+  // Save as new prompt
+  const handleSaveAsNew = async () => {
+    if (!newPromptName.trim() || !customPrompt.trim()) return
     
-    const newPrompt: ImprovementPrompt = {
-      id: `custom-${Date.now()}`,
-      name: newPromptName.trim(),
-      prompt: newPromptText.trim()
+    setSavingPrompt(true)
+    try {
+      const res = await fetch('/api/improvement-prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newPromptName.trim(), prompt: customPrompt.trim() }),
+      })
+      const data = await res.json()
+      if (data.prompt) {
+        setPrompts(prev => [...prev, data.prompt])
+        setSelectedPromptId(data.prompt.id)
+        setOriginalPromptText(data.prompt.prompt)
+        setNewPromptName('')
+        setShowAddPrompt(false)
+      }
+    } catch (err) {
+      console.error('Failed to save prompt:', err)
+      setError('Fehler beim Speichern der Anweisung')
+    } finally {
+      setSavingPrompt(false)
     }
-    setPrompts(prev => [...prev, newPrompt])
-    setSelectedPromptId(newPrompt.id)
-    setNewPromptName('')
-    setNewPromptText('')
-    setShowAddPrompt(false)
   }
+
+  // Update existing prompt
+  const handleUpdatePrompt = async () => {
+    if (!selectedPromptId || !customPrompt.trim()) return
+    const selected = prompts.find(p => p.id === selectedPromptId)
+    if (!selected) return
+
+    setSavingPrompt(true)
+    try {
+      const res = await fetch(`/api/improvement-prompts/${selectedPromptId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: selected.name, prompt: customPrompt.trim() }),
+      })
+      const data = await res.json()
+      if (data.prompt) {
+        setPrompts(prev => prev.map(p => p.id === data.prompt.id ? data.prompt : p))
+        setOriginalPromptText(data.prompt.prompt)
+      }
+    } catch (err) {
+      console.error('Failed to update prompt:', err)
+      setError('Fehler beim Aktualisieren der Anweisung')
+    } finally {
+      setSavingPrompt(false)
+    }
+  }
+
+  // Delete prompt
+  const handleDeletePrompt = async () => {
+    if (!selectedPromptId) return
+    const selected = prompts.find(p => p.id === selectedPromptId)
+    if (!selected) return
+
+    if (!confirm(`Anweisung "${selected.name}" wirklich löschen?`)) return
+
+    setSavingPrompt(true)
+    try {
+      await fetch(`/api/improvement-prompts/${selectedPromptId}`, {
+        method: 'DELETE',
+      })
+      const newPrompts = prompts.filter(p => p.id !== selectedPromptId)
+      setPrompts(newPrompts)
+      if (newPrompts.length > 0) {
+        setSelectedPromptId(newPrompts[0].id)
+      }
+    } catch (err) {
+      console.error('Failed to delete prompt:', err)
+      setError('Fehler beim Löschen der Anweisung')
+    } finally {
+      setSavingPrompt(false)
+    }
+  }
+
+  const selectedPrompt = prompts.find(p => p.id === selectedPromptId)
 
   const modalContent = (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50" onClick={onCancel}>
@@ -132,24 +209,33 @@ export function TextImprovementDialog(props: {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-3 md:p-4">
+          {loadingPrompts ? (
+            <div className="flex items-center justify-center h-32">
+              <span className="loading loading-spinner loading-md"></span>
+            </div>
+          ) : (
           <div className="space-y-4">
             
             {/* Prompt selection */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="label-text font-medium">Verbesserungsanweisung</label>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <MicrophoneButton
                     onText={(t) => setCustomPrompt(prev => prev ? (prev + ' ' + t) : t)}
                     compact
                   />
-                  <button 
-                    onClick={() => setShowAddPrompt(!showAddPrompt)}
-                    className="btn btn-ghost btn-xs btn-circle"
-                    title="Neue Anweisung hinzufügen"
-                  >
-                    <TablerIcon name="add" size={16} />
-                  </button>
+                  {/* Delete button */}
+                  {selectedPrompt && (
+                    <button 
+                      onClick={handleDeletePrompt}
+                      className="btn btn-ghost btn-xs btn-circle text-error"
+                      title="Anweisung löschen"
+                      disabled={savingPrompt}
+                    >
+                      <TablerIcon name="trash" size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
               
@@ -166,34 +252,6 @@ export function TextImprovementDialog(props: {
                 ))}
               </select>
 
-              {/* Add new prompt form */}
-              {showAddPrompt && (
-                <div className="p-3 bg-base-300 rounded-lg space-y-2 mb-2">
-                  <input
-                    type="text"
-                    value={newPromptName}
-                    onChange={(e) => setNewPromptName(e.target.value)}
-                    placeholder="Name der Anweisung"
-                    className="input input-bordered input-sm w-full"
-                  />
-                  <textarea
-                    value={newPromptText}
-                    onChange={(e) => setNewPromptText(e.target.value)}
-                    placeholder="Anweisungstext..."
-                    className="textarea textarea-bordered textarea-sm w-full"
-                    rows={2}
-                  />
-                  <div className="flex gap-2">
-                    <button onClick={handleAddPrompt} className="btn btn-primary btn-xs">
-                      Hinzufügen
-                    </button>
-                    <button onClick={() => setShowAddPrompt(false)} className="btn btn-ghost btn-xs">
-                      Abbrechen
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* Custom prompt textarea */}
               <textarea
                 value={customPrompt}
@@ -202,9 +260,70 @@ export function TextImprovementDialog(props: {
                 rows={3}
                 placeholder="Anweisung für die Textverbesserung..."
               />
+
+              {/* Save/Update buttons - show when prompt is modified */}
+              {isPromptModified && (
+                <div className="flex items-center gap-2 mt-2">
+                  {/* Update existing */}
+                  <button 
+                    onClick={handleUpdatePrompt}
+                    className="btn btn-outline btn-xs"
+                    disabled={savingPrompt}
+                    title="Aktuelle Anweisung überschreiben"
+                  >
+                    {savingPrompt ? (
+                      <span className="loading loading-spinner loading-xs"></span>
+                    ) : (
+                      <TablerIcon name="device-floppy" size={14} />
+                    )}
+                    <span>Überschreiben</span>
+                  </button>
+                  
+                  {/* Save as new */}
+                  <button 
+                    onClick={() => setShowAddPrompt(!showAddPrompt)}
+                    className="btn btn-outline btn-xs"
+                    disabled={savingPrompt}
+                    title="Als neue Anweisung speichern"
+                  >
+                    <TablerIcon name="plus" size={14} />
+                    <span>Als neu speichern</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Add new prompt form */}
+              {showAddPrompt && (
+                <div className="p-3 bg-base-300 rounded-lg space-y-2 mt-2">
+                  <input
+                    type="text"
+                    value={newPromptName}
+                    onChange={(e) => setNewPromptName(e.target.value)}
+                    placeholder="Name der neuen Anweisung"
+                    className="input input-bordered input-sm w-full"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={handleSaveAsNew} 
+                      className="btn btn-primary btn-xs"
+                      disabled={!newPromptName.trim() || savingPrompt}
+                    >
+                      {savingPrompt ? (
+                        <span className="loading loading-spinner loading-xs"></span>
+                      ) : (
+                        'Speichern'
+                      )}
+                    </button>
+                    <button onClick={() => { setShowAddPrompt(false); setNewPromptName('') }} className="btn btn-ghost btn-xs">
+                      Abbrechen
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Model selection */}
+            {/* Model selection with pricing */}
             <div>
               <label className="label-text font-medium mb-1 block">Modell</label>
               <select
@@ -212,9 +331,9 @@ export function TextImprovementDialog(props: {
                 onChange={(e) => setModel(e.target.value)}
                 className="select select-bordered select-sm w-full"
               >
-                {defaultModels.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
+                {DEFAULT_LLM_MODELS.concat(customModels).map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.inputCost} input / {m.outputCost} output)
                   </option>
                 ))}
               </select>
@@ -265,6 +384,7 @@ export function TextImprovementDialog(props: {
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Footer */}

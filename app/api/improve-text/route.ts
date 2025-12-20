@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Together from 'together-ai'
+import { DEFAULT_MODEL_ID } from '@/lib/llmModels'
 
 // POST /api/improve-text
 // JSON: { text: string, prompt: string, model?: string }
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const text = body?.text || ''
     const prompt = body?.prompt || 'Verbessere diesen Text'
-    const model = body?.model || process.env.TOGETHERAI_LLM_MODEL || 'openai/gpt-oss-20b'
+    const model = body?.model || process.env.TOGETHERAI_LLM_MODEL || DEFAULT_MODEL_ID
 
     if (!text) {
       return NextResponse.json({ error: 'Missing text' }, { status: 400 })

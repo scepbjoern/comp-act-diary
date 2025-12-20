@@ -5,6 +5,7 @@ import { SaveIndicator, useSaveIndicator } from '@/components/SaveIndicator'
 import { Icon } from '@/components/Icon'
 import { TablerIcon } from '@/components/TablerIcon'
 import { useRouter } from 'next/navigation'
+import { DEFAULT_LLM_MODELS, LLMModel } from '@/lib/llmModels'
 
 type Me = {
   id: string
@@ -19,6 +20,7 @@ type Me = {
     weekStart: string
     summaryModel?: string
     summaryPrompt?: string
+    customModels?: LLMModel[]
   } | null
 }
 
@@ -71,6 +73,8 @@ export default function SettingsPage() {
   const [stdSymptomIconDrafts, setStdSymptomIconDrafts] = useState<Record<string, string>>({})
   const [summaryModel, setSummaryModel] = useState('openai/gpt-oss-120b')
   const [summaryPrompt, setSummaryPrompt] = useState('Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
+  const [customModels, setCustomModels] = useState<LLMModel[]>([])
+  const [newModel, setNewModel] = useState({ id: '', name: '', inputCost: '', outputCost: '' })
 
   // Avatar cropper state
   const [avatarOpen, setAvatarOpen] = useState(false)
@@ -106,6 +110,7 @@ export default function SettingsPage() {
         setAutosaveIntervalSec(u.settings?.autosaveIntervalSec ?? 5)
         setSummaryModel(u.settings?.summaryModel || 'openai/gpt-oss-120b')
         setSummaryPrompt(u.settings?.summaryPrompt || 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
+        setCustomModels(u.settings?.customModels || [])
       }
       if (habitsRes.ok) {
         const data = await habitsRes.json()
@@ -427,6 +432,21 @@ export default function SettingsPage() {
     }
   }
 
+  async function saveModels(newModels: LLMModel[]) {
+    startSaving()
+    try {
+      const res = await fetch('/api/me', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: { customModels: newModels } })
+      })
+      if (res.ok) {
+        setCustomModels(newModels)
+      }
+    } finally {
+      doneSaving()
+    }
+  }
+
   async function addHabit() {
     const title = newHabit.trim()
     if (!title) return
@@ -643,6 +663,107 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* LLM Model Management */}
+      <div className="card p-4 space-y-3 max-w-xl">
+        <h2 className="font-medium">
+          <span className="inline-flex items-center gap-1">
+            <TablerIcon name="robot" />
+            <span>KI-Modellverwaltung</span>
+          </span>
+        </h2>
+        <div className="space-y-3">
+          <div className="text-sm text-gray-500">
+            Hier kannst du eigene KI-Modelle hinzufügen, die dann in allen KI-Funktionen zur Verfügung stehen.
+          </div>
+          
+          {/* Add new model */}
+          <div className="border border-base-300 rounded-lg p-3 space-y-2 bg-base-100/50">
+            <h3 className="text-sm font-medium">Neues Modell hinzufügen</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                type="text"
+                placeholder="Modell ID (z.B. openai/gpt-4)"
+                value={newModel.id}
+                onChange={(e) => setNewModel({ ...newModel, id: e.target.value })}
+                className="bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Anzeigename"
+                value={newModel.name}
+                onChange={(e) => setNewModel({ ...newModel, name: e.target.value })}
+                className="bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Input Preis (z.B. $0.50)"
+                value={newModel.inputCost}
+                onChange={(e) => setNewModel({ ...newModel, inputCost: e.target.value })}
+                className="bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
+              />
+              <input
+                type="text"
+                placeholder="Output Preis (z.B. $1.50)"
+                value={newModel.outputCost}
+                onChange={(e) => setNewModel({ ...newModel, outputCost: e.target.value })}
+                className="bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
+              />
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  if (newModel.id && newModel.name) {
+                    const updated = [...customModels, newModel]
+                    saveModels(updated)
+                    setNewModel({ id: '', name: '', inputCost: '', outputCost: '' })
+                  }
+                }}
+                className="btn btn-sm btn-primary"
+                disabled={!newModel.id || !newModel.name}
+              >
+                Hinzufügen
+              </button>
+            </div>
+          </div>
+
+          {/* Model list */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">Verfügbare Modelle</h3>
+            <div className="space-y-1 max-h-60 overflow-y-auto">
+              {DEFAULT_LLM_MODELS.map((m) => (
+                <div key={m.id} className="flex items-center justify-between text-sm p-2 bg-base-100 rounded border border-base-200">
+                  <div>
+                    <div className="font-medium">{m.name}</div>
+                    <div className="text-xs text-gray-400 font-mono">{m.id}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{m.inputCost} / {m.outputCost}</div>
+                  </div>
+                  <span className="badge badge-sm badge-ghost">Standard</span>
+                </div>
+              ))}
+              {customModels.map((m, idx) => (
+                <div key={idx} className="flex items-center justify-between text-sm p-2 bg-base-100 rounded border border-base-200 border-l-4 border-l-primary">
+                  <div>
+                    <div className="font-medium">{m.name}</div>
+                    <div className="text-xs text-gray-400 font-mono">{m.id}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{m.inputCost} / {m.outputCost}</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const updated = customModels.filter((_, i) => i !== idx)
+                      saveModels(updated)
+                    }}
+                    className="btn btn-ghost btn-xs text-error"
+                    title="Modell entfernen"
+                  >
+                    <TablerIcon name="trash" size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Summary AI Settings */}
       <div className="card p-4 space-y-3 max-w-xl">
         <h2 className="font-medium">
@@ -660,10 +781,11 @@ export default function SettingsPage() {
               onChange={(e) => setSummaryModel(e.target.value)}
               className="w-full bg-base-100 border border-base-300 rounded px-3 py-2 text-sm"
             >
-              <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (Standard)</option>
-              <option value="gpt-4o-mini">gpt-4o-mini</option>
-              <option value="gpt-4o">gpt-4o</option>
-              <option value="openai/gpt-oss-20b">openai/gpt-oss-20b</option>
+              {DEFAULT_LLM_MODELS.concat(customModels).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} ({m.inputCost} input / {m.outputCost} output)
+                </option>
+              ))}
             </select>
           </label>
           

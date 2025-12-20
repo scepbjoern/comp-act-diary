@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/prisma'
+import { DEFAULT_LLM_MODELS } from '@/lib/llmModels'
 
-const DEFAULT_SUMMARY_MODEL = 'openai/gpt-oss-120b'
+const DEFAULT_SUMMARY_MODEL = DEFAULT_LLM_MODELS[0].id
 const DEFAULT_SUMMARY_PROMPT = 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"'
 
 export const runtime = 'nodejs'
@@ -15,7 +16,9 @@ export async function GET(req: NextRequest) {
     user = await prisma.user.findUnique({ where: { username: 'demo' } })
   }
   if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
-  // UserSettings not in new schema - return defaults
+
+  const userSettings = user.settings as Record<string, any> || {}
+
   return NextResponse.json({
     user: {
       id: user.id,
@@ -23,13 +26,14 @@ export async function GET(req: NextRequest) {
       displayName: user.displayName,
       profileImageUrl: null,
       settings: {
-        theme: 'dark',
-        timeFormat24h: true,
-        weekStart: 'mon',
-        autosaveEnabled: true,
-        autosaveIntervalSec: 5,
-        summaryModel: DEFAULT_SUMMARY_MODEL,
-        summaryPrompt: DEFAULT_SUMMARY_PROMPT,
+        theme: userSettings.theme || 'dark',
+        timeFormat24h: userSettings.timeFormat24h ?? true,
+        weekStart: userSettings.weekStart || 'mon',
+        autosaveEnabled: userSettings.autosaveEnabled ?? true,
+        autosaveIntervalSec: userSettings.autosaveIntervalSec ?? 5,
+        summaryModel: userSettings.summaryModel || DEFAULT_SUMMARY_MODEL,
+        summaryPrompt: userSettings.summaryPrompt || DEFAULT_SUMMARY_PROMPT,
+        customModels: userSettings.customModels || [],
       },
     },
   })
@@ -53,13 +57,9 @@ export async function PATCH(req: NextRequest) {
       updates.displayName = dn && dn.length > 0 ? dn : null
     }
 
-    const settingsPatch: {
-      theme?: 'dark' | 'bright'
-      autosaveEnabled?: boolean
-      autosaveIntervalSec?: number
-      summaryModel?: string
-      summaryPrompt?: string
-    } = {}
+    const currentSettings = (user.settings as Record<string, any> || {})
+    const settingsPatch: Record<string, any> = { ...currentSettings }
+    
     if (body.settings && typeof body.settings === 'object') {
       if (body.settings.theme && (body.settings.theme === 'dark' || body.settings.theme === 'bright')) {
         settingsPatch.theme = body.settings.theme
@@ -78,22 +78,30 @@ export async function PATCH(req: NextRequest) {
         const prompt = body.settings.summaryPrompt.trim()
         settingsPatch.summaryPrompt = prompt.length > 0 ? prompt : DEFAULT_SUMMARY_PROMPT
       }
-    }
-
-    let updatedUser = user
-    if (Object.keys(updates).length > 0) {
-      try {
-        updatedUser = await prisma.user.update({ where: { id: user.id }, data: updates })
-      } catch (err: any) {
-        // Prisma unique constraint error
-        if (err?.code === 'P2002') {
-          return NextResponse.json({ error: 'Username bereits vergeben' }, { status: 409 })
-        }
-        throw err
+      if (Array.isArray(body.settings.customModels)) {
+        settingsPatch.customModels = body.settings.customModels
       }
     }
 
-    // UserSettings not in new schema - return defaults
+    let updatedUser = user
+    try {
+      updatedUser = await prisma.user.update({ 
+        where: { id: user.id }, 
+        data: {
+          ...updates,
+          settings: settingsPatch
+        } 
+      })
+    } catch (err: any) {
+      // Prisma unique constraint error
+      if (err?.code === 'P2002') {
+        return NextResponse.json({ error: 'Username bereits vergeben' }, { status: 409 })
+      }
+      throw err
+    }
+
+    const updatedSettings = updatedUser.settings as Record<string, any> || {}
+
     return NextResponse.json({
       ok: true,
       user: {
@@ -102,13 +110,14 @@ export async function PATCH(req: NextRequest) {
         displayName: updatedUser.displayName,
         profileImageUrl: null,
         settings: {
-          theme: settingsPatch.theme || 'dark',
-          timeFormat24h: true,
-          weekStart: 'mon',
-          autosaveEnabled: settingsPatch.autosaveEnabled ?? true,
-          autosaveIntervalSec: settingsPatch.autosaveIntervalSec ?? 5,
-          summaryModel: settingsPatch.summaryModel ?? DEFAULT_SUMMARY_MODEL,
-          summaryPrompt: settingsPatch.summaryPrompt ?? DEFAULT_SUMMARY_PROMPT,
+          theme: updatedSettings.theme || 'dark',
+          timeFormat24h: updatedSettings.timeFormat24h ?? true,
+          weekStart: updatedSettings.weekStart || 'mon',
+          autosaveEnabled: updatedSettings.autosaveEnabled ?? true,
+          autosaveIntervalSec: updatedSettings.autosaveIntervalSec ?? 5,
+          summaryModel: updatedSettings.summaryModel || DEFAULT_SUMMARY_MODEL,
+          summaryPrompt: updatedSettings.summaryPrompt || DEFAULT_SUMMARY_PROMPT,
+          customModels: updatedSettings.customModels || [],
         },
       },
     })

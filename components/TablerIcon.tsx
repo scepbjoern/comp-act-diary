@@ -54,6 +54,7 @@ import {
   IconRestore,
   IconEye,
   IconArrowBackUp,
+  IconRobot,
 } from '@tabler/icons-react'
 
 // Mapping from old Material Icon names to Tabler Icons
@@ -64,6 +65,7 @@ const iconMap: Record<string, typeof IconSettings> = {
   manage_accounts: IconUserEdit,
   palette: IconPalette,
   tune: IconAdjustments,
+  robot: IconRobot,
   
   // Actions
   delete: IconTrash,
