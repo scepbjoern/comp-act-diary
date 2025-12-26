@@ -1,8 +1,11 @@
+'use client'
+
+import { useState } from 'react'
 import { Icon } from '@/components/Icon'
 import { MicrophoneButton } from '@/components/MicrophoneButton'
-import { ImproveTextButton } from '@/components/ImproveTextButton'
 import { SaveIndicator } from '@/components/SaveIndicator'
 import { MealNotesAccordion } from '@/components/MealNotesAccordion'
+import { IconSparkles } from '@tabler/icons-react'
 import type { DayNote } from '@/types/day'
 
 interface MealNotesSectionProps {
@@ -50,6 +53,27 @@ export function MealNotesSection({
   onMealTextChange,
   onAddMealNote,
 }: MealNotesSectionProps) {
+  const [isImproving, setIsImproving] = useState(false)
+
+  const handleImproveText = async () => {
+    if (!mealText.trim()) return
+    setIsImproving(true)
+    try {
+      const response = await fetch('/api/journal-ai/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: mealText, typeCode: 'meal' }),
+      })
+      const data = await response.json()
+      if (response.ok && data.content) {
+        onMealTextChange(data.content)
+      }
+    } catch (err) {
+      console.error('Text improvement failed:', err)
+    } finally {
+      setIsImproving(false)
+    }
+  }
   return (
     <div className="space-y-3">
       <h3 className="font-medium text-sm">
@@ -93,11 +117,19 @@ export function MealNotesSection({
             className="text-gray-300 hover:text-gray-100 text-xs"
             compact
           />
-          <ImproveTextButton
-            text={mealText}
-            onImprovedText={onMealTextChange}
-            className="text-gray-300 hover:text-gray-100 text-xs"
-          />
+          <button
+            type="button"
+            onClick={handleImproveText}
+            disabled={isImproving || !mealText.trim()}
+            title="Text mit KI verbessern"
+            className="text-primary hover:text-primary/80 disabled:opacity-50"
+          >
+            {isImproving ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : (
+              <IconSparkles size={16} />
+            )}
+          </button>
           <button 
             className="pill w-full sm:w-auto" 
             onClick={onAddMealNote} 

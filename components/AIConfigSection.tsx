@@ -139,10 +139,11 @@ export function AIConfigSection() {
       for (const type of journalEntryTypes) {
         newLocalSettings[type.code] = getSettingsForType(type.code)
       }
+      console.log('[AIConfigSection] Initializing localSettings from server:', JSON.stringify(newLocalSettings, null, 2))
       setLocalSettings(newLocalSettings)
       setHasChanges(false)
     }
-  }, [isLoading])
+  }, [isLoading, getSettingsForType])
 
   const toggleType = (code: string) => {
     const newExpanded = new Set(expandedTypes)

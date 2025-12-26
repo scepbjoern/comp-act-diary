@@ -1,8 +1,8 @@
 # Migrationsplan: Deprecated Komponenten entfernen
 
-**Version:** 1.1  
-**Erstellt:** Dezember 2025  
-**Status:** Phase 1 abgeschlossen
+**Version:** 1.2
+**Erstellt:** Dezember 2025
+**Status:** Phase 1 + 2 abgeschlossen
 
 ---
 
@@ -59,17 +59,17 @@ Die deprecated Komponenten werden aktuell an folgenden Stellen verwendet:
 
 **Abgeschlossen:** 26. Dezember 2025
 
-### Phase 2: MealNotesAccordion und MealNotesSection migrieren (Priorität: Mittel)
+### Phase 2: MealNotesAccordion und MealNotesSection migrieren (Priorität: Mittel) ✅ ABGESCHLOSSEN
 
 **Ziel:** `ImproveTextButton` aus Mahlzeit-Komponenten entfernen.
 
 **Schritte:**
-1. Prüfen, ob Mahlzeit-Einträge die neue Journal AI-Pipeline nutzen können
-2. Falls ja: Ähnliche Inline-Implementierung wie bei DiarySection
-3. Falls nein: Eigene simplified "Verbessern"-Funktion implementieren
-4. Imports entfernen
+1. ✅ Mahlzeit-Einträge nutzen die neue Journal AI-Pipeline mit typeCode 'meal'
+2. ✅ Inline-Implementierung wie bei DiarySection umgesetzt
+3. ✅ `MealNotesAccordion.tsx`: ImproveTextButton durch inline Button ersetzt
+4. ✅ `MealNotesSection.tsx`: ImproveTextButton durch inline Button ersetzt
 
-**Aufwand:** ~45 Minuten
+**Abgeschlossen:** 26. Dezember 2025
 
 ### Phase 3: Reflections-Page migrieren (Priorität: Mittel)
 

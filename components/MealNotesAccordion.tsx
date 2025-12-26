@@ -1,11 +1,11 @@
 "use client"
-import React from 'react'
+import React, { useState } from 'react'
 import Image from 'next/image'
 import { TablerIcon } from './TablerIcon'
 import { MicrophoneButton } from './MicrophoneButton'
-import { ImproveTextButton } from './ImproveTextButton'
 import { CameraPicker } from './CameraPicker'
 import { AudioPlayerH5 } from './AudioPlayerH5'
+import { IconSparkles } from '@tabler/icons-react'
 
 type Note = {
   id: string
@@ -53,6 +53,27 @@ export function MealNotesAccordion({
   onDeletePhoto,
   onViewPhoto
 }: MealNotesAccordionProps) {
+  const [isImproving, setIsImproving] = useState(false)
+
+  const handleImproveText = async () => {
+    if (!editingText.trim()) return
+    setIsImproving(true)
+    try {
+      const response = await fetch('/api/journal-ai/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: editingText, typeCode: 'meal' }),
+      })
+      const data = await response.json()
+      if (response.ok && data.content) {
+        onTextChange(data.content)
+      }
+    } catch (err) {
+      console.error('Text improvement failed:', err)
+    } finally {
+      setIsImproving(false)
+    }
+  }
   const fmtHMLocal = (iso?: string) => {
     if (!iso) return ''
     const d = new Date(iso)
@@ -145,11 +166,19 @@ export function MealNotesAccordion({
                         className="text-gray-300 hover:text-gray-100 text-xs"
                         compact
                       />
-                      <ImproveTextButton
-                        text={editingText}
-                        onImprovedText={(t) => onTextChange(t)}
-                        className="text-gray-300 hover:text-gray-100 text-xs"
-                      />
+                      <button
+                        type="button"
+                        onClick={handleImproveText}
+                        disabled={isImproving || !editingText.trim()}
+                        title="Text mit KI verbessern"
+                        className="text-primary hover:text-primary/80 disabled:opacity-50"
+                      >
+                        {isImproving ? (
+                          <span className="loading loading-spinner loading-xs" />
+                        ) : (
+                          <IconSparkles size={16} />
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
