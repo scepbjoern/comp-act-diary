@@ -44,6 +44,8 @@ export function useAISettings(): UseAISettingsReturn {
       const response = await fetch('/api/me')
       const data = await response.json()
 
+      console.log('[useAISettings] fetchSettings response:', JSON.stringify(data.user?.settings?.journalAISettings, null, 2))
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to load settings')
       }
@@ -93,22 +95,28 @@ export function useAISettings(): UseAISettingsReturn {
     try {
       setError(null)
 
-      // Merge with existing settings
-      const currentTypeSettings = getSettingsForType(typeCode)
+      console.log('[useAISettings] updateSettingsForType called with:', { typeCode, newSettings })
+
+      // Get defaults for fallback
+      const defaults = getDefaultAISettings(DEFAULT_MODEL_ID)
+      
+      // Build complete settings for this type, using newSettings values directly
       const mergedSettings: JournalEntryTypeAISettings = {
         content: {
-          ...currentTypeSettings.content,
-          ...newSettings.content,
+          modelId: newSettings.content?.modelId || settings[typeCode]?.content?.modelId || defaults.content.modelId,
+          prompt: newSettings.content?.prompt ?? settings[typeCode]?.content?.prompt ?? defaults.content.prompt,
         },
         analysis: {
-          ...currentTypeSettings.analysis,
-          ...newSettings.analysis,
+          modelId: newSettings.analysis?.modelId || settings[typeCode]?.analysis?.modelId || defaults.analysis.modelId,
+          prompt: newSettings.analysis?.prompt ?? settings[typeCode]?.analysis?.prompt ?? defaults.analysis.prompt,
         },
         summary: {
-          ...currentTypeSettings.summary,
-          ...newSettings.summary,
+          modelId: newSettings.summary?.modelId || settings[typeCode]?.summary?.modelId || defaults.summary.modelId,
+          prompt: newSettings.summary?.prompt ?? settings[typeCode]?.summary?.prompt ?? defaults.summary.prompt,
         },
       }
+
+      console.log('[useAISettings] mergedSettings:', mergedSettings)
 
       // Update local state optimistically
       const updatedSettings = {
@@ -116,6 +124,8 @@ export function useAISettings(): UseAISettingsReturn {
         [typeCode]: mergedSettings,
       }
       setSettings(updatedSettings)
+
+      console.log('[useAISettings] Sending to API:', JSON.stringify({ journalAISettings: updatedSettings }, null, 2))
 
       // Persist to server
       const response = await fetch('/api/me', {
@@ -129,6 +139,7 @@ export function useAISettings(): UseAISettingsReturn {
       })
 
       const data = await response.json()
+      console.log('[useAISettings] API response:', response.ok, data)
 
       if (!response.ok) {
         // Revert on error
@@ -142,7 +153,7 @@ export function useAISettings(): UseAISettingsReturn {
       setError(message)
       return false
     }
-  }, [settings, getSettingsForType, fetchSettings])
+  }, [settings, fetchSettings])
 
   const resetToDefault = useCallback(async (
     typeCode: string,

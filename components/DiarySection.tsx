@@ -1,8 +1,11 @@
+'use client'
+
+import { useState } from 'react'
 import { TablerIcon } from '@/components/TablerIcon'
 import { MicrophoneButton } from '@/components/MicrophoneButton'
 import AudioUploadButton from '@/components/AudioUploadButton'
-import { ImproveTextButton } from '@/components/ImproveTextButton'
 import { OriginalTranscriptSection } from '@/components/OriginalTextButton'
+import { IconSparkles } from '@tabler/icons-react'
 import { RichTextEditor } from '@/components/RichTextEditor'
 import { SaveIndicator } from '@/components/SaveIndicator'
 import dynamic from 'next/dynamic'
@@ -56,6 +59,7 @@ interface DiarySectionProps {
   onOriginalPreserved: (orig: string) => void
   onUpdateNoteContent: (noteId: string, newContent: string) => Promise<boolean>
   onRefreshNotes?: () => Promise<void>
+  onSaveAndRunPipeline?: () => Promise<void>
 }
 
 export function DiarySection({
@@ -102,7 +106,56 @@ export function DiarySection({
   onOriginalPreserved,
   onUpdateNoteContent,
   onRefreshNotes,
+  onSaveAndRunPipeline,
 }: DiarySectionProps) {
+  const [isImproving, setIsImproving] = useState(false)
+  const [isSavingWithPipeline, setIsSavingWithPipeline] = useState(false)
+
+  const handleSaveAndRunPipeline = async () => {
+    if (!newDiaryText.trim()) return
+    setIsSavingWithPipeline(true)
+    try {
+      await onSaveAndRunPipeline?.()
+    } finally {
+      setIsSavingWithPipeline(false)
+    }
+  }
+
+  const handleImproveText = async () => {
+    if (!newDiaryText.trim() && !originalDiaryText?.trim()) return
+    
+    setIsImproving(true)
+    try {
+      // Preserve original transcript if not already preserved
+      if (originalDiaryText && !newDiaryText.includes('[Original')) {
+        onOriginalPreserved(originalDiaryText)
+      }
+      
+      // Use the new Journal AI content generation API
+      const response = await fetch('/api/journal-ai/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: originalDiaryText || newDiaryText,
+          typeCode: 'diary',
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (response.ok && data.content) {
+        onNewDiaryTextChange(data.content)
+        setTimeout(() => onEditorKeyIncrement(), 0)
+      } else {
+        console.error('Text improvement failed:', data.error)
+      }
+    } catch (err) {
+      console.error('Text improvement failed:', err)
+    } finally {
+      setIsImproving(false)
+    }
+  }
+
   return (
     <div className="card p-4 md:p-4 p-2 space-y-3">
       <h2 className="font-medium">
@@ -252,16 +305,19 @@ export function DiarySection({
           {/* Vertical divider */}
           <div className="w-px h-5 bg-slate-600" />
           
-          <ImproveTextButton
-            text={newDiaryText}
-            sourceTranscript={originalDiaryText}
-            onImprovedText={(t) => {
-              onNewDiaryTextChange(t)
-              // Defer key increment to ensure state is updated first
-              setTimeout(() => onEditorKeyIncrement(), 0)
-            }}
-            onOriginalPreserved={onOriginalPreserved}
-          />
+          <button
+            type="button"
+            onClick={handleImproveText}
+            disabled={isImproving || (!newDiaryText.trim() && !originalDiaryText?.trim())}
+            title="Text mit KI verbessern"
+            className="text-primary hover:text-primary/80 disabled:opacity-50"
+          >
+            {isImproving ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : (
+              <IconSparkles size={20} />
+            )}
+          </button>
           
           {/* Vertical divider */}
           <div className="w-px h-5 bg-slate-600" />
@@ -275,6 +331,26 @@ export function DiarySection({
               className="text-green-500 hover:text-green-400"
             >
               <TablerIcon name="device-floppy" size={20} />
+            </button>
+          )}
+          
+          {/* Save + AI Pipeline button */}
+          {newDiaryText.trim() && onSaveAndRunPipeline && (
+            <button 
+              type="button"
+              onClick={handleSaveAndRunPipeline}
+              disabled={isSavingWithPipeline}
+              title="Speichern + AI-Pipeline ausführen"
+              className="text-primary hover:text-primary/80 disabled:opacity-50 flex items-center gap-1"
+            >
+              {isSavingWithPipeline ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <>
+                  <TablerIcon name="device-floppy" size={16} />
+                  <IconSparkles size={16} />
+                </>
+              )}
             </button>
           )}
           

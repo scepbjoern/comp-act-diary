@@ -1,8 +1,8 @@
 # Migrationsplan: Deprecated Komponenten entfernen
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Erstellt:** Dezember 2025  
-**Status:** Geplant
+**Status:** Phase 1 abgeschlossen
 
 ---
 
@@ -47,17 +47,17 @@ Die deprecated Komponenten werden aktuell an folgenden Stellen verwendet:
 
 ## Migrationsstrategie
 
-### Phase 1: DiarySection migrieren (Priorität: Hoch)
+### Phase 1: DiarySection migrieren (Priorität: Hoch) ✅ ABGESCHLOSSEN
 
 **Ziel:** `ImproveTextButton` aus `DiarySection.tsx` entfernen.
 
 **Schritte:**
-1. Neuen "Verbessern"-Button inline implementieren, der `/api/journal-ai/generate-content` aufruft
-2. Original-Transkript-Logik beibehalten (für `onOriginalPreserved`)
-3. Loading-State und Fehlerbehandlung hinzufügen
-4. `ImproveTextButton` Import und Verwendung entfernen
+1. ✅ Neuen "Verbessern"-Button inline implementieren, der `/api/journal-ai/generate-content` aufruft
+2. ✅ Original-Transkript-Logik beibehalten (für `onOriginalPreserved`)
+3. ✅ Loading-State und Fehlerbehandlung hinzufügen
+4. ✅ `ImproveTextButton` Import und Verwendung entfernen
 
-**Aufwand:** ~30 Minuten
+**Abgeschlossen:** 26. Dezember 2025
 
 ### Phase 2: MealNotesAccordion und MealNotesSection migrieren (Priorität: Mittel)
 

@@ -120,6 +120,49 @@ export class JournalAIService {
   }
 
   /**
+   * Generates formatted content from raw text without a journal entry.
+   * Used for improving text before saving a new entry.
+   */
+  async generateContentFromText(params: {
+    text: string
+    userId: string
+    typeCode?: string
+  }): Promise<GenerateResult> {
+    const { text, userId, typeCode = 'diary' } = params
+
+    // Get AI settings for this type
+    const entryType = await this.prisma.journalEntryType.findFirst({
+      where: { code: typeCode },
+    })
+
+    const settings = entryType
+      ? await this.getSettingsForEntry(entryType.id, userId)
+      : getDefaultAISettings(DEFAULT_MODEL_ID)
+
+    const { modelId, prompt } = settings.content
+
+    // Interpolate variables
+    const interpolatedPrompt = interpolatePrompt(prompt, {
+      '{{date}}': formatDateForPrompt(new Date()),
+      '{{entryType}}': entryType?.name ?? 'Tagebucheintrag',
+      '{{title}}': '',
+    })
+
+    // Call LLM
+    const result = await this.callLLM({
+      modelId,
+      systemPrompt: interpolatedPrompt,
+      userMessage: text,
+    })
+
+    return {
+      text: result.text,
+      tokensUsed: result.tokensUsed,
+      modelUsed: modelId,
+    }
+  }
+
+  /**
    * Generates ACT-based analysis from content.
    */
   async generateAnalysis(params: {

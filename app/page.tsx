@@ -313,6 +313,92 @@ export default function HeutePage() {
 
   // saveDiaryEntry and shiftDate are now handled by useDiaryManagement and lib/date-utils
 
+  // Save diary entry and run AI pipeline (keeps form open during processing)
+  async function saveDiaryEntryAndRunPipeline(): Promise<void> {
+    if (!day || !newDiaryText.trim()) return
+    
+    // Step 1: Save entry WITHOUT closing form (don't use saveDiaryEntry which resets form)
+    const saveRes = await fetch(`/api/day/${day.id}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'DIARY',
+        title: newDiaryTitle.trim() || null,
+        text: newDiaryText.trim(),
+        audioFileId: newDiaryAudioFileId,
+        keepAudio,
+        originalTranscript: newDiaryOriginalTranscript,
+        time: newDiaryTime || new Date().toISOString().slice(11, 16),
+        tzOffsetMinutes: new Date().getTimezoneOffset(),
+      }),
+      credentials: 'same-origin',
+    })
+    
+    const saveData = await saveRes.json()
+    if (!saveRes.ok || !saveData?.notes) {
+      push('Speichern fehlgeschlagen', 'error')
+      return
+    }
+    
+    // Find the newly created entry
+    const diaryNotes = saveData.notes.filter((n: { type: string }) => n.type === 'DIARY')
+    const latestNote = diaryNotes.sort((a: { createdAtIso: string }, b: { createdAtIso: string }) => 
+      (b.createdAtIso || '').localeCompare(a.createdAtIso || '')
+    )[0]
+    
+    if (!latestNote) {
+      push('Eintrag nicht gefunden', 'error')
+      return
+    }
+    
+    // Step 2: Run pipeline
+    try {
+      await fetch('/api/journal-ai/pipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ journalEntryId: latestNote.id }),
+      })
+      
+      // Step 3: Generate title
+      if (latestNote.text?.trim()) {
+        const titleRes = await fetch('/api/generate-title', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: latestNote.text, model: 'gpt-4o-mini' })
+        })
+        const titleData = await titleRes.json()
+        if (titleData.title) {
+          await fetch(`/api/notes/${latestNote.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: titleData.title })
+          })
+        }
+      }
+      
+      // Step 4: Refresh notes and THEN close form
+      const refreshRes = await fetch(`/api/day?date=${date}`, { credentials: 'same-origin' })
+      const refreshData = await refreshRes.json()
+      if (refreshData?.notes) setNotes(refreshData.notes)
+      
+      // Now reset the form (close edit mode)
+      setNewDiaryText('')
+      setNewDiaryAudioFileId(null)
+      _setNewDiaryOriginalTranscript(null)
+      const now = new Date()
+      const hh = String(now.getHours()).padStart(2, '0')
+      const mm = String(now.getMinutes()).padStart(2, '0')
+      setNewDiaryTime(`${hh}:${mm}`)
+      setNewDiaryTitle(`${date} ${hh}:${mm}`)
+      setEditorKey(prev => prev + 1)
+      
+      push('AI-Pipeline abgeschlossen', 'success')
+    } catch (e) {
+      console.error('Pipeline failed', e)
+      push('AI-Pipeline fehlgeschlagen', 'error')
+    }
+  }
+
   async function addMealNote() {
     if (!day || !mealText.trim()) return
     startSaving()
@@ -490,6 +576,7 @@ export default function HeutePage() {
                 console.error('Refresh notes failed', e)
               }
             }}
+            onSaveAndRunPipeline={saveDiaryEntryAndRunPipeline}
           />
 
           <DarmkurSection

@@ -105,6 +105,29 @@ export function DiaryEntriesAccordion({
   const handleRunPipeline = async (noteId: string) => {
     setLoadingStates(prev => ({ ...prev, [noteId]: 'pipeline' }))
     await runPipeline(noteId)
+    
+    // Also generate title after pipeline
+    const note = notes.find(n => n.id === noteId)
+    if (note?.text?.trim()) {
+      try {
+        const res = await fetch('/api/generate-title', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: note.text, model: 'gpt-4o-mini' })
+        })
+        const data = await res.json()
+        if (data.title) {
+          await fetch(`/api/notes/${noteId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: data.title })
+          })
+        }
+      } catch (e) {
+        console.error('Title generation in pipeline failed', e)
+      }
+    }
+    
     setLoadingStates(prev => ({ ...prev, [noteId]: null }))
     onRefreshNotes?.()
   }

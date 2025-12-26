@@ -174,11 +174,15 @@ export function AIConfigSection() {
     setIsSaving(true)
     setSaveError(null)
 
+    console.log('[AIConfigSection] Saving all settings, localSettings:', JSON.stringify(localSettings, null, 2))
+
     try {
       for (const type of journalEntryTypes) {
         const typeSettings = localSettings[type.code]
+        console.log(`[AIConfigSection] Saving ${type.code}:`, JSON.stringify(typeSettings, null, 2))
         if (typeSettings) {
           const success = await updateSettingsForType(type.code, typeSettings)
+          console.log(`[AIConfigSection] Save ${type.code} result:`, success)
           if (!success) {
             setSaveError('Fehler beim Speichern')
             setIsSaving(false)
@@ -187,7 +191,9 @@ export function AIConfigSection() {
         }
       }
       setHasChanges(false)
-    } catch (_err) {
+      console.log('[AIConfigSection] All settings saved successfully')
+    } catch (err) {
+      console.error('[AIConfigSection] Save error:', err)
       setSaveError('Fehler beim Speichern')
     } finally {
       setIsSaving(false)

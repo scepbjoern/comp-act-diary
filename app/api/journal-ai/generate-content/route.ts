@@ -12,8 +12,9 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const RequestSchema = z.object({
-  journalEntryId: z.string().uuid(),
+  journalEntryId: z.string().uuid().optional(),
   text: z.string().optional(),
+  typeCode: z.string().optional(),
 })
 
 async function getCurrentUserId(req: NextRequest): Promise<string | null> {
@@ -47,10 +48,30 @@ export async function POST(req: NextRequest) {
     const prisma = getPrisma()
     const service = getJournalAIService(prisma)
 
-    const result = await service.generateContent({
-      journalEntryId: parsed.data.journalEntryId,
-      userId,
+    // If we have a journalEntryId, use the full service
+    if (parsed.data.journalEntryId) {
+      const result = await service.generateContent({
+        journalEntryId: parsed.data.journalEntryId,
+        userId,
+        text: parsed.data.text,
+      })
+
+      return NextResponse.json({
+        content: result.text,
+        modelUsed: result.modelUsed,
+        tokensUsed: result.tokensUsed,
+      })
+    }
+
+    // Standalone text improvement (no journalEntryId)
+    if (!parsed.data.text?.trim()) {
+      return NextResponse.json({ error: 'Text is required when no journalEntryId is provided' }, { status: 400 })
+    }
+
+    const result = await service.generateContentFromText({
       text: parsed.data.text,
+      userId,
+      typeCode: parsed.data.typeCode || 'diary',
     })
 
     return NextResponse.json({
