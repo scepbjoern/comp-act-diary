@@ -55,6 +55,9 @@ import {
   IconEye,
   IconArrowBackUp,
   IconRobot,
+  IconBrain,
+  IconMessage2,
+  IconSend,
 } from '@tabler/icons-react'
 
 // Mapping from old Material Icon names to Tabler Icons
@@ -143,6 +146,13 @@ const iconMap: Record<string, typeof IconSettings> = {
   
   // File icons
   'file-text': IconFileText,
+  
+  // Additional icons
+  brain: IconBrain,
+  refresh: IconRefresh,
+  book: IconBook,
+  'message-2': IconMessage2,
+  send: IconSend,
 }
 
 interface TablerIconProps {

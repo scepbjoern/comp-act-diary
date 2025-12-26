@@ -40,7 +40,7 @@ interface AIFunctionConfigProps {
   onModelChange: (modelId: string) => void
   onPromptChange: (prompt: string) => void
   onReset: () => void
-  isSaving: boolean
+  disabled: boolean
 }
 
 function AIFunctionConfig({
@@ -51,7 +51,7 @@ function AIFunctionConfig({
   onModelChange,
   onPromptChange,
   onReset,
-  isSaving,
+  disabled,
 }: AIFunctionConfigProps) {
   return (
     <div className="space-y-3 p-4 bg-base-200/50 rounded-lg">
@@ -64,7 +64,7 @@ function AIFunctionConfig({
           type="button"
           className="btn btn-ghost btn-xs"
           onClick={onReset}
-          disabled={isSaving}
+          disabled={disabled}
           title="Auf Standard zurücksetzen"
         >
           <IconRefresh size={14} />
@@ -81,7 +81,7 @@ function AIFunctionConfig({
           className="select select-bordered select-sm w-full"
           value={modelId}
           onChange={(e) => onModelChange(e.target.value)}
-          disabled={isSaving}
+          disabled={disabled}
         >
           {DEFAULT_LLM_MODELS.map((model) => (
             <option key={model.id} value={model.id}>
@@ -100,7 +100,7 @@ function AIFunctionConfig({
           className="textarea textarea-bordered text-sm min-h-32"
           value={prompt}
           onChange={(e) => onPromptChange(e.target.value)}
-          disabled={isSaving}
+          disabled={disabled}
           placeholder="Prompt eingeben..."
         />
       </div>
@@ -117,8 +117,9 @@ export function AIConfigSection() {
   const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set(['diary']))
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [hasChanges, setHasChanges] = useState(false)
 
-  // Local state for form values (to enable debounced saving)
+  // Local state for form values (edited locally, saved explicitly)
   const [localSettings, setLocalSettings] = useState<Record<string, {
     content: { modelId: string; prompt: string }
     analysis: { modelId: string; prompt: string }
@@ -139,6 +140,7 @@ export function AIConfigSection() {
         newLocalSettings[type.code] = getSettingsForType(type.code)
       }
       setLocalSettings(newLocalSettings)
+      setHasChanges(false)
     }
   }, [isLoading])
 
@@ -152,11 +154,8 @@ export function AIConfigSection() {
     setExpandedTypes(newExpanded)
   }
 
-  const handleSave = async (typeCode: string, field: 'content' | 'analysis' | 'summary', updates: { modelId?: string; prompt?: string }) => {
-    setIsSaving(true)
-    setSaveError(null)
-
-    // Update local state immediately
+  // Update local state only (no API call)
+  const handleLocalChange = (typeCode: string, field: 'content' | 'analysis' | 'summary', updates: { modelId?: string; prompt?: string }) => {
     setLocalSettings((prev) => ({
       ...prev,
       [typeCode]: {
@@ -167,18 +166,27 @@ export function AIConfigSection() {
         },
       },
     }))
+    setHasChanges(true)
+  }
 
-    // Debounced save to server
+  // Save all changes to server
+  const handleSaveAll = async () => {
+    setIsSaving(true)
+    setSaveError(null)
+
     try {
-      const success = await updateSettingsForType(typeCode, {
-        [field]: {
-          ...localSettings[typeCode]?.[field],
-          ...updates,
-        },
-      })
-      if (!success) {
-        setSaveError('Fehler beim Speichern')
+      for (const type of journalEntryTypes) {
+        const typeSettings = localSettings[type.code]
+        if (typeSettings) {
+          const success = await updateSettingsForType(type.code, typeSettings)
+          if (!success) {
+            setSaveError('Fehler beim Speichern')
+            setIsSaving(false)
+            return
+          }
+        }
       }
+      setHasChanges(false)
     } catch (_err) {
       setSaveError('Fehler beim Speichern')
     } finally {
@@ -202,6 +210,7 @@ export function AIConfigSection() {
             [field]: defaults[field],
           },
         }))
+        setHasChanges(true)
       } else {
         setSaveError('Fehler beim Zurücksetzen')
       }
@@ -270,10 +279,10 @@ export function AIConfigSection() {
                     icon={<IconPencil size={16} className="text-primary" />}
                     modelId={typeSettings.content.modelId}
                     prompt={typeSettings.content.prompt}
-                    onModelChange={(modelId) => handleSave(type.code, 'content', { modelId })}
-                    onPromptChange={(prompt) => handleSave(type.code, 'content', { prompt })}
+                    onModelChange={(modelId) => handleLocalChange(type.code, 'content', { modelId })}
+                    onPromptChange={(prompt) => handleLocalChange(type.code, 'content', { prompt })}
                     onReset={() => handleReset(type.code, 'content')}
-                    isSaving={isSaving}
+                    disabled={isSaving}
                   />
 
                   {/* Analysis */}
@@ -282,10 +291,10 @@ export function AIConfigSection() {
                     icon={<IconSearch size={16} className="text-warning" />}
                     modelId={typeSettings.analysis.modelId}
                     prompt={typeSettings.analysis.prompt}
-                    onModelChange={(modelId) => handleSave(type.code, 'analysis', { modelId })}
-                    onPromptChange={(prompt) => handleSave(type.code, 'analysis', { prompt })}
+                    onModelChange={(modelId) => handleLocalChange(type.code, 'analysis', { modelId })}
+                    onPromptChange={(prompt) => handleLocalChange(type.code, 'analysis', { prompt })}
                     onReset={() => handleReset(type.code, 'analysis')}
-                    isSaving={isSaving}
+                    disabled={isSaving}
                   />
 
                   {/* Summary */}
@@ -294,11 +303,26 @@ export function AIConfigSection() {
                     icon={<IconClipboard size={16} className="text-info" />}
                     modelId={typeSettings.summary.modelId}
                     prompt={typeSettings.summary.prompt}
-                    onModelChange={(modelId) => handleSave(type.code, 'summary', { modelId })}
-                    onPromptChange={(prompt) => handleSave(type.code, 'summary', { prompt })}
+                    onModelChange={(modelId) => handleLocalChange(type.code, 'summary', { modelId })}
+                    onPromptChange={(prompt) => handleLocalChange(type.code, 'summary', { prompt })}
                     onReset={() => handleReset(type.code, 'summary')}
-                    isSaving={isSaving}
+                    disabled={isSaving}
                   />
+
+                  {/* Save Button */}
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      onClick={handleSaveAll}
+                      disabled={isSaving || !hasChanges}
+                    >
+                      {isSaving ? (
+                        <span className="loading loading-spinner loading-xs" />
+                      ) : null}
+                      Speichern
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

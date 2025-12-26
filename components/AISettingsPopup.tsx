@@ -41,7 +41,7 @@ function getModelInfo(modelId: string): { name: string; inputCost: string; outpu
   }
 }
 
-function truncatePrompt(prompt: string, maxLength = 160): string {
+function truncatePrompt(prompt: string, maxLength = 320): string {
   if (prompt.length <= maxLength) return prompt
   return prompt.slice(0, maxLength).trim() + '...'
 }
