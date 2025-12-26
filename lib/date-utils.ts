@@ -40,3 +40,18 @@ export function shiftDate(cur: string, delta: number): string {
   dt.setDate(dt.getDate() + delta)
   return ymd(dt)
 }
+
+/**
+ * Shift date by delta months
+ */
+export function shiftMonth(cur: string, delta: number): string {
+  const [y, m, d] = cur.split('-').map(Number)
+  const dt = new Date(y, (m || 1) - 1 + delta, d || 1)
+  // Handle month overflow (e.g., Jan 31 + 1 month = Feb 28/29)
+  const originalDay = d || 1
+  if (dt.getDate() !== originalDay) {
+    // Day overflowed, go to last day of previous month
+    dt.setDate(0)
+  }
+  return ymd(dt)
+}

@@ -1,5 +1,5 @@
 import { Icon } from '@/components/Icon'
-import { fmtDmyFromYmd, shiftDate } from '@/lib/date-utils'
+import { fmtDmyFromYmd, shiftDate, shiftMonth } from '@/lib/date-utils'
 
 interface DateNavigationProps {
   date: string
@@ -15,11 +15,20 @@ export function DateNavigation({ date, onDateChange }: DateNavigationProps) {
           <span>Tagebuch {fmtDmyFromYmd(date)}</span>
         </span>
       </h2>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
+        <button 
+          aria-label="Vorheriger Monat" 
+          className="pill" 
+          onClick={() => onDateChange(shiftMonth(date, -1))}
+          title="Vorheriger Monat"
+        >
+          «
+        </button>
         <button 
           aria-label="Vorheriger Tag" 
           className="pill" 
           onClick={() => onDateChange(shiftDate(date, -1))}
+          title="Vorheriger Tag"
         >
           ‹
         </button>
@@ -33,8 +42,17 @@ export function DateNavigation({ date, onDateChange }: DateNavigationProps) {
           aria-label="Nächster Tag" 
           className="pill" 
           onClick={() => onDateChange(shiftDate(date, +1))}
+          title="Nächster Tag"
         >
           ›
+        </button>
+        <button 
+          aria-label="Nächster Monat" 
+          className="pill" 
+          onClick={() => onDateChange(shiftMonth(date, +1))}
+          title="Nächster Monat"
+        >
+          »
         </button>
       </div>
     </div>

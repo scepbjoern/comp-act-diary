@@ -113,7 +113,7 @@ function AIFunctionConfig({
 // =============================================================================
 
 export function AIConfigSection() {
-  const { getSettingsForType, updateSettingsForType, resetToDefault, isLoading, error } = useAISettings()
+  const { getSettingsForType, updateAllSettings, resetToDefault, isLoading, error } = useAISettings()
   const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set(['diary']))
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -174,26 +174,19 @@ export function AIConfigSection() {
     setHasChanges(true)
   }
 
-  // Save all changes to server
+  // Save all changes to server in a single API call
   const handleSaveAll = async () => {
     setIsSaving(true)
     setSaveError(null)
 
-    console.log('[AIConfigSection] Saving all settings, localSettings:', JSON.stringify(localSettings, null, 2))
+    console.log('[AIConfigSection] Saving all settings in single call, localSettings:', JSON.stringify(localSettings, null, 2))
 
     try {
-      for (const type of journalEntryTypes) {
-        const typeSettings = localSettings[type.code]
-        console.log(`[AIConfigSection] Saving ${type.code}:`, JSON.stringify(typeSettings, null, 2))
-        if (typeSettings) {
-          const success = await updateSettingsForType(type.code, typeSettings)
-          console.log(`[AIConfigSection] Save ${type.code} result:`, success)
-          if (!success) {
-            setSaveError('Fehler beim Speichern')
-            setIsSaving(false)
-            return
-          }
-        }
+      const success = await updateAllSettings(localSettings)
+      if (!success) {
+        setSaveError('Fehler beim Speichern')
+        setIsSaving(false)
+        return
       }
       setHasChanges(false)
       console.log('[AIConfigSection] All settings saved successfully')

@@ -23,6 +23,7 @@ export interface UseAISettingsReturn {
   error: string | null
   getSettingsForType: (typeCode: string) => JournalEntryTypeAISettings
   updateSettingsForType: (typeCode: string, settings: Partial<JournalEntryTypeAISettings>) => Promise<boolean>
+  updateAllSettings: (allSettings: JournalAISettings) => Promise<boolean>
   resetToDefault: (typeCode: string, field: 'content' | 'analysis' | 'summary') => Promise<boolean>
   refetch: () => Promise<void>
 }
@@ -155,6 +156,45 @@ export function useAISettings(): UseAISettingsReturn {
     }
   }, [settings, fetchSettings])
 
+  // Save all settings in a single API call (avoids race conditions)
+  const updateAllSettings = useCallback(async (
+    allSettings: JournalAISettings
+  ): Promise<boolean> => {
+    try {
+      setError(null)
+
+      console.log('[useAISettings] updateAllSettings called with:', JSON.stringify(allSettings, null, 2))
+
+      // Update local state optimistically
+      setSettings(allSettings)
+
+      // Persist to server
+      const response = await fetch('/api/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          settings: {
+            journalAISettings: allSettings,
+          },
+        }),
+      })
+
+      const data = await response.json()
+      console.log('[useAISettings] updateAllSettings API response:', response.ok, data)
+
+      if (!response.ok) {
+        await fetchSettings()
+        throw new Error(data.error || 'Failed to update settings')
+      }
+
+      return true
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      setError(message)
+      return false
+    }
+  }, [fetchSettings])
+
   const resetToDefault = useCallback(async (
     typeCode: string,
     field: 'content' | 'analysis' | 'summary'
@@ -172,6 +212,7 @@ export function useAISettings(): UseAISettingsReturn {
     error,
     getSettingsForType,
     updateSettingsForType,
+    updateAllSettings,
     resetToDefault,
     refetch: fetchSettings,
   }
