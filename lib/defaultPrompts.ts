@@ -39,6 +39,11 @@ Datum: {{date}}
 
 Antworte direkt mit der Zusammenfassung, ohne Einleitung.`
 
+export const DEFAULT_TITLE_PROMPT = `Du bist ein Assistent, der prägnante, aussagekräftige Titel für Tagebucheinträge generiert. Der Titel soll kurz (maximal 5-7 Wörter), informativ und ansprechend sein. Antworte NUR mit dem Titel, ohne zusätzliche Erklärungen oder Anführungszeichen.
+
+Datum: {{date}}
+Eintragstyp: {{entryType}}`
+
 // =============================================================================
 // PROMPT VARIABLES
 // =============================================================================
@@ -72,6 +77,7 @@ export interface AIFunctionSettings {
  * AI settings for a single JournalEntryType.
  */
 export interface JournalEntryTypeAISettings {
+  title: AIFunctionSettings
   content: AIFunctionSettings
   analysis: AIFunctionSettings
   summary: AIFunctionSettings
@@ -109,6 +115,7 @@ export const AIFunctionSettingsSchema = z.object({
 })
 
 export const JournalEntryTypeAISettingsSchema = z.object({
+  title: AIFunctionSettingsSchema.optional(),
   content: AIFunctionSettingsSchema,
   analysis: AIFunctionSettingsSchema,
   summary: AIFunctionSettingsSchema,
@@ -146,6 +153,10 @@ export function interpolatePrompt(
  */
 export function getDefaultAISettings(defaultModelId: string): JournalEntryTypeAISettings {
   return {
+    title: {
+      modelId: defaultModelId,
+      prompt: DEFAULT_TITLE_PROMPT,
+    },
     content: {
       modelId: defaultModelId,
       prompt: DEFAULT_CONTENT_PROMPT,

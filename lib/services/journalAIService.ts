@@ -25,18 +25,58 @@ export interface GenerateResult {
 }
 
 export interface PipelineStepResult {
-  step: 'content' | 'analysis' | 'summary'
+  step: 'title' | 'content' | 'analysis' | 'summary'
   success: boolean
   error?: string
   tokensUsed?: number
 }
 
 export interface PipelineResult {
+  title?: string
   content?: string
   analysis?: string
   aiSummary?: string
   steps: PipelineStepResult[]
   totalTokensUsed: number
+}
+
+export interface BatchPipelineParams {
+  userId: string
+  dateFrom: string
+  dateTo: string
+  typeCodes: string[]
+  steps: ('title' | 'content' | 'analysis' | 'summary')[]
+  overwriteMode: 'empty_only' | 'overwrite_all'
+}
+
+export interface BatchEntryResult {
+  entryId: string
+  entryTitle: string | null
+  entryDate: string
+  success: boolean
+  stepsRun: string[]
+  error?: string
+}
+
+export interface BatchPipelineResult {
+  totalProcessed: number
+  successCount: number
+  errorCount: number
+  results: BatchEntryResult[]
+  totalTokensUsed: number
+}
+
+export interface AffectedEntry {
+  id: string
+  date: string
+  title: string | null
+  typeName: string
+  typeCode: string
+  typeIcon: string | null
+  hasTitle: boolean
+  hasContent: boolean
+  hasAnalysis: boolean
+  hasSummary: boolean
 }
 
 // =============================================================================
@@ -357,6 +397,251 @@ export class JournalAIService {
   }
 
   /**
+   * Generates a title for a journal entry.
+   */
+  async generateTitle(params: {
+    journalEntryId: string
+    userId: string
+  }): Promise<GenerateResult> {
+    const { journalEntryId, userId } = params
+
+    const entry = await this.prisma.journalEntry.findUnique({
+      where: { id: journalEntryId },
+      include: { type: true },
+    })
+
+    if (!entry) {
+      throw new Error('Journal entry not found')
+    }
+
+    if (entry.userId !== userId) {
+      throw new Error('Unauthorized')
+    }
+
+    if (!entry.content) {
+      throw new Error('No content to generate title from')
+    }
+
+    const settings = await this.getSettingsForEntry(entry.typeId, userId)
+    const { modelId, prompt } = settings.title
+
+    const interpolatedPrompt = interpolatePrompt(prompt, {
+      '{{date}}': formatDateForPrompt(entry.createdAt),
+      '{{entryType}}': entry.type.name,
+      '{{title}}': entry.title ?? '',
+    })
+
+    const result = await this.callLLM({
+      modelId,
+      systemPrompt: interpolatedPrompt,
+      userMessage: entry.content.substring(0, 1000),
+    })
+
+    // Update entry with new title
+    await this.prisma.journalEntry.update({
+      where: { id: journalEntryId },
+      data: { title: result.text.trim() },
+    })
+
+    return {
+      text: result.text.trim(),
+      tokensUsed: result.tokensUsed,
+      modelUsed: modelId,
+    }
+  }
+
+  /**
+   * Gets affected entries for batch processing (dry-run).
+   */
+  async getAffectedEntries(params: BatchPipelineParams): Promise<AffectedEntry[]> {
+    const { userId, dateFrom, dateTo, typeCodes, steps, overwriteMode } = params
+
+    // Get type IDs for the requested codes
+    const types = await this.prisma.journalEntryType.findMany({
+      where: {
+        OR: [
+          { userId: null, code: { in: typeCodes } },
+          { userId, code: { in: typeCodes } },
+        ],
+      },
+    })
+    const typeIds = types.map(t => t.id)
+    const typeMap = new Map(types.map(t => [t.id, t]))
+
+    if (typeIds.length === 0) {
+      return []
+    }
+
+    // Get timeboxes in date range
+    const timeBoxes = await this.prisma.timeBox.findMany({
+      where: {
+        userId,
+        kind: 'DAY',
+        localDate: {
+          gte: dateFrom,
+          lte: dateTo,
+        },
+      },
+      select: { id: true, localDate: true },
+    })
+    const timeBoxIds = timeBoxes.map(t => t.id)
+    const timeBoxMap = new Map(timeBoxes.map(t => [t.id, t.localDate]))
+
+    if (timeBoxIds.length === 0) {
+      return []
+    }
+
+    // Get journal entries
+    const entries = await this.prisma.journalEntry.findMany({
+      where: {
+        userId,
+        typeId: { in: typeIds },
+        timeBoxId: { in: timeBoxIds },
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        analysis: true,
+        aiSummary: true,
+        typeId: true,
+        timeBoxId: true,
+      },
+    })
+
+    // Filter based on overwriteMode
+    const affectedEntries: AffectedEntry[] = []
+
+    for (const entry of entries) {
+      const type = typeMap.get(entry.typeId)
+      const localDate = timeBoxMap.get(entry.timeBoxId) || ''
+
+      const hasTitle = Boolean(entry.title?.trim())
+      const hasContent = Boolean(entry.content?.trim())
+      const hasAnalysis = Boolean(entry.analysis?.trim())
+      const hasSummary = Boolean(entry.aiSummary?.trim())
+
+      // Check if entry should be included based on overwriteMode
+      let shouldInclude = false
+
+      if (overwriteMode === 'overwrite_all') {
+        // Always include if content exists (needed for processing)
+        shouldInclude = hasContent || steps.includes('content')
+      } else {
+        // Only include if at least one requested step has empty field
+        for (const step of steps) {
+          if (step === 'title' && !hasTitle && hasContent) shouldInclude = true
+          if (step === 'content' && !hasContent) shouldInclude = true
+          if (step === 'analysis' && !hasAnalysis && hasContent) shouldInclude = true
+          if (step === 'summary' && !hasSummary && hasContent) shouldInclude = true
+        }
+      }
+
+      if (shouldInclude) {
+        affectedEntries.push({
+          id: entry.id,
+          date: localDate,
+          title: entry.title,
+          typeName: type?.name || 'Unbekannt',
+          typeCode: type?.code || 'unknown',
+          typeIcon: type?.icon || null,
+          hasTitle,
+          hasContent,
+          hasAnalysis,
+          hasSummary,
+        })
+      }
+    }
+
+    // Sort by date descending
+    affectedEntries.sort((a, b) => b.date.localeCompare(a.date))
+
+    return affectedEntries
+  }
+
+  /**
+   * Runs batch pipeline on multiple entries.
+   */
+  async runBatchPipeline(params: BatchPipelineParams): Promise<BatchPipelineResult> {
+    const { userId, steps, overwriteMode } = params
+
+    const affectedEntries = await this.getAffectedEntries(params)
+
+    const result: BatchPipelineResult = {
+      totalProcessed: 0,
+      successCount: 0,
+      errorCount: 0,
+      results: [],
+      totalTokensUsed: 0,
+    }
+
+    for (const entry of affectedEntries) {
+      result.totalProcessed++
+      const stepsRun: string[] = []
+      let entrySuccess = true
+      let entryError: string | undefined
+
+      try {
+        // Run each requested step
+        for (const step of steps) {
+          // Check if we should skip based on overwriteMode
+          if (overwriteMode === 'empty_only') {
+            if (step === 'title' && entry.hasTitle) continue
+            if (step === 'analysis' && entry.hasAnalysis) continue
+            if (step === 'summary' && entry.hasSummary) continue
+          }
+
+          // Skip if no content (except for content step)
+          if (step !== 'content' && !entry.hasContent) continue
+
+          try {
+            if (step === 'title') {
+              const r = await this.generateTitle({ journalEntryId: entry.id, userId })
+              result.totalTokensUsed += r.tokensUsed
+              stepsRun.push('title')
+            } else if (step === 'content') {
+              const r = await this.generateContent({ journalEntryId: entry.id, userId })
+              result.totalTokensUsed += r.tokensUsed
+              stepsRun.push('content')
+            } else if (step === 'analysis') {
+              const r = await this.generateAnalysis({ journalEntryId: entry.id, userId })
+              result.totalTokensUsed += r.tokensUsed
+              stepsRun.push('analysis')
+            } else if (step === 'summary') {
+              const r = await this.generateSummary({ journalEntryId: entry.id, userId })
+              result.totalTokensUsed += r.tokensUsed
+              stepsRun.push('summary')
+            }
+          } catch (stepError) {
+            // Continue with other steps even if one fails
+            console.error(`Step ${step} failed for entry ${entry.id}:`, stepError)
+          }
+        }
+
+        if (stepsRun.length > 0) {
+          result.successCount++
+        }
+      } catch (error) {
+        entrySuccess = false
+        entryError = error instanceof Error ? error.message : 'Unknown error'
+        result.errorCount++
+      }
+
+      result.results.push({
+        entryId: entry.id,
+        entryTitle: entry.title,
+        entryDate: entry.date,
+        success: entrySuccess && stepsRun.length > 0,
+        stepsRun,
+        error: entryError,
+      })
+    }
+
+    return result
+  }
+
+  /**
    * Gets AI settings for a journal entry type.
    * Falls back to defaults if no user settings exist.
    */
@@ -390,6 +675,10 @@ export class JournalAIService {
       // Merge with defaults to ensure all fields exist
       const defaults = getDefaultAISettings(DEFAULT_MODEL_ID)
       return {
+        title: {
+          modelId: typeSettings.title?.modelId || defaults.title.modelId,
+          prompt: typeSettings.title?.prompt || defaults.title.prompt,
+        },
         content: {
           modelId: typeSettings.content?.modelId || defaults.content.modelId,
           prompt: typeSettings.content?.prompt || defaults.content.prompt,

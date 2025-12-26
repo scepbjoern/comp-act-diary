@@ -13,6 +13,7 @@ import {
   IconSearch,
   IconClipboard,
   IconRefresh,
+  IconHeading,
 } from '@tabler/icons-react'
 import { useAISettings } from '@/hooks/useAISettings'
 import { DEFAULT_LLM_MODELS } from '@/lib/llmModels'
@@ -121,6 +122,7 @@ export function AIConfigSection() {
 
   // Local state for form values (edited locally, saved explicitly)
   const [localSettings, setLocalSettings] = useState<Record<string, {
+    title: { modelId: string; prompt: string }
     content: { modelId: string; prompt: string }
     analysis: { modelId: string; prompt: string }
     summary: { modelId: string; prompt: string }
@@ -160,7 +162,7 @@ export function AIConfigSection() {
   }
 
   // Update local state only (no API call)
-  const handleLocalChange = (typeCode: string, field: 'content' | 'analysis' | 'summary', updates: { modelId?: string; prompt?: string }) => {
+  const handleLocalChange = (typeCode: string, field: 'title' | 'content' | 'analysis' | 'summary', updates: { modelId?: string; prompt?: string }) => {
     setLocalSettings((prev) => ({
       ...prev,
       [typeCode]: {
@@ -198,7 +200,7 @@ export function AIConfigSection() {
     }
   }
 
-  const handleReset = async (typeCode: string, field: 'content' | 'analysis' | 'summary') => {
+  const handleReset = async (typeCode: string, field: 'title' | 'content' | 'analysis' | 'summary') => {
     setIsSaving(true)
     setSaveError(null)
 
@@ -277,6 +279,18 @@ export function AIConfigSection() {
               {/* Type Content */}
               {isExpanded && (
                 <div className="p-4 pt-0 space-y-4">
+                  {/* Title Generation */}
+                  <AIFunctionConfig
+                    title="Titel-Generierung (Text → Titel)"
+                    icon={<IconHeading size={16} className="text-success" />}
+                    modelId={typeSettings.title?.modelId || ''}
+                    prompt={typeSettings.title?.prompt || ''}
+                    onModelChange={(modelId) => handleLocalChange(type.code, 'title', { modelId })}
+                    onPromptChange={(prompt) => handleLocalChange(type.code, 'title', { prompt })}
+                    onReset={() => handleReset(type.code, 'title')}
+                    disabled={isSaving}
+                  />
+
                   {/* Content Generation */}
                   <AIFunctionConfig
                     title="Content-Generierung (Transkript → Inhalt)"

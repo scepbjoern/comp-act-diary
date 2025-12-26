@@ -182,6 +182,7 @@ export function SiteNav({ user }: { user: UserLite }) {
           {menuOpen && (
             <div className="absolute right-0 mt-2 w-56 bg-surface border border-slate-800 rounded-xl shadow-lg p-2 z-30" role="menu">
               <div className="flex flex-col gap-1">
+                <Link href="/batch" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(false)}>Batch-Verarbeitung</Link>
                 <Link href="/export" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(false)}>Export</Link>
                 <Link href="/settings" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(false)}>Einstellungen</Link>
                 <Link href="/help" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(false)}>App-Hilfe</Link>
@@ -318,6 +319,7 @@ export function SiteNav({ user }: { user: UserLite }) {
             <Link href="/analytics" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Auswertungen</Link>
             <Link href="/reflections" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Reflexionen</Link>
             <Link href="/coach" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Coach</Link>
+            <Link href="/batch" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Batch-Verarbeitung</Link>
             <Link href="/export" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Export</Link>
             {/* Links submenu (mobile): collapsible */}
             <button

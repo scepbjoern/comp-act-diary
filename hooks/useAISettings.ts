@@ -24,7 +24,7 @@ export interface UseAISettingsReturn {
   getSettingsForType: (typeCode: string) => JournalEntryTypeAISettings
   updateSettingsForType: (typeCode: string, settings: Partial<JournalEntryTypeAISettings>) => Promise<boolean>
   updateAllSettings: (allSettings: JournalAISettings) => Promise<boolean>
-  resetToDefault: (typeCode: string, field: 'content' | 'analysis' | 'summary') => Promise<boolean>
+  resetToDefault: (typeCode: string, field: 'title' | 'content' | 'analysis' | 'summary') => Promise<boolean>
   refetch: () => Promise<void>
 }
 
@@ -74,6 +74,10 @@ export function useAISettings(): UseAISettingsReturn {
 
     // Merge with defaults to ensure all fields exist
     return {
+      title: {
+        modelId: typeSettings.title?.modelId || defaults.title.modelId,
+        prompt: typeSettings.title?.prompt || defaults.title.prompt,
+      },
       content: {
         modelId: typeSettings.content?.modelId || defaults.content.modelId,
         prompt: typeSettings.content?.prompt || defaults.content.prompt,
@@ -103,6 +107,10 @@ export function useAISettings(): UseAISettingsReturn {
       
       // Build complete settings for this type, using newSettings values directly
       const mergedSettings: JournalEntryTypeAISettings = {
+        title: {
+          modelId: newSettings.title?.modelId || settings[typeCode]?.title?.modelId || defaults.title.modelId,
+          prompt: newSettings.title?.prompt ?? settings[typeCode]?.title?.prompt ?? defaults.title.prompt,
+        },
         content: {
           modelId: newSettings.content?.modelId || settings[typeCode]?.content?.modelId || defaults.content.modelId,
           prompt: newSettings.content?.prompt ?? settings[typeCode]?.content?.prompt ?? defaults.content.prompt,
@@ -197,7 +205,7 @@ export function useAISettings(): UseAISettingsReturn {
 
   const resetToDefault = useCallback(async (
     typeCode: string,
-    field: 'content' | 'analysis' | 'summary'
+    field: 'title' | 'content' | 'analysis' | 'summary'
   ): Promise<boolean> => {
     const defaults = getDefaultAISettings(DEFAULT_MODEL_ID)
     
