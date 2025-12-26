@@ -8,13 +8,7 @@ interface DateNavigationProps {
 
 export function DateNavigation({ date, onDateChange }: DateNavigationProps) {
   return (
-    <div className="flex items-center justify-between">
-      <h2 className="text-xl font-semibold">
-        <span className="inline-flex items-center gap-1">
-          <Icon name="menu_book" />
-          <span>Tagebuch {fmtDmyFromYmd(date)}</span>
-        </span>
-      </h2>
+    <div className="flex items-center justify-center">
       <div className="flex items-center gap-1">
         <button 
           aria-label="Vorheriger Monat" 
