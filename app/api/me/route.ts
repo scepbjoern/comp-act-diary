@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
         summaryModel: userSettings.summaryModel || DEFAULT_SUMMARY_MODEL,
         summaryPrompt: userSettings.summaryPrompt || DEFAULT_SUMMARY_PROMPT,
         customModels: userSettings.customModels || [],
+        journalAISettings: userSettings.journalAISettings || {},
       },
     },
   })
@@ -81,6 +82,9 @@ export async function PATCH(req: NextRequest) {
       if (Array.isArray(body.settings.customModels)) {
         settingsPatch.customModels = body.settings.customModels
       }
+      if (body.settings.journalAISettings && typeof body.settings.journalAISettings === 'object') {
+        settingsPatch.journalAISettings = body.settings.journalAISettings
+      }
     }
 
     let updatedUser = user
@@ -118,6 +122,7 @@ export async function PATCH(req: NextRequest) {
           summaryModel: updatedSettings.summaryModel || DEFAULT_SUMMARY_MODEL,
           summaryPrompt: updatedSettings.summaryPrompt || DEFAULT_SUMMARY_PROMPT,
           customModels: updatedSettings.customModels || [],
+          journalAISettings: updatedSettings.journalAISettings || {},
         },
       },
     })

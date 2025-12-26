@@ -481,6 +481,15 @@ export default function HeutePage() {
             onGenerateTitle={handleGenerateTitle}
             onOriginalPreserved={(orig) => _setNewDiaryOriginalTranscript(orig)}
             onUpdateNoteContent={updateNoteContent}
+            onRefreshNotes={async () => {
+              try {
+                const res = await fetch(`/api/day?date=${date}`, { credentials: 'same-origin' })
+                const data = await res.json()
+                if (data?.notes) setNotes(data.notes)
+              } catch (e) {
+                console.error('Refresh notes failed', e)
+              }
+            }}
           />
 
           <DarmkurSection

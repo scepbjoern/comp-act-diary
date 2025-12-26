@@ -469,6 +469,10 @@ model JournalEntry {
   originalTranscript String?
   /// KI-generierte Zusammenfassung (optional)
   aiSummary   String?
+  /// KI-generierte Analyse/Interpretation (z.B. ACT-Perspektive)
+  analysis    String?
+  /// Zeitstempel der letzten Content-Änderung (für "veraltet"-Warnung bei analysis/aiSummary)
+  contentUpdatedAt DateTime?
   /// Enthält sensible Daten? (für Verschlüsselung/biometrischen Schutz)
   isSensitive Boolean   @default(false)
   /// Soft-Delete Zeitpunkt (NULL = nicht gelöscht)

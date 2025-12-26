@@ -40,9 +40,15 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (entry.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const data: { title?: string | null; content?: string } = {}
+  const data: { title?: string | null; content?: string; contentUpdatedAt?: Date; aiSummary?: string | null } = {}
   if (typeof body.title === 'string') data.title = String(body.title).trim() || null
-  if (typeof body.text === 'string') data.content = String(body.text).trim()
+  if (typeof body.text === 'string') {
+    data.content = String(body.text).trim()
+    data.contentUpdatedAt = new Date()
+  }
+  if (body.aiSummary !== undefined) {
+    data.aiSummary = body.aiSummary === null ? null : String(body.aiSummary).trim()
+  }
 
   // Handle audio deletion via MediaAttachment
   if (body.audioFilePath === null || body.audioFileId === null) {
@@ -148,6 +154,9 @@ async function loadNotesForTimeBox(timeBoxId: string, dayId: string) {
       createdAtIso: j.createdAt?.toISOString(),
       text: j.content ?? '',
       originalTranscript: j.originalTranscript ?? null,
+      aiSummary: j.aiSummary ?? null,
+      analysis: j.analysis ?? null,
+      contentUpdatedAt: j.contentUpdatedAt?.toISOString() ?? null,
       audioFilePath: audioAtt?.asset.filePath ?? null,
       audioFileId: audioAtt?.asset.id ?? null,
       keepAudio: true,

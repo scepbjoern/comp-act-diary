@@ -55,6 +55,7 @@ interface DiarySectionProps {
   onGenerateTitle: () => Promise<void>
   onOriginalPreserved: (orig: string) => void
   onUpdateNoteContent: (noteId: string, newContent: string) => Promise<boolean>
+  onRefreshNotes?: () => Promise<void>
 }
 
 export function DiarySection({
@@ -100,6 +101,7 @@ export function DiarySection({
   onGenerateTitle,
   onOriginalPreserved,
   onUpdateNoteContent,
+  onRefreshNotes,
 }: DiarySectionProps) {
   return (
     <div className="card p-4 md:p-4 p-2 space-y-3">
@@ -310,6 +312,7 @@ export function DiarySection({
         onDeleteAudio={onDeleteAudio}
         onRetranscribe={onHandleRetranscribe}
         onUpdateContent={onUpdateNoteContent}
+        onRefreshNotes={onRefreshNotes}
       />
       
       <SaveIndicator saving={saving} savedAt={savedAt} />

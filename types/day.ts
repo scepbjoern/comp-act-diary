@@ -34,6 +34,9 @@ export type DayNote = {
   techTime?: string
   text: string
   originalTranscript?: string | null
+  aiSummary?: string | null
+  analysis?: string | null
+  contentUpdatedAt?: string | null
   audioFilePath?: string | null
   audioFileId?: string | null
   keepAudio?: boolean

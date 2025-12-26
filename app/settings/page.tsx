@@ -4,6 +4,7 @@ import NextImage from 'next/image'
 import { SaveIndicator, useSaveIndicator } from '@/components/SaveIndicator'
 import { Icon } from '@/components/Icon'
 import { TablerIcon } from '@/components/TablerIcon'
+import { AIConfigSection } from '@/components/AIConfigSection'
 import { useRouter } from 'next/navigation'
 import { DEFAULT_LLM_MODELS, LLMModel } from '@/lib/llmModels'
 
@@ -805,6 +806,17 @@ export default function SettingsPage() {
             Die Tagebucheinträge werden automatisch als Kontext mitgegeben.
           </p>
         </div>
+      </div>
+
+      {/* Journal AI Configuration */}
+      <div className="card p-4 space-y-3">
+        <h2 className="font-medium">
+          <span className="inline-flex items-center gap-1">
+            <TablerIcon name="brain" />
+            <span>Journal AI-Konfiguration</span>
+          </span>
+        </h2>
+        <AIConfigSection />
       </div>
 
       <div className="card p-4 space-y-3 max-w-xl">
