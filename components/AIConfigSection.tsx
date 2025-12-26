@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   IconChevronDown,
   IconChevronRight,
@@ -132,9 +132,13 @@ export function AIConfigSection() {
     { code: 'meal', name: 'Mahlzeit', icon: '🍽️' },
   ]
 
-  // Initialize local settings from server
+  // Track if initial load has been done
+  const initialLoadDone = useRef(false)
+
+  // Initialize local settings from server (only on first load)
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && !initialLoadDone.current) {
+      initialLoadDone.current = true
       const newLocalSettings: typeof localSettings = {}
       for (const type of journalEntryTypes) {
         newLocalSettings[type.code] = getSettingsForType(type.code)

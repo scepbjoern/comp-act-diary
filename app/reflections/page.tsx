@@ -4,10 +4,51 @@ import Image from 'next/image'
 import { TablerIcon } from '@/components/TablerIcon'
 import { CameraPicker } from '@/components/CameraPicker'
 import { MicrophoneButton } from '@/components/MicrophoneButton'
-import { ImproveTextButton } from '@/components/ImproveTextButton'
 import { SaveBar } from '@/components/SaveBar'
 import { Toasts, useToasts } from '@/components/Toast'
 import { useSaveIndicator } from '@/components/SaveIndicator'
+import { IconSparkles } from '@tabler/icons-react'
+
+// Inline text improvement button (replaces ImproveTextButton)
+function InlineImproveButton({ text, onImprovedText, className }: { text: string; onImprovedText: (t: string) => void; className?: string }) {
+  const [isImproving, setIsImproving] = useState(false)
+
+  const handleImprove = async () => {
+    if (!text.trim()) return
+    setIsImproving(true)
+    try {
+      const response = await fetch('/api/journal-ai/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, typeCode: 'diary' }),
+      })
+      const data = await response.json()
+      if (response.ok && data.content) {
+        onImprovedText(data.content)
+      }
+    } catch (err) {
+      console.error('Text improvement failed:', err)
+    } finally {
+      setIsImproving(false)
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleImprove}
+      disabled={isImproving || !text.trim()}
+      title="Text mit KI verbessern"
+      className={className + ' disabled:opacity-50'}
+    >
+      {isImproving ? (
+        <span className="loading loading-spinner loading-xs" />
+      ) : (
+        <IconSparkles size={14} />
+      )}
+    </button>
+  )
+}
 
 type ReflectionKind = 'WEEK' | 'MONTH'
 
@@ -204,7 +245,7 @@ export default function ReflectionsPage() {
               <span>Was hat sich verändert?</span>
               <div className="flex items-center gap-2">
                 <MicrophoneButton onText={(t) => setChanged(prev => prev ? (prev + ' ' + t) : t)} className="pill text-xs" compact />
-                <ImproveTextButton text={changed} onImprovedText={(t) => setChanged(t)} className="pill text-xs" />
+                <InlineImproveButton text={changed} onImprovedText={(t) => setChanged(t)} className="pill text-xs" />
               </div>
             </div>
             <textarea value={changed} onChange={e => setChanged(e.target.value)} className="w-full bg-background border border-slate-700 rounded p-2" rows={3} />
@@ -214,7 +255,7 @@ export default function ReflectionsPage() {
               <span>Wofür bin ich dankbar?</span>
               <div className="flex items-center gap-2">
                 <MicrophoneButton onText={(t) => setGratitude(prev => prev ? (prev + ' ' + t) : t)} className="pill text-xs" compact />
-                <ImproveTextButton text={gratitude} onImprovedText={(t) => setGratitude(t)} className="pill text-xs" />
+                <InlineImproveButton text={gratitude} onImprovedText={(t) => setGratitude(t)} className="pill text-xs" />
               </div>
             </div>
             <textarea value={gratitude} onChange={e => setGratitude(e.target.value)} className="w-full bg-background border border-slate-700 rounded p-2" rows={3} />
@@ -224,7 +265,7 @@ export default function ReflectionsPage() {
               <span>Vorsätze</span>
               <div className="flex items-center gap-2">
                 <MicrophoneButton onText={(t) => setVows(prev => prev ? (prev + ' ' + t) : t)} className="pill text-xs" compact />
-                <ImproveTextButton text={vows} onImprovedText={(t) => setVows(t)} className="pill text-xs" />
+                <InlineImproveButton text={vows} onImprovedText={(t) => setVows(t)} className="pill text-xs" />
               </div>
             </div>
             <textarea value={vows} onChange={e => setVows(e.target.value)} className="w-full bg-background border border-slate-700 rounded p-2" rows={3} />
@@ -234,7 +275,7 @@ export default function ReflectionsPage() {
               <span>Sonstige Bemerkungen</span>
               <div className="flex items-center gap-2">
                 <MicrophoneButton onText={(t) => setRemarks(prev => prev ? (prev + ' ' + t) : t)} className="pill text-xs" compact />
-                <ImproveTextButton text={remarks} onImprovedText={(t) => setRemarks(t)} className="pill text-xs" />
+                <InlineImproveButton text={remarks} onImprovedText={(t) => setRemarks(t)} className="pill text-xs" />
               </div>
             </div>
             <textarea value={remarks} onChange={e => setRemarks(e.target.value)} className="w-full bg-background border border-slate-700 rounded p-2" rows={3} />
@@ -271,7 +312,7 @@ export default function ReflectionsPage() {
                         <span>Was hat sich verändert?</span>
                         <div className="flex items-center gap-2">
                           <MicrophoneButton onText={(t) => setEChanged(prev => prev ? (prev + ' ' + t) : t)} className="pill text-xs" compact />
-                          <ImproveTextButton text={eChanged} onImprovedText={(t) => setEChanged(t)} className="pill text-xs" />
+                          <InlineImproveButton text={eChanged} onImprovedText={(t) => setEChanged(t)} className="pill text-xs" />
                         </div>
                       </div>
                       <textarea value={eChanged} onChange={e => setEChanged(e.target.value)} className="w-full bg-background border border-slate-700 rounded p-2" rows={3} />
@@ -281,7 +322,7 @@ export default function ReflectionsPage() {
                         <span>Wofür bin ich dankbar?</span>
                         <div className="flex items-center gap-2">
                           <MicrophoneButton onText={(t) => setEGratitude(prev => prev ? (prev + ' ' + t) : t)} className="pill text-xs" compact />
-                          <ImproveTextButton text={eGratitude} onImprovedText={(t) => setEGratitude(t)} className="pill text-xs" />
+                          <InlineImproveButton text={eGratitude} onImprovedText={(t) => setEGratitude(t)} className="pill text-xs" />
                         </div>
                       </div>
                       <textarea value={eGratitude} onChange={e => setEGratitude(e.target.value)} className="w-full bg-background border border-slate-700 rounded p-2" rows={3} />
@@ -291,7 +332,7 @@ export default function ReflectionsPage() {
                         <span>Vorsätze</span>
                         <div className="flex items-center gap-2">
                           <MicrophoneButton onText={(t) => setEVows(prev => prev ? (prev + ' ' + t) : t)} className="pill text-xs" compact />
-                          <ImproveTextButton text={eVows} onImprovedText={(t) => setEVows(t)} className="pill text-xs" />
+                          <InlineImproveButton text={eVows} onImprovedText={(t) => setEVows(t)} className="pill text-xs" />
                         </div>
                       </div>
                       <textarea value={eVows} onChange={e => setEVows(e.target.value)} className="w-full bg-background border border-slate-700 rounded p-2" rows={3} />
@@ -301,7 +342,7 @@ export default function ReflectionsPage() {
                         <span>Sonstige Bemerkungen</span>
                         <div className="flex items-center gap-2">
                           <MicrophoneButton onText={(t) => setERemarks(prev => prev ? (prev + ' ' + t) : t)} className="pill text-xs" compact />
-                          <ImproveTextButton text={eRemarks} onImprovedText={(t) => setERemarks(t)} className="pill text-xs" />
+                          <InlineImproveButton text={eRemarks} onImprovedText={(t) => setERemarks(t)} className="pill text-xs" />
                         </div>
                       </div>
                       <textarea value={eRemarks} onChange={e => setERemarks(e.target.value)} className="w-full bg-background border border-slate-700 rounded p-2" rows={3} />

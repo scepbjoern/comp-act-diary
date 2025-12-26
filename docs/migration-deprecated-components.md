@@ -1,8 +1,8 @@
 # Migrationsplan: Deprecated Komponenten entfernen
 
-**Version:** 1.2
+**Version:** 2.0
 **Erstellt:** Dezember 2025
-**Status:** Phase 1 + 2 abgeschlossen
+**Status:** ✅ VOLLSTÄNDIG ABGESCHLOSSEN (Phase 1-5)
 
 ---
 
@@ -71,49 +71,36 @@ Die deprecated Komponenten werden aktuell an folgenden Stellen verwendet:
 
 **Abgeschlossen:** 26. Dezember 2025
 
-### Phase 3: Reflections-Page migrieren (Priorität: Mittel)
+### Phase 3: Reflections-Page migrieren (Priorität: Mittel) ✅ ABGESCHLOSSEN
 
 **Ziel:** `ImproveTextButton` und `TextImprovementDialog` aus Reflexions-Seite entfernen.
 
 **Schritte:**
-1. Analyse der bestehenden Implementierung
-2. Entscheiden: Journal AI-Pipeline nutzen oder simplified Lösung
-3. Inline-Verbesserungsfunktion implementieren
-4. Dialog-basierte Verbesserung durch direkten API-Call ersetzen
-5. Imports und Komponenten entfernen
+1. ✅ Analyse der bestehenden Implementierung (8 Verwendungen von ImproveTextButton)
+2. ✅ Inline `InlineImproveButton` Komponente erstellt
+3. ✅ Alle 8 ImproveTextButton-Verwendungen durch InlineImproveButton ersetzt
+4. ✅ Import entfernt
 
-**Aufwand:** ~60 Minuten
+**Abgeschlossen:** 26. Dezember 2025
 
-### Phase 4: API-Routen entfernen (Priorität: Niedrig)
-
-**Voraussetzung:** Alle Frontend-Verwendungen müssen zuerst migriert sein.
+### Phase 4: API-Routen entfernen (Priorität: Niedrig) ✅ ABGESCHLOSSEN
 
 **Schritte:**
-1. Sicherstellen, dass keine Referenzen mehr existieren:
-   ```bash
-   grep -r "improve-text" --include="*.ts" --include="*.tsx"
-   grep -r "improvement-prompts" --include="*.ts" --include="*.tsx"
-   ```
-2. `app/api/improve-text/route.ts` löschen
-3. `app/api/improvement-prompts/` Ordner löschen
-4. `lib/improvementPrompt.ts` löschen
+1. ✅ Keine Frontend-Referenzen mehr vorhanden
+2. ✅ `app/api/improve-text/route.ts` gelöscht
+3. ✅ `app/api/improvement-prompts/` Ordner gelöscht
+4. ✅ `lib/improvementPrompt.ts` gelöscht
 
-**Aufwand:** ~15 Minuten
+**Abgeschlossen:** 26. Dezember 2025
 
-### Phase 5: Komponenten-Dateien entfernen (Priorität: Niedrig)
-
-**Voraussetzung:** Alle Frontend-Verwendungen müssen zuerst migriert sein.
+### Phase 5: Komponenten-Dateien entfernen (Priorität: Niedrig) ✅ ABGESCHLOSSEN
 
 **Schritte:**
-1. Sicherstellen, dass keine Imports mehr existieren:
-   ```bash
-   grep -r "ImproveTextButton" --include="*.tsx"
-   grep -r "TextImprovementDialog" --include="*.tsx"
-   ```
-2. `components/ImproveTextButton.tsx` löschen
-3. `components/TextImprovementDialog.tsx` löschen
+1. ✅ Keine Imports mehr vorhanden
+2. ✅ `components/ImproveTextButton.tsx` gelöscht
+3. ✅ `components/TextImprovementDialog.tsx` gelöscht
 
-**Aufwand:** ~10 Minuten
+**Abgeschlossen:** 26. Dezember 2025
 
 ---
 
