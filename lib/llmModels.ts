@@ -1,25 +1,57 @@
 /**
- * Shared LLM model configuration
+ * Shared LLM model types and utilities
  * Used across all AI features (Text Improvement, Coach, Summary, etc.)
  */
 
+export type LLMProvider = 'openai' | 'togetherai'
+
 export type LLMModel = {
   id: string
+  modelId: string
   name: string
-  inputCost: string
-  outputCost: string
+  provider: LLMProvider
+  inputCost?: string | null
+  outputCost?: string | null
+  url?: string | null
+  bestFor?: string | null
+  sortOrder?: number
 }
 
-// Default models available - shared across all AI features
-export const DEFAULT_LLM_MODELS: LLMModel[] = [
-  { id: 'openai/gpt-oss-120b', name: 'GPT-OSS-120B', inputCost: '$0.15', outputCost: '$0.60' },
-  { id: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', name: 'Llama-3.3-70B-Instruct-Turbo', inputCost: '$0.88', outputCost: '$0.88' },
-  { id: 'deepcogito/cogito-v2-preview-llama-405B', name: 'Cogito-v2-Preview-Llama-405B', inputCost: '$3.50', outputCost: '$3.50' },
-  { id: 'meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8', name: 'Llama-4-Maverick-17B', inputCost: '$0.27', outputCost: '$0.85' },
-  { id: 'meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo', name: 'Meta-Llama-3.1-405B', inputCost: '$3.50', outputCost: '$3.50' },
-  { id: 'deepseek-ai/DeepSeek-R1', name: 'DeepSeek-R1', inputCost: '$3.00', outputCost: '$7.00' },
-  { id: 'moonshotai/Kimi-K2-Thinking', name: 'Kimi-K2-Thinking', inputCost: '$1.20', outputCost: '$4.00' },
-]
+/**
+ * Fallback default model ID used when no models are configured.
+ * This should be a model available via TogetherAI.
+ */
+export const FALLBACK_MODEL_ID = 'openai/gpt-oss-120b'
+export const FALLBACK_PROVIDER: LLMProvider = 'togetherai'
 
-// Get default model ID
-export const DEFAULT_MODEL_ID = DEFAULT_LLM_MODELS[0].id
+/**
+ * Check if a model ID belongs to OpenAI
+ * Used as fallback when provider is not explicitly set
+ */
+export function inferProvider(modelId: string): LLMProvider {
+  if (modelId.startsWith('gpt-') || modelId.startsWith('o1-') || modelId.startsWith('o3-')) {
+    return 'openai'
+  }
+  return 'togetherai'
+}
+
+/**
+ * Get the API key for a provider from environment variables
+ */
+export function getApiKeyForProvider(provider: LLMProvider): string | undefined {
+  if (provider === 'openai') {
+    return process.env.OPENAI_API_KEY
+  }
+  return process.env.TOGETHERAI_API_KEY
+}
+
+/**
+ * Validate that an API key exists for the given provider
+ */
+export function validateProviderApiKey(provider: LLMProvider): void {
+  const apiKey = getApiKeyForProvider(provider)
+  if (!apiKey) {
+    const envVar = provider === 'openai' ? 'OPENAI_API_KEY' : 'TOGETHERAI_API_KEY'
+    throw new Error(`Missing ${envVar} environment variable for provider: ${provider}`)
+  }
+}

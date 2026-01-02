@@ -244,6 +244,7 @@ model User {
   trashItems            Trash[]
   chatMethods           ChatMethod[]
   improvementPrompts    ImprovementPrompt[]
+  llmModels             LlmModel[]
 }
 
 /// Entity-Registry: Zentrale Tabelle für FK-basierte Polymorphie.
@@ -1556,4 +1557,43 @@ model ChatMethod {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+/// LLM-Modell: Benutzerspezifische KI-Modell-Konfiguration.
+/// Speichert verfügbare LLM-Modelle pro Benutzer mit Provider-Informationen.
+model LlmModel {
+  /// Eindeutige ID
+  id                      String   @id @default(uuid())
+  /// Besitzer-User
+  userId                  String
+  /// Modell-ID beim Provider (z.B. "gpt-4o", "meta-llama/Llama-3.3-70B-Instruct-Turbo")
+  modelId                 String
+  /// Anzeigename (z.B. "GPT-4o", "Llama-3.3-70B")
+  name                    String
+  /// Provider: "openai" oder "togetherai"
+  provider                String
+  /// Eingabekosten pro 1M Tokens (z.B. "$0.15")
+  inputCost               String?
+  /// Ausgabekosten pro 1M Tokens (z.B. "$0.60")
+  outputCost              String?
+  /// URL zur Modell-Dokumentation
+  url                     String?
+  /// Beschreibung, wofür sich das Modell besonders eignet
+  bestFor                 String?
+  /// Unterstützt das Modell reasoning_effort Parameter? (für OpenAI GPT-5 Serie)
+  supportsReasoningEffort Boolean  @default(false)
+  /// Standard reasoning_effort Wert ("minimal", "low", "medium", "high")
+  defaultReasoningEffort  String?
+  /// Sortierreihenfolge
+  sortOrder               Int      @default(0)
+  /// Erstellungszeitpunkt
+  createdAt               DateTime @default(now())
+  /// Letztes Update
+  updatedAt               DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Pro User nur ein Eintrag pro modelId
+  @@unique([userId, modelId])
+  @@index([userId, sortOrder])
 }

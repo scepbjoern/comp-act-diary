@@ -1,0 +1,146 @@
+{
+  "$schema": "./llm-models-schema.json",
+  "description": "Standard-LLM-Modelle für comp-act-diary. Diese Datei wird als Basis für neue Benutzerkonten verwendet und kann über 'Standard-Modelle synchronisieren' in den Einstellungen geladen werden.",
+  "models": [
+    {
+      "id": "gpt-5.2",
+      "name": "GPT-5.2",
+      "provider": "openai",
+      "inputCost": "$2.00",
+      "outputCost": "$8.00",
+      "url": "https://platform.openai.com/docs/models/gpt-5.2",
+      "best_for": "Flaggschiff-Modell für komplexe psychologische Analysen, tiefgreifende Reflexionen und anspruchsvolle Coaching-Gespräche. Ideal für detaillierte Tagebuch-Auswertungen mit nuancierten Einsichten.",
+      "supportsReasoningEffort": true,
+      "defaultReasoningEffort": "medium"
+    },
+    {
+      "id": "gpt-5-mini",
+      "name": "GPT-5 Mini",
+      "provider": "openai",
+      "inputCost": "$0.30",
+      "outputCost": "$1.20",
+      "url": "https://platform.openai.com/docs/models/gpt-5-mini",
+      "best_for": "Ausgewogenes Verhältnis von Kosten und Qualität. Gut für tägliche Zusammenfassungen, strukturierte Reflexionen und mittlere Coach-Konversationen.",
+      "supportsReasoningEffort": true,
+      "defaultReasoningEffort": "medium"
+    },
+    {
+      "id": "gpt-5-nano",
+      "name": "GPT-5 Nano",
+      "provider": "openai",
+      "inputCost": "$0.10",
+      "outputCost": "$0.40",
+      "url": "https://platform.openai.com/docs/models/gpt-5-nano",
+      "best_for": "Schnellstes und günstigstes GPT-5 Modell. Ideal für einfache Titel-Generierung, kurze Zusammenfassungen und schnelle Coach-Antworten bei unkomplizierten Fragen.",
+      "supportsReasoningEffort": true,
+      "defaultReasoningEffort": "low"
+    },
+    {
+      "id": "gpt-4.1",
+      "name": "GPT-4.1",
+      "provider": "openai",
+      "inputCost": "$2.00",
+      "outputCost": "$8.00",
+      "url": "https://platform.openai.com/docs/models/gpt-4.1",
+      "best_for": "Bewährtes Modell mit exzellenter Coding- und Analysefähigkeit. Zuverlässig für strukturierte Tagebuch-Analysen und konsistente Coach-Gespräche.",
+      "supportsReasoningEffort": false
+    },
+    {
+      "id": "deepseek-ai/DeepSeek-V3.1",
+      "name": "DeepSeek-V3.1",
+      "provider": "togetherai",
+      "inputCost": "$0.60",
+      "outputCost": "$1.70",
+      "url": "https://api-docs.deepseek.com/news/news250821",
+      "best_for": "Hybrid-Modell mit Thinking/Non-Thinking Modi. Exzellent für komplexe psychologische Analysen, detaillierte Schlussfolgerungen und tiefgehende Reflexions-Gespräche im Coach-Bereich.",
+      "supportsReasoningEffort": false
+    },
+    {
+      "id": "zai-org/GLM-4.6",
+      "name": "GLM-4.6",
+      "provider": "togetherai",
+      "inputCost": "$0.60",
+      "outputCost": "$2.20",
+      "url": "https://docs.z.ai/guides/llm/glm-4.6",
+      "best_for": "Starkes multilinguales Modell. Gut für deutsche Tagebucheinträge, differenzierte Zusammenfassungen und empathische Coach-Konversationen mit kulturellem Verständnis.",
+      "supportsReasoningEffort": false
+    },
+    {
+      "id": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+      "name": "Llama-3.3-70B-Instruct-Turbo",
+      "provider": "togetherai",
+      "inputCost": "$0.88",
+      "outputCost": "$0.88",
+      "url": "https://www.llama.com/docs/model-cards-and-prompt-formats/llama3_3/",
+      "best_for": "Schnelle Inferenz mit guter Qualität. Ideal für tägliche Zusammenfassungen, strukturierte Eintrags-Analysen und responsive Coach-Gespräche.",
+      "supportsReasoningEffort": true,
+      "defaultReasoningEffort": "none"
+    },
+    {
+      "id": "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
+      "name": "Llama-4-Maverick-17B",
+      "provider": "togetherai",
+      "inputCost": "$0.27",
+      "outputCost": "$0.85",
+      "url": "https://ai.meta.com/blog/llama-4-multimodal-intelligence/",
+      "best_for": "Kostengünstiger Allrounder. Effizient für einfache Titel-Generierung, kurze Zusammenfassungen und schnelle Coach-Antworten bei alltäglichen Themen.",
+      "supportsReasoningEffort": true,
+      "defaultReasoningEffort": "none"
+    },
+    {
+      "id": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
+      "name": "Meta-Llama-3.1-405B",
+      "provider": "togetherai",
+      "inputCost": "$3.50",
+      "outputCost": "$3.50",
+      "url": "https://ai.meta.com/blog/meta-llama-3-1/",
+      "best_for": "Premium Open-Source Modell. Hervorragend für umfassende psychologische Analysen, komplexe Reflexions-Gespräche und tiefgreifende Tagebuch-Auswertungen.",
+      "supportsReasoningEffort": true,
+      "defaultReasoningEffort": "none"
+    },
+    {
+      "id": "deepseek-ai/DeepSeek-R1",
+      "name": "DeepSeek-R1",
+      "provider": "togetherai",
+      "inputCost": "$3.00",
+      "outputCost": "$7.00",
+      "url": "https://github.com/deepseek-ai/DeepSeek-R1",
+      "best_for": "Spezialisiert auf Reasoning und Schlussfolgerungen. Optimal für komplexe psychologische Muster-Erkennung, Ursachen-Analysen und strukturierte Reflexions-Prozesse.",
+      "supportsReasoningEffort": true,
+      "defaultReasoningEffort": "medium"
+    },
+    {
+      "id": "moonshotai/Kimi-K2-Thinking",
+      "name": "Kimi-K2-Thinking",
+      "provider": "togetherai",
+      "inputCost": "$1.20",
+      "outputCost": "$4.00",
+      "url": "https://moonshotai.github.io/Kimi-K2/thinking.html",
+      "best_for": "Thinking-Modell für Schritt-für-Schritt Analysen. Ideal für strukturierte Problemlösungen im Coach-Bereich und nachvollziehbare psychologische Einschätzungen.",
+      "supportsReasoningEffort": true,
+      "defaultReasoningEffort": "medium"
+    },
+    {
+      "id": "deepcogito/cogito-v2-preview-llama-405B",
+      "name": "Cogito-v2-Preview-405B",
+      "provider": "togetherai",
+      "inputCost": "$3.50",
+      "outputCost": "$3.50",
+      "url": "https://www.deepcogito.com/research/cogito-v2-preview",
+      "best_for": "Reasoning-optimiertes Modell. Exzellent für tiefgreifende psychologische Analysen, komplexe Zusammenhänge in Tagebüchern erkennen und reflektierte Coach-Gespräche.",
+      "supportsReasoningEffort": true,
+      "defaultReasoningEffort": "medium"
+    },
+    {
+      "id": "openai/gpt-oss-120b",
+      "name": "GPT-OSS-120B",
+      "provider": "togetherai",
+      "inputCost": "$0.15",
+      "outputCost": "$0.60",
+      "url": "https://openai.com/index/introducing-gpt-oss/",
+      "best_for": "Open-Weights Reasoning-Modell von OpenAI. Hervorragend für komplexe logische Schlüsse, detaillierte Tagebuch-Analysen und anspruchsvolle Coach-Interaktionen bei hoher Effizienz.",
+      "supportsReasoningEffort": true,
+      "defaultReasoningEffort": "medium"
+    }
+  ]
+}

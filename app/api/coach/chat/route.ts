@@ -12,9 +12,10 @@
 
 import { streamText, convertToModelMessages } from 'ai'
 import { createTogetherAI } from '@ai-sdk/togetherai'
+import { createOpenAI } from '@ai-sdk/openai'
 import { NextRequest } from 'next/server'
 import { getPrisma } from '@/lib/prisma'
-import { DEFAULT_MODEL_ID } from '@/lib/llmModels'
+import { FALLBACK_MODEL_ID, inferProvider, type LLMProvider } from '@/lib/llmModels'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -37,6 +38,24 @@ async function getChatMethod(chatMethodId: string, userId: string) {
   })
 }
 
+async function getModelConfig(modelId: string, userId: string): Promise<{
+  provider: LLMProvider
+  supportsReasoningEffort: boolean
+  defaultReasoningEffort: string | null
+}> {
+  const prisma = getPrisma()
+  const userModel = await (prisma as any).llmModel?.findFirst({
+    where: { userId, modelId },
+    select: { provider: true, supportsReasoningEffort: true, defaultReasoningEffort: true },
+  })
+  
+  return {
+    provider: (userModel?.provider as LLMProvider) || inferProvider(modelId),
+    supportsReasoningEffort: userModel?.supportsReasoningEffort ?? false,
+    defaultReasoningEffort: userModel?.defaultReasoningEffort ?? null,
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser(req)
@@ -44,7 +63,7 @@ export async function POST(req: NextRequest) {
       return new Response('Unauthorized', { status: 401 })
     }
 
-    const { messages, chatMethodId, modelId } = await req.json()
+    const { messages, chatMethodId, modelId, reasoningEffort } = await req.json()
 
     // Validate inputs
     if (!messages || !Array.isArray(messages)) {
@@ -61,12 +80,6 @@ export async function POST(req: NextRequest) {
       return new Response('Chat method not found', { status: 404 })
     }
 
-    // Initialize Together AI provider
-    // Uses TOGETHERAI_API_KEY or falls back to TOGETHER_API_KEY
-    const together = createTogetherAI({
-      apiKey: process.env.TOGETHERAI_API_KEY || process.env.TOGETHER_API_KEY || '',
-    })
-
     // Convert messages to the format expected by the AI SDK
     const modelMessages = convertToModelMessages(messages)
 
@@ -76,19 +89,50 @@ export async function POST(req: NextRequest) {
     }
 
     // Use the provided model ID or fallback to default
-    const selectedModelId = modelId || DEFAULT_MODEL_ID
+    const selectedModelId = modelId || FALLBACK_MODEL_ID
+
+    // Get model configuration including provider and reasoning effort support
+    const modelConfig = await getModelConfig(selectedModelId, user.id)
+
+    // Initialize provider based on model configuration
+    let providerModel: any
+    const streamOptions: any = {
+      system: chatMethod.systemPrompt,
+      messages: modelMessages,
+    }
+
+    if (modelConfig.provider === 'openai') {
+      const openai = createOpenAI({
+        apiKey: process.env.OPENAI_API_KEY || '',
+      })
+      providerModel = openai(selectedModelId)
+      
+      // Add reasoning effort for OpenAI GPT-5 models
+      if (modelConfig.supportsReasoningEffort) {
+        const effort = reasoningEffort || modelConfig.defaultReasoningEffort || 'medium'
+        if (effort !== 'none') {
+          streamOptions.reasoning = { effort }
+        }
+      }
+    } else {
+      const together = createTogetherAI({
+        apiKey: process.env.TOGETHERAI_API_KEY || process.env.TOGETHER_API_KEY || '',
+      })
+      providerModel = together(selectedModelId)
+      
+      // Add reasoning effort for TogetherAI models that support it
+      if (modelConfig.supportsReasoningEffort) {
+        const effort = reasoningEffort || modelConfig.defaultReasoningEffort
+        if (effort && effort !== 'none') {
+          streamOptions.reasoning_effort = effort
+        }
+      }
+    }
 
     // Stream the response using the Vercel AI SDK
-    // The system prompt from the selected ChatMethod is injected here
     const result = await streamText({
-      model: together(selectedModelId),
-      system: chatMethod.systemPrompt, // System prompt from selected mode
-      messages: modelMessages,
-      // Future enhancements:
-      // - Add RAG context from ACT book
-      // - Add user's journal entries as context
-      // - Add memory for long-term conversation tracking
-      // - Add tools for specific actions (e.g., create reflection, log mood)
+      model: providerModel,
+      ...streamOptions,
     })
 
     // Return the streamed response using the new v5 format

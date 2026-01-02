@@ -15,7 +15,7 @@ import {
   formatDateForPrompt,
   type JournalAISettings,
 } from '@/lib/defaultPrompts'
-import { DEFAULT_MODEL_ID } from '@/lib/llmModels'
+import { FALLBACK_MODEL_ID, inferProvider, getApiKeyForProvider, type LLMProvider } from '@/lib/llmModels'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
     // Get user ID and settings
     const userId = await getCurrentUserId(req)
-    let titleSettings = getDefaultAISettings(DEFAULT_MODEL_ID).title
+    let titleSettings = getDefaultAISettings(FALLBACK_MODEL_ID).title
     let entryTypeName = 'Tagebucheintrag'
     let entryDate = new Date()
 
@@ -98,33 +98,45 @@ export async function POST(req: NextRequest) {
       '{{entryType}}': entryTypeName,
     })
 
-    // Determine provider from model ID
-    const isOpenAI = titleSettings.modelId.startsWith('gpt-') || titleSettings.modelId.includes('openai')
+    // Determine provider from model ID or user's DB config
+    let provider: LLMProvider = inferProvider(titleSettings.modelId)
+    
+    // Try to get provider from user's LLM model config
+    if (userId) {
+      const userModel = await (prisma as any).llmModel?.findFirst({
+        where: { userId, modelId: titleSettings.modelId },
+        select: { provider: true },
+      })
+      if (userModel?.provider) {
+        provider = userModel.provider as LLMProvider
+      }
+    }
+    
+    const apiKey = getApiKeyForProvider(provider)
+    if (!apiKey) {
+      throw new Error(`Missing API key for provider: ${provider}`)
+    }
     
     let title: string
+    const messages: Array<{ role: 'system' | 'user'; content: string }> = [
+      { role: 'system', content: interpolatedPrompt },
+      { role: 'user', content: text.substring(0, 1000) },
+    ]
 
-    if (isOpenAI) {
-      // Use OpenAI
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    if (provider === 'openai') {
+      const openai = new OpenAI({ apiKey })
       const completion = await openai.chat.completions.create({
-        model: titleSettings.modelId.replace('openai/', ''),
-        messages: [
-          { role: 'system', content: interpolatedPrompt },
-          { role: 'user', content: text.substring(0, 1000) },
-        ],
+        model: titleSettings.modelId,
+        messages,
         temperature: 0.7,
         max_tokens: 50,
       })
       title = completion.choices[0]?.message?.content?.trim() || 'Tagebucheintrag'
     } else {
-      // Use TogetherAI
-      const together = new Together({ apiKey: process.env.TOGETHERAI_API_KEY })
+      const together = new Together({ apiKey })
       const response = await together.chat.completions.create({
         model: titleSettings.modelId,
-        messages: [
-          { role: 'system', content: interpolatedPrompt },
-          { role: 'user', content: text.substring(0, 1000) },
-        ],
+        messages,
         max_tokens: 50,
         temperature: 0.7,
       })

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/prisma'
-import { DEFAULT_LLM_MODELS } from '@/lib/llmModels'
+import { FALLBACK_MODEL_ID } from '@/lib/llmModels'
 
-const DEFAULT_SUMMARY_MODEL = DEFAULT_LLM_MODELS[0].id
+const DEFAULT_SUMMARY_MODEL = FALLBACK_MODEL_ID
 const DEFAULT_SUMMARY_PROMPT = 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"'
 
 export const runtime = 'nodejs'

@@ -11,7 +11,7 @@ import {
   type JournalEntryTypeAISettings,
   getDefaultAISettings,
 } from '@/lib/defaultPrompts'
-import { DEFAULT_MODEL_ID } from '@/lib/llmModels'
+import { FALLBACK_MODEL_ID } from '@/lib/llmModels'
 
 // =============================================================================
 // TYPES
@@ -66,7 +66,7 @@ export function useAISettings(): UseAISettingsReturn {
 
   const getSettingsForType = useCallback((typeCode: string): JournalEntryTypeAISettings => {
     const typeSettings = settings[typeCode]
-    const defaults = getDefaultAISettings(DEFAULT_MODEL_ID)
+    const defaults = getDefaultAISettings(FALLBACK_MODEL_ID)
 
     if (!typeSettings) {
       return defaults
@@ -103,7 +103,7 @@ export function useAISettings(): UseAISettingsReturn {
       console.log('[useAISettings] updateSettingsForType called with:', { typeCode, newSettings })
 
       // Get defaults for fallback
-      const defaults = getDefaultAISettings(DEFAULT_MODEL_ID)
+      const defaults = getDefaultAISettings(FALLBACK_MODEL_ID)
       
       // Build complete settings for this type, using newSettings values directly
       const mergedSettings: JournalEntryTypeAISettings = {
@@ -207,7 +207,7 @@ export function useAISettings(): UseAISettingsReturn {
     typeCode: string,
     field: 'title' | 'content' | 'analysis' | 'summary'
   ): Promise<boolean> => {
-    const defaults = getDefaultAISettings(DEFAULT_MODEL_ID)
+    const defaults = getDefaultAISettings(FALLBACK_MODEL_ID)
     
     return updateSettingsForType(typeCode, {
       [field]: defaults[field],

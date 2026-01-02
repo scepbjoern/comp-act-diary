@@ -1,12 +1,13 @@
 "use client"
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import NextImage from 'next/image'
 import { SaveIndicator, useSaveIndicator } from '@/components/SaveIndicator'
 import { Icon } from '@/components/Icon'
 import { TablerIcon } from '@/components/TablerIcon'
+import { LlmModelManager } from '@/components/LlmModelManager'
 import { AIConfigSection } from '@/components/AIConfigSection'
-import { useRouter } from 'next/navigation'
-import { DEFAULT_LLM_MODELS, LLMModel } from '@/lib/llmModels'
+import { useLlmModels } from '@/hooks/useLlmModels'
 
 type Me = {
   id: string
@@ -21,7 +22,7 @@ type Me = {
     weekStart: string
     summaryModel?: string
     summaryPrompt?: string
-    customModels?: LLMModel[]
+    customModels?: any[]  // Legacy - now managed via LlmModel table
   } | null
 }
 
@@ -48,6 +49,7 @@ const STD_SYMPTOM_LABELS: Record<string, string> = {
 }
 
 export default function SettingsPage() {
+  const { models: llmModels } = useLlmModels()
   const router = useRouter()
   const { saving, savedAt, startSaving, doneSaving } = useSaveIndicator()
 
@@ -74,8 +76,11 @@ export default function SettingsPage() {
   const [stdSymptomIconDrafts, setStdSymptomIconDrafts] = useState<Record<string, string>>({})
   const [summaryModel, setSummaryModel] = useState('openai/gpt-oss-120b')
   const [summaryPrompt, setSummaryPrompt] = useState('Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
-  const [customModels, setCustomModels] = useState<LLMModel[]>([])
-  const [newModel, setNewModel] = useState({ id: '', name: '', inputCost: '', outputCost: '' })
+  
+  // Sort models alphabetically for summary selection
+  const sortedModelsForSummary = useMemo(() => {
+    return [...llmModels].sort((a, b) => a.name.localeCompare(b.name))
+  }, [llmModels])
 
   // Avatar cropper state
   const [avatarOpen, setAvatarOpen] = useState(false)
@@ -111,7 +116,6 @@ export default function SettingsPage() {
         setAutosaveIntervalSec(u.settings?.autosaveIntervalSec ?? 5)
         setSummaryModel(u.settings?.summaryModel || 'openai/gpt-oss-120b')
         setSummaryPrompt(u.settings?.summaryPrompt || 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
-        setCustomModels(u.settings?.customModels || [])
       }
       if (habitsRes.ok) {
         const data = await habitsRes.json()
@@ -433,21 +437,6 @@ export default function SettingsPage() {
     }
   }
 
-  async function saveModels(newModels: LLMModel[]) {
-    startSaving()
-    try {
-      const res = await fetch('/api/me', {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings: { customModels: newModels } })
-      })
-      if (res.ok) {
-        setCustomModels(newModels)
-      }
-    } finally {
-      doneSaving()
-    }
-  }
-
   async function addHabit() {
     const title = newHabit.trim()
     if (!title) return
@@ -510,10 +499,10 @@ export default function SettingsPage() {
         </h2>
         <form onSubmit={saveProfile} className="grid gap-3 max-w-md">
           <label className="text-sm text-gray-400">Anzeigename
-            <input className="w-full bg-background border border-slate-700 rounded px-2 py-1" value={displayName} onChange={e => setDisplayName(e.target.value)} />
+            <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={displayName} onChange={e => setDisplayName(e.target.value)} />
           </label>
           <label className="text-sm text-gray-400">Benutzername
-            <input className="w-full bg-background border border-slate-700 rounded px-2 py-1" value={username} onChange={e => setUsername(e.target.value)} />
+            <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={username} onChange={e => setUsername(e.target.value)} />
           </label>
           {profileError && <div className="alert alert-error"><span className="text-sm">{profileError}</span></div>}
           <div className="flex items-center gap-2">
@@ -525,7 +514,7 @@ export default function SettingsPage() {
         </form>
         {/* Avatar controls */}
         <div className="flex items-center gap-3 pt-2">
-          <div className="h-12 w-12 rounded-full overflow-hidden border border-slate-700 bg-surface flex items-center justify-center">
+          <div className="h-12 w-12 rounded-full overflow-hidden border border-base-300 bg-base-100 flex items-center justify-center">
             {me?.profileImageUrl ? (
               <NextImage src={me.profileImageUrl} alt="Avatar" width={48} height={48} className="h-full w-full object-cover" />
             ) : (
@@ -549,7 +538,7 @@ export default function SettingsPage() {
         <div className="flex items-center gap-3">
           <label className="inline-flex items-center gap-2 text-sm">
             <span>Theme</span>
-            <select value={theme} onChange={e => setTheme(e.target.value as 'dark' | 'bright')} className="bg-background border border-slate-700 rounded px-2 py-1">
+            <select value={theme} onChange={e => setTheme(e.target.value as 'dark' | 'bright')} className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm">
               <option value="dark">Dark</option>
               <option value="bright">Bright</option>
             </select>
@@ -569,11 +558,11 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
             <label className="md:col-span-4 text-sm">
               <div className="text-gray-400">Name</div>
-              <input className="w-full bg-background border border-slate-700 rounded px-2 py-1 text-sm" placeholder="Neue Gewohnheit…" value={newHabit} onChange={e => setNewHabit(e.target.value)} />
+              <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" placeholder="Neue Gewohnheit…" value={newHabit} onChange={e => setNewHabit(e.target.value)} />
             </label>
             <label className="text-sm">
               <div className="text-gray-400">Icon (Emoji oder Symbol)</div>
-              <input className="w-full bg-background border border-slate-700 rounded px-2 py-1 text-sm" placeholder="z. B. 😊 oder fitness_center" value={newHabitIcon} onChange={e => setNewHabitIcon(e.target.value)} />
+              <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" placeholder="z. B. 😊 oder fitness_center" value={newHabitIcon} onChange={e => setNewHabitIcon(e.target.value)} />
             </label>
             <div>
               <button className="pill" onClick={addHabit} disabled={!newHabit.trim()}>Hinzufügen</button>
@@ -599,10 +588,10 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-2 mt-2">
                   <label className="md:col-span-4 text-xs">
                     <div className="text-gray-400">Icon (Emoji oder Symbol)</div>
-                    <input className="w-full bg-background border border-slate-700 rounded px-2 py-1" value={habitIconDrafts[h.id] ?? (h.icon ?? '')} onChange={e => setHabitIconDrafts(d => ({ ...d, [h.id]: e.target.value }))} placeholder="z. B. 😊 oder fitness_center" />
+                    <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={habitIconDrafts[h.id] ?? (h.icon ?? '')} onChange={e => setHabitIconDrafts(d => ({ ...d, [h.id]: e.target.value }))} placeholder="z. B. 😊 oder fitness_center" />
                   </label>
                   <div className="flex items-end gap-2">
-                    <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-surface border border-slate-700"><Icon name={(habitIconDrafts[h.id] ?? h.icon) || ''} /></span>
+                    <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-base-100 border border-base-300"><Icon name={(habitIconDrafts[h.id] ?? h.icon) || ''} /></span>
                     <button className="pill" title="Icon speichern" aria-label="Icon speichern" onClick={() => saveHabitIcon(h.id, habitIconDrafts[h.id] ?? (h.icon ?? ''))}>
                       <TablerIcon name="save" />
                     </button>
@@ -624,21 +613,28 @@ export default function SettingsPage() {
         <div className="grid gap-3">
           <label className="inline-flex items-center gap-2 text-sm">
             <span>Autosave</span>
-            <select value={String(autosaveEnabled)} onChange={e => setAutosaveEnabled(e.target.value === 'true')} className="bg-background border border-slate-700 rounded px-2 py-1">
-              <option value="true">Aktiv</option>
-              <option value="false">Inaktiv</option>
-            </select>
+            <input
+              type="checkbox"
+              checked={autosaveEnabled}
+              onChange={e => setAutosaveEnabled(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <span className="text-sm">Automatisches Speichern beim Tippen</span>
           </label>
           <label className="inline-flex items-center gap-2 text-sm">
             <span>Intervall (Sek.)</span>
-            <input type="number" min={1} max={3600} value={autosaveIntervalSec} onChange={e => setAutosaveIntervalSec(Math.max(1, Math.min(3600, Number(e.target.value) || 1)))} className="w-28 bg-background border border-slate-700 rounded px-2 py-1" />
+            <input type="number" min={1} max={3600} value={autosaveIntervalSec} onChange={e => setAutosaveIntervalSec(Math.max(1, Math.min(3600, Number(e.target.value) || 1)))} className="w-28 bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" />
           </label>
           <div className="h-px bg-slate-800 my-2" />
           <div className="text-sm text-gray-400">Foto-Komprimierung & Auflösung (clientseitig, wird in diesem Browser gespeichert)</div>
           <div className="grid grid-cols-2 gap-3">
             <label className="text-sm">
               <div className="text-gray-400">Format</div>
-              <select value={imageSettings.format} onChange={e => setImageSettings(s => ({ ...s, format: e.target.value as ImageSettings['format'] }))} className="w-full bg-background border border-slate-700 rounded px-2 py-1">
+              <select
+                value={imageSettings.format}
+                onChange={e => setImageSettings(s => ({ ...s, format: e.target.value as ImageSettings['format'] }))}
+                className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
+              >
                 <option value="webp">WebP (empfohlen)</option>
                 <option value="jpeg">JPEG</option>
                 <option value="png">PNG</option>
@@ -646,15 +642,15 @@ export default function SettingsPage() {
             </label>
             <label className="text-sm">
               <div className="text-gray-400">Qualität</div>
-              <input type="number" min={1} max={100} value={imageSettings.quality} onChange={e => setImageSettings(s => ({ ...s, quality: Math.max(1, Math.min(100, Number(e.target.value) || 80)) }))} className="w-full bg-background border border-slate-700 rounded px-2 py-1" />
+              <input type="number" min={1} max={100} value={imageSettings.quality} onChange={e => setImageSettings(s => ({ ...s, quality: Math.max(1, Math.min(100, Number(e.target.value) || 80)) }))} className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" />
             </label>
             <label className="text-sm">
               <div className="text-gray-400">Max. Breite</div>
-              <input type="number" min={100} max={8000} value={imageSettings.maxWidth} onChange={e => setImageSettings(s => ({ ...s, maxWidth: Math.max(100, Math.min(8000, Number(e.target.value) || 1600)) }))} className="w-full bg-background border border-slate-700 rounded px-2 py-1" />
+              <input type="number" min={100} max={8000} value={imageSettings.maxWidth} onChange={e => setImageSettings(s => ({ ...s, maxWidth: Math.max(100, Math.min(8000, Number(e.target.value) || 1600)) }))} className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" />
             </label>
             <label className="text-sm">
               <div className="text-gray-400">Max. Höhe</div>
-              <input type="number" min={100} max={8000} value={imageSettings.maxHeight} onChange={e => setImageSettings(s => ({ ...s, maxHeight: Math.max(100, Math.min(8000, Number(e.target.value) || 1600)) }))} className="w-full bg-background border border-slate-700 rounded px-2 py-1" />
+              <input type="number" min={100} max={8000} value={imageSettings.maxHeight} onChange={e => setImageSettings(s => ({ ...s, maxHeight: Math.max(100, Math.min(8000, Number(e.target.value) || 1600)) }))} className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" />
             </label>
           </div>
           <div className="flex items-center gap-2">
@@ -664,106 +660,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* LLM Model Management */}
-      <div className="card p-4 space-y-3 max-w-xl">
-        <h2 className="font-medium">
-          <span className="inline-flex items-center gap-1">
-            <TablerIcon name="robot" />
-            <span>KI-Modellverwaltung</span>
-          </span>
-        </h2>
-        <div className="space-y-3">
-          <div className="text-sm text-gray-500">
-            Hier kannst du eigene KI-Modelle hinzufügen, die dann in allen KI-Funktionen zur Verfügung stehen.
-          </div>
-          
-          {/* Add new model */}
-          <div className="border border-base-300 rounded-lg p-3 space-y-2 bg-base-100/50">
-            <h3 className="text-sm font-medium">Neues Modell hinzufügen</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <input
-                type="text"
-                placeholder="Modell ID (z.B. openai/gpt-4)"
-                value={newModel.id}
-                onChange={(e) => setNewModel({ ...newModel, id: e.target.value })}
-                className="bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
-              />
-              <input
-                type="text"
-                placeholder="Anzeigename"
-                value={newModel.name}
-                onChange={(e) => setNewModel({ ...newModel, name: e.target.value })}
-                className="bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
-              />
-              <input
-                type="text"
-                placeholder="Input Preis (z.B. $0.50)"
-                value={newModel.inputCost}
-                onChange={(e) => setNewModel({ ...newModel, inputCost: e.target.value })}
-                className="bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
-              />
-              <input
-                type="text"
-                placeholder="Output Preis (z.B. $1.50)"
-                value={newModel.outputCost}
-                onChange={(e) => setNewModel({ ...newModel, outputCost: e.target.value })}
-                className="bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
-              />
-            </div>
-            <div className="flex justify-end">
-              <button
-                onClick={() => {
-                  if (newModel.id && newModel.name) {
-                    const updated = [...customModels, newModel]
-                    saveModels(updated)
-                    setNewModel({ id: '', name: '', inputCost: '', outputCost: '' })
-                  }
-                }}
-                className="btn btn-sm btn-primary"
-                disabled={!newModel.id || !newModel.name}
-              >
-                Hinzufügen
-              </button>
-            </div>
-          </div>
-
-          {/* Model list */}
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium">Verfügbare Modelle</h3>
-            <div className="space-y-1 max-h-60 overflow-y-auto">
-              {DEFAULT_LLM_MODELS.map((m) => (
-                <div key={m.id} className="flex items-center justify-between text-sm p-2 bg-base-100 rounded border border-base-200">
-                  <div>
-                    <div className="font-medium">{m.name}</div>
-                    <div className="text-xs text-gray-400 font-mono">{m.id}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{m.inputCost} / {m.outputCost}</div>
-                  </div>
-                  <span className="badge badge-sm badge-ghost">Standard</span>
-                </div>
-              ))}
-              {customModels.map((m, idx) => (
-                <div key={idx} className="flex items-center justify-between text-sm p-2 bg-base-100 rounded border border-base-200 border-l-4 border-l-primary">
-                  <div>
-                    <div className="font-medium">{m.name}</div>
-                    <div className="text-xs text-gray-400 font-mono">{m.id}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{m.inputCost} / {m.outputCost}</div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const updated = customModels.filter((_, i) => i !== idx)
-                      saveModels(updated)
-                    }}
-                    className="btn btn-ghost btn-xs text-error"
-                    title="Modell entfernen"
-                  >
-                    <TablerIcon name="trash" size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      <LlmModelManager startSaving={startSaving} doneSaving={doneSaving} saving={saving} savedAt={savedAt} />
 
       {/* Summary AI Settings */}
       <div className="card p-4 space-y-3 max-w-xl">
@@ -780,11 +677,11 @@ export default function SettingsPage() {
             <select
               value={summaryModel}
               onChange={(e) => setSummaryModel(e.target.value)}
-              className="w-full bg-base-100 border border-base-300 rounded px-3 py-2 text-sm"
+              className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
             >
-              {DEFAULT_LLM_MODELS.concat(customModels).map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({m.inputCost} input / {m.outputCost} output)
+              {sortedModelsForSummary.map((m) => (
+                <option key={m.modelId} value={m.modelId}>
+                  {m.name} ({m.inputCost || '-'} / {m.outputCost || '-'}) [{m.provider}]
                 </option>
               ))}
             </select>
@@ -796,7 +693,7 @@ export default function SettingsPage() {
               value={summaryPrompt}
               onChange={(e) => setSummaryPrompt(e.target.value)}
               rows={4}
-              className="w-full bg-base-100 border border-base-300 rounded px-3 py-2 text-sm font-mono"
+              className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm font-mono"
               placeholder="System-Prompt für die Zusammenfassung..."
             />
           </label>
@@ -829,11 +726,11 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
           <label className="md:col-span-4 text-sm">
             <div className="text-gray-400">Name</div>
-            <input className="w-full bg-background border border-slate-700 rounded px-2 py-1" value={newUserSymptom} onChange={e => setNewUserSymptom(e.target.value)} placeholder="z. B. Kopfschmerzen" />
+            <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={newUserSymptom} onChange={e => setNewUserSymptom(e.target.value)} placeholder="z. B. Kopfschmerzen" />
           </label>
           <label className="text-sm">
             <div className="text-gray-400">Icon (Emoji oder Symbol)</div>
-            <input className="w-full bg-background border border-slate-700 rounded px-2 py-1" value={newUserSymptomIcon} onChange={e => setNewUserSymptomIcon(e.target.value)} placeholder="z. B. 😊 oder mood" />
+            <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={newUserSymptomIcon} onChange={e => setNewUserSymptomIcon(e.target.value)} placeholder="z. B. 😊 oder mood" />
           </label>
           <div>
             <button className="pill" onClick={addUserSymptom} disabled={!newUserSymptom.trim()}>Hinzufügen</button>
@@ -852,9 +749,9 @@ export default function SettingsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <label className="text-xs">
-                      <input className="w-44 bg-background border border-slate-700 rounded px-2 py-1" value={current} onChange={e => setStdSymptomIconDrafts(d => ({ ...d, [type]: e.target.value }))} placeholder="Emoji/Symbol" />
+                      <input className="w-44 bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={current} onChange={e => setStdSymptomIconDrafts(d => ({ ...d, [type]: e.target.value }))} placeholder="Emoji/Symbol" />
                     </label>
-                    <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-surface border border-slate-700"><Icon name={current || ''} /></span>
+                    <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-base-100 border border-base-300"><Icon name={current || ''} /></span>
                     <button className="pill" title="Icon speichern" aria-label="Icon speichern" onClick={() => saveStdSymptomIcon(type, current)}>
                       <TablerIcon name="save" />
                     </button>
@@ -875,9 +772,9 @@ export default function SettingsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <label className="text-xs">
-                      <input className="w-44 bg-background border border-slate-700 rounded px-2 py-1" value={current} onChange={e => setUserSymptomIconDrafts(d => ({ ...d, [s.id]: e.target.value }))} placeholder="Emoji/Symbol" />
+                      <input className="w-44 bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={current} onChange={e => setUserSymptomIconDrafts(d => ({ ...d, [s.id]: e.target.value }))} placeholder="Emoji/Symbol" />
                     </label>
-                    <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-surface border border-slate-700"><Icon name={current || ''} /></span>
+                    <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-base-100 border border-base-300"><Icon name={current || ''} /></span>
                     <button className="pill" title="Icon speichern" aria-label="Icon speichern" onClick={() => saveUserSymptomIcon(s.id, current)}>
                       <TablerIcon name="save" />
                     </button>
@@ -902,11 +799,11 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
           <label className="md:col-span-2 text-sm">
             <div className="text-gray-400">Name</div>
-            <input className="w-full bg-background border border-slate-700 rounded px-2 py-1" value={newLinkName} onChange={e => setNewLinkName(e.target.value)} placeholder="z. B. Blog" />
+            <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={newLinkName} onChange={e => setNewLinkName(e.target.value)} placeholder="z. B. Blog" />
           </label>
           <label className="md:col-span-3 text-sm">
             <div className="text-gray-400">URL</div>
-            <input className="w-full bg-background border border-slate-700 rounded px-2 py-1" value={newLinkUrl} onChange={e => setNewLinkUrl(e.target.value)} placeholder="https://… oder /docs/…" />
+            <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={newLinkUrl} onChange={e => setNewLinkUrl(e.target.value)} placeholder="https://… oder /docs/…" />
           </label>
           <div>
             <button className="pill" onClick={addLink} disabled={!newLinkName.trim() || !newLinkUrl.trim()}>Hinzufügen</button>

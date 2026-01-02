@@ -15,7 +15,7 @@ import {
   IconSettings,
 } from '@tabler/icons-react'
 import { useAISettings } from '@/hooks/useAISettings'
-import { DEFAULT_LLM_MODELS } from '@/lib/llmModels'
+import { useLlmModels, LlmModelData } from '@/hooks/useLlmModels'
 
 // =============================================================================
 // TYPES
@@ -32,8 +32,8 @@ export interface AISettingsPopupProps {
 // HELPER
 // =============================================================================
 
-function getModelInfo(modelId: string): { name: string; inputCost: string; outputCost: string } {
-  const model = DEFAULT_LLM_MODELS.find((m) => m.id === modelId)
+function getModelInfo(modelId: string, models: LlmModelData[]): { name: string; inputCost: string; outputCost: string } {
+  const model = models.find((m) => m.modelId === modelId)
   return {
     name: model?.name || modelId.split('/').pop() || modelId,
     inputCost: model?.inputCost || '?',
@@ -58,6 +58,7 @@ export function AISettingsPopup({
 }: AISettingsPopupProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const { getSettingsForType, isLoading } = useAISettings()
+  const { models } = useLlmModels()
 
   const settings = getSettingsForType(typeCode)
 
@@ -131,7 +132,7 @@ export function AISettingsPopup({
                 </div>
                 <div className="text-sm text-base-content/70 pl-6">
                   {(() => {
-                    const info = getModelInfo(settings.content.modelId)
+                    const info = getModelInfo(settings.content.modelId, models)
                     return (
                       <div>
                         <span className="font-medium">Modell:</span>{' '}
@@ -157,7 +158,7 @@ export function AISettingsPopup({
                 </div>
                 <div className="text-sm text-base-content/70 pl-6">
                   {(() => {
-                    const info = getModelInfo(settings.analysis.modelId)
+                    const info = getModelInfo(settings.analysis.modelId, models)
                     return (
                       <div>
                         <span className="font-medium">Modell:</span>{' '}
@@ -183,7 +184,7 @@ export function AISettingsPopup({
                 </div>
                 <div className="text-sm text-base-content/70 pl-6">
                   {(() => {
-                    const info = getModelInfo(settings.summary.modelId)
+                    const info = getModelInfo(settings.summary.modelId, models)
                     return (
                       <div>
                         <span className="font-medium">Modell:</span>{' '}

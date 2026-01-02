@@ -58,6 +58,7 @@ import {
   IconBrain,
   IconMessage2,
   IconSend,
+  IconExternalLink,
 } from '@tabler/icons-react'
 
 // Mapping from old Material Icon names to Tabler Icons
@@ -153,6 +154,7 @@ const iconMap: Record<string, typeof IconSettings> = {
   book: IconBook,
   'message-2': IconMessage2,
   send: IconSend,
+  'external-link': IconExternalLink,
 }
 
 interface TablerIconProps {

@@ -24,7 +24,8 @@ import { DefaultChatTransport } from 'ai'
 import { TablerIcon } from '@/components/TablerIcon'
 import { MicrophoneButton } from '@/components/MicrophoneButton'
 
-import { DEFAULT_LLM_MODELS, DEFAULT_MODEL_ID, LLMModel } from '@/lib/llmModels'
+import { FALLBACK_MODEL_ID } from '@/lib/llmModels'
+import { useLlmModels } from '@/hooks/useLlmModels'
 
 type ChatMethod = {
   id: string
@@ -49,9 +50,14 @@ export default function CoachPage() {
   const [input, setInput] = useState('')
   const [loadingDiary, setLoadingDiary] = useState(false)
 
-  // Custom models loaded from user settings
-  const [customModels, setCustomModels] = useState<LLMModel[]>([])
-  const [selectedModelId, setSelectedModelId] = useState<string>(DEFAULT_MODEL_ID)
+  // Models loaded from database
+  const { models: llmModels, isLoading: modelsLoading } = useLlmModels()
+  const [selectedModelId, setSelectedModelId] = useState<string>(FALLBACK_MODEL_ID)
+  const [selectedReasoningEffort, setSelectedReasoningEffort] = useState<string>('medium')
+  
+  // Get the selected model to check if it supports reasoning effort
+  const selectedModel = llmModels.find(m => m.modelId === selectedModelId)
+  const supportsReasoningEffort = selectedModel?.supportsReasoningEffort ?? false
   
   const { messages, sendMessage, status, setMessages } = useChat({
     transport: new DefaultChatTransport({
@@ -78,12 +84,7 @@ export default function CoachPage() {
       const methodsData = await methodsRes.json()
       setChatMethods(methodsData.methods || [])
       
-      if (meRes.ok) {
-        const meData = await meRes.json()
-        if (meData.user?.settings?.customModels) {
-          setCustomModels(meData.user.settings.customModels)
-        }
-      }
+      // Models are now loaded via useLlmModels hook
       
       // Auto-select first method if available
       if (methodsData.methods && methodsData.methods.length > 0 && !selectedMethodId) {
@@ -195,6 +196,7 @@ export default function CoachPage() {
           body: {
             chatMethodId: selectedMethodId,
             modelId: selectedModelId,
+            reasoningEffort: selectedReasoningEffort,
           }
         })
       } else {
@@ -203,6 +205,7 @@ export default function CoachPage() {
           body: {
             chatMethodId: selectedMethodId,
             modelId: selectedModelId,
+            reasoningEffort: selectedReasoningEffort,
           }
         })
       }
@@ -212,6 +215,7 @@ export default function CoachPage() {
         body: {
           chatMethodId: selectedMethodId,
           modelId: selectedModelId,
+          reasoningEffort: selectedReasoningEffort,
         }
       })
     } finally {
@@ -251,16 +255,42 @@ export default function CoachPage() {
 
           <select
             value={selectedModelId}
-            onChange={(e) => setSelectedModelId(e.target.value)}
+            onChange={(e) => {
+              setSelectedModelId(e.target.value)
+              // Reset reasoning effort when model changes
+              const newModel = llmModels.find(m => m.modelId === e.target.value)
+              if (newModel?.defaultReasoningEffort) {
+                setSelectedReasoningEffort(newModel.defaultReasoningEffort)
+              }
+            }}
             className="select select-bordered flex-1 max-w-xs"
-            title="Together AI Modell auswählen"
+            title="KI-Modell auswählen"
           >
-            {DEFAULT_LLM_MODELS.concat(customModels).map(model => (
-              <option key={model.id} value={model.id}>
-                {model.name} ({model.inputCost} input / {model.outputCost} output)
-              </option>
-            ))}
+            {llmModels.length === 0 ? (
+              <option value="">Lade Modelle...</option>
+            ) : (
+              llmModels.map(model => (
+                <option key={model.modelId} value={model.modelId}>
+                  {model.name} ({model.inputCost || '-'} / {model.outputCost || '-'}) [{model.provider}]
+                </option>
+              ))
+            )}
           </select>
+
+          {/* Reasoning Effort selector (only for supported models) */}
+          {supportsReasoningEffort && (
+            <select
+              value={selectedReasoningEffort}
+              onChange={(e) => setSelectedReasoningEffort(e.target.value)}
+              className="select select-bordered select-sm"
+              title="Reasoning-Aufwand (GPT-5)"
+            >
+              <option value="minimal">Minimal</option>
+              <option value="low">Niedrig</option>
+              <option value="medium">Mittel</option>
+              <option value="high">Hoch</option>
+            </select>
+          )}
 
           <button
             onClick={openCreateForm}
@@ -441,6 +471,7 @@ export default function CoachPage() {
                 body: {
                   chatMethodId: selectedMethodId,
                   modelId: selectedModelId,
+                  reasoningEffort: selectedReasoningEffort,
                 }
               }); 
               setInput(''); 

@@ -5,7 +5,14 @@
 
 import { PrismaClient } from '@prisma/client'
 import Together from 'together-ai'
-import { DEFAULT_MODEL_ID } from '@/lib/llmModels'
+import OpenAI from 'openai'
+import {
+  FALLBACK_MODEL_ID,
+  FALLBACK_PROVIDER,
+  inferProvider,
+  getApiKeyForProvider,
+  type LLMProvider,
+} from '@/lib/llmModels'
 import {
   interpolatePrompt,
   formatDateForPrompt,
@@ -85,15 +92,47 @@ export interface AffectedEntry {
 
 export class JournalAIService {
   private prisma: PrismaClient
-  private together: Together
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma
-    const apiKey = process.env.TOGETHERAI_API_KEY
-    if (!apiKey) {
-      throw new Error('Missing TOGETHERAI_API_KEY environment variable')
+  }
+
+  /**
+   * Gets the provider for a model from the database or infers it from the model ID.
+   */
+  private async getProviderForModel(modelId: string, userId: string): Promise<LLMProvider> {
+    // Try to find the model in user's configured models
+    const userModel = await (this.prisma as any).llmModel?.findFirst({
+      where: { userId, modelId },
+      select: { provider: true },
+    })
+    
+    if (userModel?.provider) {
+      return userModel.provider as LLMProvider
     }
-    this.together = new Together({ apiKey })
+    
+    // Fallback: infer provider from model ID
+    return inferProvider(modelId)
+  }
+
+  /**
+   * Gets model configuration including reasoning effort support from the database.
+   */
+  private async getModelConfig(modelId: string, userId: string): Promise<{
+    provider: LLMProvider
+    supportsReasoningEffort: boolean
+    defaultReasoningEffort: string | null
+  }> {
+    const userModel = await (this.prisma as any).llmModel?.findFirst({
+      where: { userId, modelId },
+      select: { provider: true, supportsReasoningEffort: true, defaultReasoningEffort: true },
+    })
+    
+    return {
+      provider: (userModel?.provider as LLMProvider) || inferProvider(modelId),
+      supportsReasoningEffort: userModel?.supportsReasoningEffort ?? false,
+      defaultReasoningEffort: userModel?.defaultReasoningEffort ?? null,
+    }
   }
 
   /**
@@ -141,6 +180,7 @@ export class JournalAIService {
       modelId,
       systemPrompt: interpolatedPrompt,
       userMessage: inputText,
+      userId,
     })
 
     // Update entry with new content and contentUpdatedAt
@@ -177,7 +217,7 @@ export class JournalAIService {
 
     const settings = entryType
       ? await this.getSettingsForEntry(entryType.id, userId)
-      : getDefaultAISettings(DEFAULT_MODEL_ID)
+      : getDefaultAISettings(FALLBACK_MODEL_ID)
 
     const { modelId, prompt } = settings.content
 
@@ -193,6 +233,7 @@ export class JournalAIService {
       modelId,
       systemPrompt: interpolatedPrompt,
       userMessage: text,
+      userId,
     })
 
     return {
@@ -245,6 +286,7 @@ export class JournalAIService {
       modelId,
       systemPrompt: interpolatedPrompt,
       userMessage: entry.content,
+      userId,
     })
 
     // Update entry with analysis
@@ -303,6 +345,7 @@ export class JournalAIService {
       modelId,
       systemPrompt: interpolatedPrompt,
       userMessage: entry.content,
+      userId,
     })
 
     // Update entry with summary
@@ -435,6 +478,7 @@ export class JournalAIService {
       modelId,
       systemPrompt: interpolatedPrompt,
       userMessage: entry.content.substring(0, 1000),
+      userId,
     })
 
     // Update entry with new title
@@ -665,7 +709,7 @@ export class JournalAIService {
     })
 
     if (!entryType) {
-      return getDefaultAISettings(DEFAULT_MODEL_ID)
+      return getDefaultAISettings(FALLBACK_MODEL_ID)
     }
 
     // Check if user has settings for this type
@@ -673,7 +717,7 @@ export class JournalAIService {
 
     if (typeSettings) {
       // Merge with defaults to ensure all fields exist
-      const defaults = getDefaultAISettings(DEFAULT_MODEL_ID)
+      const defaults = getDefaultAISettings(FALLBACK_MODEL_ID)
       return {
         title: {
           modelId: typeSettings.title?.modelId || defaults.title.modelId,
@@ -694,33 +738,83 @@ export class JournalAIService {
       }
     }
 
-    return getDefaultAISettings(DEFAULT_MODEL_ID)
+    return getDefaultAISettings(FALLBACK_MODEL_ID)
   }
 
   /**
-   * Calls the LLM via Together AI.
+   * Calls the LLM via the appropriate provider (OpenAI or TogetherAI).
+   * Supports reasoning_effort parameter for OpenAI GPT-5 series models.
    */
   private async callLLM(params: {
     modelId: string
     systemPrompt: string
     userMessage: string
+    userId: string
+    reasoningEffort?: string
   }): Promise<{ text: string; tokensUsed: number }> {
-    const { modelId, systemPrompt, userMessage } = params
+    const { modelId, systemPrompt, userMessage, userId, reasoningEffort } = params
+    
+    const modelConfig = await this.getModelConfig(modelId, userId)
+    const apiKey = getApiKeyForProvider(modelConfig.provider)
+    
+    if (!apiKey) {
+      throw new Error(`Missing API key for provider: ${modelConfig.provider}`)
+    }
 
-    const response = await this.together.chat.completions.create({
-      model: modelId,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage },
-      ],
-      max_tokens: 4096,
-      temperature: 0.7,
-    })
+    const messages: Array<{ role: 'system' | 'user'; content: string }> = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage },
+    ]
 
-    const text = response.choices?.[0]?.message?.content || ''
-    const tokensUsed = response.usage?.total_tokens || 0
-
-    return { text, tokensUsed }
+    if (modelConfig.provider === 'openai') {
+      const openai = new OpenAI({ apiKey })
+      
+      // Build request options
+      const requestOptions: Parameters<typeof openai.chat.completions.create>[0] = {
+        model: modelId,
+        messages,
+        max_tokens: 4096,
+        temperature: 0.7,
+        stream: false as const,
+      }
+      
+      // Add reasoning_effort for models that support it (GPT-5 series)
+      if (modelConfig.supportsReasoningEffort) {
+        const effort = reasoningEffort || modelConfig.defaultReasoningEffort || 'medium'
+        if (effort !== 'none') {
+          // reasoning_effort is passed via the reasoning object for GPT-5 models
+          ;(requestOptions as any).reasoning = { effort }
+        }
+      }
+      
+      const response = await openai.chat.completions.create(requestOptions) as OpenAI.Chat.ChatCompletion
+      const text = response.choices?.[0]?.message?.content || ''
+      const tokensUsed = response.usage?.total_tokens || 0
+      return { text, tokensUsed }
+    } else {
+      const together = new Together({ apiKey })
+      
+      // Build request options
+      const requestOptions: any = {
+        model: modelId,
+        messages,
+        max_tokens: 4096,
+        temperature: 0.7,
+      }
+      
+      // Add reasoning_effort for TogetherAI models that support it
+      if (modelConfig.supportsReasoningEffort) {
+        const effort = reasoningEffort || modelConfig.defaultReasoningEffort
+        if (effort && effort !== 'none') {
+          requestOptions.reasoning_effort = effort
+        }
+      }
+      
+      const response = await together.chat.completions.create(requestOptions)
+      const text = response.choices?.[0]?.message?.content || ''
+      const tokensUsed = response.usage?.total_tokens || 0
+      return { text, tokensUsed }
+    }
   }
 }
 
