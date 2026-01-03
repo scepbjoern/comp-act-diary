@@ -47,6 +47,7 @@ export type ContactWithRelations = Prisma.ContactGetPayload<{
 export async function getContacts(
   userId: string,
   filter: Partial<ContactFilter & { summary?: boolean }> = {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<{ contacts: any[]; total: number }> {
   const {
     search,
@@ -62,7 +63,7 @@ export async function getContacts(
   } = filter
 
   // Base where clause
-  const where: any = {
+  const where: Prisma.ContactWhereInput = {
     userId,
     isArchived,
   }
@@ -98,31 +99,36 @@ export async function getContacts(
   }
 
   // Sort logic with tie-breaker for deterministic pagination
-  const orderBy: any = []
+  const orderBy: Prisma.ContactOrderByWithRelationInput[] = []
   if (sortBy === 'lastInteraction') {
-    orderBy.push({ updatedAt: sortOrder })
+    orderBy.push({ updatedAt: sortOrder as Prisma.SortOrder })
   } else {
-    const sortObj: any = {}
-    sortObj[sortBy] = sortOrder
-    orderBy.push(sortObj)
+    const sortObj: Record<string, Prisma.SortOrder> = {}
+    sortObj[sortBy] = sortOrder as Prisma.SortOrder
+    orderBy.push(sortObj as Prisma.ContactOrderByWithRelationInput)
   }
   orderBy.push({ id: 'asc' }) 
 
   // Selective inclusion based on summary mode
-  const include: any = summary ? {
+  const includeSummary = {
     location: true,
-  } : {
+  } as const
+
+  const includeFull = {
     relationsAsA: { include: { personB: true } },
     relationsAsB: { include: { personA: true } },
     interactions: { orderBy: { occurredAt: 'desc' }, take: 5 },
     tasks: { where: { status: 'PENDING' }, orderBy: { dueDate: 'asc' } },
     location: true,
-  }
+  } as const
+
+  const include = summary ? includeSummary : includeFull
 
   const [contacts, total] = await Promise.all([
     prisma.contact.findMany({
       where,
-      include,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      include: include as any, // Cast necessary due to conditional inclusion
       orderBy,
       take: limit,
       skip: offset,

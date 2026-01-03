@@ -22,6 +22,7 @@ type Me = {
     weekStart: string
     summaryModel?: string
     summaryPrompt?: string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     customModels?: any[]  // Legacy - now managed via LlmModel table
   } | null
 }

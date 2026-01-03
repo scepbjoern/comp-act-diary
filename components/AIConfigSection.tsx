@@ -14,10 +14,6 @@ import {
   IconClipboard,
   IconRefresh,
   IconHeading,
-  IconDownload,
-  IconTrash,
-  IconPlus,
-  IconRobot,
 } from '@tabler/icons-react'
 import { useAISettings } from '@/hooks/useAISettings'
 import { useLlmModels, LlmModelData } from '@/hooks/useLlmModels'
@@ -181,10 +177,10 @@ export function AIConfigSection() {
   }>>({})
 
   // Available journal entry types (currently just diary)
-  const journalEntryTypes: JournalEntryType[] = [
+  const journalEntryTypes: JournalEntryType[] = useMemo(() => [
     { code: 'diary', name: 'Tagebucheintrag', icon: '📓' },
     { code: 'meal', name: 'Mahlzeit', icon: '🍽️' },
-  ]
+  ], [])
 
   // Track if initial load has been done
   const initialLoadDone = useRef(false)
@@ -201,7 +197,7 @@ export function AIConfigSection() {
       setLocalSettings(newLocalSettings)
       setHasChanges(false)
     }
-  }, [isLoading, getSettingsForType])
+  }, [isLoading, getSettingsForType, journalEntryTypes])
 
   const toggleType = (code: string) => {
     const newExpanded = new Set(expandedTypes)

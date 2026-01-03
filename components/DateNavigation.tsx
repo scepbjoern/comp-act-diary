@@ -1,5 +1,4 @@
-import { Icon } from '@/components/Icon'
-import { fmtDmyFromYmd, shiftDate, shiftMonth } from '@/lib/date-utils'
+import { shiftDate, shiftMonth } from '@/lib/date-utils'
 
 interface DateNavigationProps {
   date: string

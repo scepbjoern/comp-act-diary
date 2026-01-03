@@ -139,7 +139,7 @@ export function LlmModelManager({ startSaving, doneSaving, saving, savedAt }: Ll
       outputCost: m.outputCost || '',
       url: m.url || '',
       supportsReasoningEffort: m.supportsReasoningEffort || false,
-      defaultReasoningEffort: (m.defaultReasoningEffort as any) || 'medium'
+      defaultReasoningEffort: m.defaultReasoningEffort || 'medium'
     })
     const form = document.getElementById('llm-form')
     if (form) form.scrollIntoView({ behavior: 'smooth' })

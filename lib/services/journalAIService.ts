@@ -8,7 +8,6 @@ import Together from 'together-ai'
 import OpenAI from 'openai'
 import {
   FALLBACK_MODEL_ID,
-  FALLBACK_PROVIDER,
   inferProvider,
   getApiKeyForProvider,
   type LLMProvider,
@@ -102,7 +101,7 @@ export class JournalAIService {
    */
   private async getProviderForModel(modelId: string, userId: string): Promise<LLMProvider> {
     // Try to find the model in user's configured models
-    const userModel = await (this.prisma as any).llmModel?.findFirst({
+    const userModel = await this.prisma.llmModel.findFirst({
       where: { userId, modelId },
       select: { provider: true },
     })
@@ -123,7 +122,7 @@ export class JournalAIService {
     supportsReasoningEffort: boolean
     defaultReasoningEffort: string | null
   }> {
-    const userModel = await (this.prisma as any).llmModel?.findFirst({
+    const userModel = await this.prisma.llmModel.findFirst({
       where: { userId, modelId },
       select: { provider: true, supportsReasoningEffort: true, defaultReasoningEffort: true },
     })
@@ -783,6 +782,7 @@ export class JournalAIService {
         const effort = reasoningEffort || modelConfig.defaultReasoningEffort || 'medium'
         if (effort !== 'none') {
           // reasoning_effort is passed via the reasoning object for GPT-5 models
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           ;(requestOptions as any).reasoning = { effort }
         }
       }
@@ -795,6 +795,7 @@ export class JournalAIService {
       const together = new Together({ apiKey })
       
       // Build request options
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const requestOptions: any = {
         model: modelId,
         messages,

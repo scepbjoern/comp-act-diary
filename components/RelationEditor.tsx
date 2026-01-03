@@ -75,7 +75,7 @@ export default function RelationEditor({
 
     const debounce = setTimeout(searchContacts, 300)
     return () => clearTimeout(debounce)
-  }, [searchQuery, contactId, existingRelations])
+  }, [searchQuery, contactId, existingRelations, selectedContact])
 
   const handleAddRelation = async () => {
     if (!selectedContact) return

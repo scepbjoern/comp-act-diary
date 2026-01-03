@@ -51,7 +51,7 @@ export default function CoachPage() {
   const [loadingDiary, setLoadingDiary] = useState(false)
 
   // Models loaded from database
-  const { models: llmModels, isLoading: modelsLoading } = useLlmModels()
+  const { models: llmModels } = useLlmModels()
   const [selectedModelId, setSelectedModelId] = useState<string>(FALLBACK_MODEL_ID)
   const [selectedReasoningEffort, setSelectedReasoningEffort] = useState<string>('medium')
   
@@ -76,7 +76,7 @@ export default function CoachPage() {
   const loadChatMethods = useCallback(async () => {
     try {
       setLoading(true)
-      const [methodsRes, meRes] = await Promise.all([
+      const [methodsRes] = await Promise.all([
         fetch('/api/coach/methods'),
         fetch('/api/me')
       ])

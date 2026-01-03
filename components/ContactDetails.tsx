@@ -50,6 +50,13 @@ interface ContactDetailsProps {
   contact: Contact
 }
 
+interface RelationWithPerson {
+  id: string
+  relationType: string
+  person: { id: string; name: string; slug: string }
+  direction: 'to' | 'from'
+}
+
 export default function ContactDetails({ contact }: ContactDetailsProps) {
   const router = useRouter()
   const [isFavorite, setIsFavorite] = useState(contact.isFavorite)
@@ -135,8 +142,8 @@ export default function ContactDetails({ contact }: ContactDetailsProps) {
   }
 
   const allRelations = useMemo(() => [
-    ...(contact.relationsAsA || []).map(r => ({ ...r, person: r.personB, direction: 'to' })),
-    ...(contact.relationsAsB || []).map(r => ({ ...r, person: r.personA, direction: 'from' })),
+    ...(contact.relationsAsA || []).map(r => ({ ...r, person: r.personB, direction: 'to' as const })),
+    ...(contact.relationsAsB || []).map(r => ({ ...r, person: r.personA, direction: 'from' as const })),
   ], [contact.relationsAsA, contact.relationsAsB])
 
   const handleToggleTask = async (taskId: string, currentStatus: string) => {
@@ -379,7 +386,7 @@ export default function ContactDetails({ contact }: ContactDetailsProps) {
               <p className="text-base-content/60 text-sm">Keine Beziehungen erfasst</p>
             ) : (
               <div className="space-y-2 mt-2">
-                {allRelations.map((rel: any) => (
+                {allRelations.map((rel: RelationWithPerson) => (
                   <Link
                     key={rel.id}
                     href={`/prm/${rel.person.slug}`}
