@@ -56,7 +56,8 @@ export async function POST(
       result.data.kind,
       result.data.notes || undefined,
       result.data.occurredAt,
-      result.data.journalEntryId || undefined
+      result.data.journalEntryId || undefined,
+      result.data.timeBoxId || undefined
     )
     
     return NextResponse.json({ success: true }, { status: 201 })

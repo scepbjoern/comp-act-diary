@@ -18,6 +18,7 @@ const DiaryEntriesAccordion = dynamic(() => import('@/components/DiaryEntriesAcc
 
 interface DiarySectionProps {
   date: string
+  timeBoxId?: string
   notes: DayNote[]
   newDiaryTitle: string
   newDiaryText: string
@@ -65,6 +66,7 @@ interface DiarySectionProps {
 
 export function DiarySection({
   date,
+  timeBoxId,
   notes,
   newDiaryTitle,
   newDiaryText,
@@ -372,6 +374,7 @@ export function DiarySection({
       {/* Interaction panel for linking contacts - always visible */}
       <DiaryInteractionPanel
         date={date}
+        timeBoxId={timeBoxId}
         onInteractionAdded={() => {}}
       />
 

@@ -23,6 +23,7 @@ interface Interaction {
 
 interface DiaryInteractionPanelProps {
   date: string // YYYY-MM-DD format
+  timeBoxId?: string
   onInteractionAdded?: () => void
 }
 
@@ -40,6 +41,7 @@ const INTERACTION_KIND_LABELS: Record<string, string> = {
 
 export default function DiaryInteractionPanel({
   date,
+  timeBoxId,
   onInteractionAdded,
 }: DiaryInteractionPanelProps) {
   const [interactions, setInteractions] = useState<Interaction[]>([])
@@ -54,12 +56,15 @@ export default function DiaryInteractionPanel({
   useEffect(() => {
     fetchInteractions()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date])
+  }, [date, timeBoxId])
 
   const fetchInteractions = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`/api/interactions?date=${date}`)
+      const url = timeBoxId 
+        ? `/api/interactions?timeBoxId=${timeBoxId}`
+        : `/api/interactions?date=${date}`
+      const res = await fetch(url)
       const data = await res.json()
       setInteractions(data.interactions || [])
     } catch (error) {
@@ -101,6 +106,7 @@ export default function DiaryInteractionPanel({
           kind,
           notes: notes || null,
           occurredAt: occurredAt.toISOString(),
+          timeBoxId: timeBoxId || undefined,
         }),
       })
 

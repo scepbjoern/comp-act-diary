@@ -50,6 +50,7 @@ export async function POST(
     // Get the journal entry to get the date
     const entry = await prisma.journalEntry.findFirst({
       where: { id: entryId, userId },
+      include: { timeBox: true },
     })
 
     if (!entry) {
@@ -61,11 +62,13 @@ export async function POST(
 
     if (mentions.length > 0) {
       // Create MENTION interactions
+      // Use the entry's timeBox startAt and timeBoxId
       await createMentionInteractions(
         userId,
         entryId,
         mentions.map(m => m.contactId),
-        entry.createdAt
+        entry.timeBox.startAt,
+        entry.timeBoxId
       )
     }
 

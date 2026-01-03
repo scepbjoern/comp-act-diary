@@ -16,23 +16,26 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const date = searchParams.get('date') // YYYY-MM-DD format
+    const timeBoxId = searchParams.get('timeBoxId')
 
-    if (!date) {
-      return NextResponse.json({ error: 'Datum erforderlich' }, { status: 400 })
+    const where: any = { userId }
+
+    if (timeBoxId) {
+      where.timeBoxId = timeBoxId
+    } else if (date) {
+      // Parse date and get start/end of day
+      const startOfDay = new Date(`${date}T00:00:00.000Z`)
+      const endOfDay = new Date(`${date}T23:59:59.999Z`)
+      where.occurredAt = {
+        gte: startOfDay,
+        lte: endOfDay,
+      }
+    } else {
+      return NextResponse.json({ error: 'Datum oder TimeBox-ID erforderlich' }, { status: 400 })
     }
 
-    // Parse date and get start/end of day
-    const startOfDay = new Date(`${date}T00:00:00.000Z`)
-    const endOfDay = new Date(`${date}T23:59:59.999Z`)
-
     const interactions = await prisma.interaction.findMany({
-      where: {
-        userId,
-        occurredAt: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-      },
+      where,
       include: {
         contact: {
           select: {

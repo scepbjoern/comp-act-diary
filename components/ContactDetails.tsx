@@ -429,19 +429,26 @@ export default function ContactDetails({ contact }: ContactDetailsProps) {
             </div>
             {contact.interactions && contact.interactions.length > 0 ? (
               <div className="space-y-2 mt-2">
-                {contact.interactions.slice(0, 5).map((interaction) => (
-                  <div key={interaction.id} className="flex justify-between items-start p-2 bg-base-200/50 rounded-lg">
-                    <div>
-                      <span className="badge badge-sm">{interaction.kind}</span>
-                      {interaction.notes && (
-                        <p className="text-sm mt-1 text-base-content/70">{interaction.notes}</p>
-                      )}
-                    </div>
-                    <span className="text-xs text-base-content/50">
-                      {format(new Date(interaction.occurredAt), 'd.M.yy', { locale: de })}
-                    </span>
-                  </div>
-                ))}
+                {contact.interactions.slice(0, 5).map((interaction) => {
+                  const dateStr = format(new Date(interaction.occurredAt), 'yyyy-MM-dd')
+                  return (
+                    <Link
+                      key={interaction.id}
+                      href={`/day/${dateStr}`}
+                      className="flex justify-between items-start p-2 bg-base-200/50 rounded-lg hover:bg-base-300/50 transition-colors cursor-pointer"
+                    >
+                      <div>
+                        <span className="badge badge-sm">{interaction.kind}</span>
+                        {interaction.notes && (
+                          <p className="text-sm mt-1 text-base-content/70">{interaction.notes}</p>
+                        )}
+                      </div>
+                      <span className="text-xs text-base-content/50">
+                        {format(new Date(interaction.occurredAt), 'd.M.yy', { locale: de })}
+                      </span>
+                    </Link>
+                  )
+                })}
               </div>
             ) : (
               <p className="text-base-content/60 text-sm">Keine Interaktionen vorhanden</p>

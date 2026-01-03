@@ -475,7 +475,8 @@ export async function createInteraction(
   kind: string,
   notes?: string,
   occurredAt?: Date,
-  journalEntryId?: string
+  journalEntryId?: string,
+  timeBoxId?: string
 ): Promise<void> {
   const contact = await prisma.contact.findFirst({
     where: { id: contactId, userId },
@@ -493,6 +494,7 @@ export async function createInteraction(
       notes,
       occurredAt: occurredAt || new Date(),
       journalEntryId,
+      timeBoxId,
     },
   })
 }

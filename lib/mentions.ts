@@ -75,7 +75,8 @@ export async function createMentionInteractions(
   userId: string,
   journalEntryId: string,
   contactIds: string[],
-  occurredAt: Date
+  occurredAt: Date,
+  timeBoxId?: string
 ): Promise<void> {
   // Remove duplicates
   const uniqueIds = [...new Set(contactIds)]
@@ -99,8 +100,25 @@ export async function createMentionInteractions(
           journalEntryId,
           kind: 'MENTION',
           occurredAt,
+          timeBoxId,
         },
       })
+    } else {
+      // Update existing if occurredAt or timeBoxId is different
+      // This helps fix data created before the date/timebox fixes
+      const needsUpdate = 
+        (timeBoxId && existing.timeBoxId !== timeBoxId) || 
+        (occurredAt.getTime() !== existing.occurredAt.getTime())
+
+      if (needsUpdate) {
+        await prisma.interaction.update({
+          where: { id: existing.id },
+          data: {
+            occurredAt,
+            timeBoxId: timeBoxId || existing.timeBoxId,
+          },
+        })
+      }
     }
   }
 }
@@ -385,35 +403,33 @@ export async function runBatchMentionDetection(
       totalMentionsFound += mentionsFound
 
       if (mentionsFound > 0) {
-        // Get unique contact IDs (deduplicated by findMentionsInText already, 
-        // but we also dedupe here for multiple occurrences of same contact)
+        // Use the TimeBox date as occurredAt, not entry.createdAt
+        // We call this even if mentions already exist to allow repairing occurredAt/timeBoxId
         const uniqueContactIds = [...new Set(mentions.map(m => m.contactId))]
+        const occurredAt = date || entry.createdAt
+        await createMentionInteractions(
+          userId,
+          entry.id,
+          uniqueContactIds,
+          occurredAt,
+          entry.timeBoxId
+        )
 
-        // Count existing mentions for this entry
+        // Count how many were actually NEW (not already existing)
+        // This is just for the result stats
         const existingMentions = await prisma.interaction.findMany({
           where: {
             userId,
             journalEntryId: entry.id,
             kind: 'MENTION',
+            createdAt: { lt: new Date(Date.now() - 1000) } // Rough way to exclude the ones just created/updated
           },
           select: { contactId: true },
         })
         const existingContactIds = new Set(existingMentions.map(m => m.contactId))
+        const newMentionsCount = uniqueContactIds.filter(id => !existingContactIds.has(id)).length
 
-        // Filter to only new contacts
-        const newContactIds = uniqueContactIds.filter(id => !existingContactIds.has(id))
-
-        // Create interactions for new mentions only
-        if (newContactIds.length > 0) {
-          await createMentionInteractions(
-            userId,
-            entry.id,
-            newContactIds,
-            entry.createdAt
-          )
-        }
-
-        totalMentionsCreated += newContactIds.length
+        totalMentionsCreated += newMentionsCount
 
         results.push({
           entryId: entry.id,
@@ -421,7 +437,7 @@ export async function runBatchMentionDetection(
           entryDate: dateStr,
           success: true,
           mentionsFound,
-          mentionsCreated: newContactIds.length,
+          mentionsCreated: newMentionsCount,
         })
       } else {
         results.push({

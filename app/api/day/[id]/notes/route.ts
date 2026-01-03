@@ -88,14 +88,16 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   }
 
   // Automatically detect and create mentions
+  // Use the TimeBox's startAt date as the occurrence date, not entry.createdAt
   try {
     const mentions = await findMentionsInText(day.userId, text)
-    if (mentions.length > 0) {
+    if (mentions.length > 0 && day.timeBox) {
       await createMentionInteractions(
         day.userId,
         entry.id,
         mentions.map(m => m.contactId),
-        entry.createdAt
+        day.timeBox.startAt,
+        day.timeBoxId
       )
     }
   } catch (mentionError) {

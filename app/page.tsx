@@ -21,7 +21,17 @@ import { ymd } from '@/lib/date-utils'
 import type { Day, InlineData } from '@/types/day'
 
 export default function HeutePage() {
-  const [date, setDate] = useState(() => ymd(new Date()))
+  const [date, setDate] = useState(() => {
+    // Check for navigation target from /day/[date] route
+    if (typeof window !== 'undefined') {
+      const targetDate = sessionStorage.getItem('navigateToDate')
+      if (targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+        sessionStorage.removeItem('navigateToDate')
+        return targetDate
+      }
+    }
+    return ymd(new Date())
+  })
   const [day, setDay] = useState<Day | null>(null)
   const [daysWithData, setDaysWithData] = useState<Set<string>>(new Set())
   const [reflectionDays, setReflectionDays] = useState<Set<string>>(new Set())
@@ -526,6 +536,7 @@ export default function HeutePage() {
 
           <DiarySection
             date={date}
+            timeBoxId={day.timeBoxId}
             notes={notes}
             newDiaryTitle={newDiaryTitle}
             newDiaryText={newDiaryText}

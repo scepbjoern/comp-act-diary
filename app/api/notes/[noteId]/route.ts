@@ -81,7 +81,8 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
             user.id,
             noteId,
             mentions.map(m => m.contactId),
-            entry.createdAt
+            entry.timeBox.startAt,
+            entry.timeBoxId
           )
         }
       } catch (mentionError) {
