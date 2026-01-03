@@ -50,12 +50,13 @@ enum TimeBoxKind {
 
 /// Art einer Taxonomie-Einheit
 enum TaxonomyKind {
-  CATEGORY  /// Hierarchische Kategorie (z.B. "Arbeit > Meetings")
-  TAG       /// Flaches Schlagwort
-  EMOTION   /// Emotion/Gefühl (z.B. "Freude", "Angst")
-  TOPIC     /// Thema (z.B. "Gesundheit", "Familie")
-  TRAIT     /// Persönlichkeitsmerkmal
-  LIFE_AREA /// Lebensbereich für ACT-Werte
+  CATEGORY      /// Hierarchische Kategorie (z.B. "Arbeit > Meetings")
+  TAG           /// Flaches Schlagwort
+  EMOTION       /// Emotion/Gefühl (z.B. "Freude", "Angst")
+  TOPIC         /// Thema (z.B. "Gesundheit", "Familie")
+  TRAIT         /// Persönlichkeitsmerkmal
+  LIFE_AREA     /// Lebensbereich für ACT-Werte
+  CONTACT_GROUP /// Google Contact Group / Kontakt-Label
 }
 
 /// Herkunft einer Taxonomie
@@ -146,13 +147,14 @@ enum SyncStatus {
 
 /// Typ eines Sync-Providers
 enum SyncProviderType {
-  PHOTOPRISM      /// Photoprism Fotoverwaltung
-  SAMSUNG_GALLERY /// Samsung Gallery
-  TOGGL           /// Toggl Zeiterfassung
-  GOOGLE_CALENDAR /// Google Kalender
-  APPLE_CALENDAR  /// Apple Kalender
-  SPOTIFY         /// Spotify Musikstreaming
-  LAST_FM         /// Last.fm Scrobbling
+  PHOTOPRISM       /// Photoprism Fotoverwaltung
+  SAMSUNG_GALLERY  /// Samsung Gallery
+  TOGGL            /// Toggl Zeiterfassung
+  GOOGLE_CALENDAR  /// Google Kalender
+  APPLE_CALENDAR   /// Apple Kalender
+  SPOTIFY          /// Spotify Musikstreaming
+  LAST_FM          /// Last.fm Scrobbling
+  GOOGLE_CONTACTS  /// Google Contacts
 }
 
 /// Art einer Interaktion mit einem Kontakt
@@ -165,6 +167,23 @@ enum InteractionKind {
   EMAIL     /// E-Mail
   LETTER    /// Brief
   SOCIAL    /// Social Media Interaktion
+  MENTION   /// Erwähnung in Journal-Eintrag
+}
+
+/// Status einer Aufgabe
+enum TaskStatus {
+  PENDING   /// Offen
+  COMPLETED /// Erledigt
+  CANCELLED /// Abgebrochen
+}
+
+/// Typ einer Benachrichtigung
+enum NotificationType {
+  GENERAL              /// Allgemeine Benachrichtigung
+  BIRTHDAY_REMINDER    /// Geburtstagserinnerung
+  SYNC_CONFLICT        /// Konflikt bei Synchronisation
+  SYNC_ERROR           /// Fehler bei Synchronisation
+  CONTACT_MATCH_REQUIRED /// Manuelle Zuordnung erforderlich
 }
 
 /// Art eines POI (Point of Interest)
@@ -245,6 +264,8 @@ model User {
   chatMethods           ChatMethod[]
   improvementPrompts    ImprovementPrompt[]
   llmModels             LlmModel[]
+  tasks                 Task[]
+  notifications         Notification[]
 }
 
 /// Entity-Registry: Zentrale Tabelle für FK-basierte Polymorphie.
@@ -491,6 +512,7 @@ model JournalEntry {
 
   exerciseSessions ExerciseSession[]
   locationVisits   LocationVisit[]
+  interactions     Interaction[]
 
   @@index([userId, typeId])
   @@index([timeBoxId])
@@ -836,44 +858,75 @@ model Tagging {
 /// Kontakt: Person aus dem sozialen Umfeld.
 model Contact {
   /// Eindeutige ID (= Entity.id)
-  id                String    @id @default(uuid())
+  id                 String    @id @default(uuid())
   /// Besitzer-User
-  userId            String
+  userId             String
   /// URL-freundlicher Slug
-  slug              String
-  /// Vollständiger Name
-  name              String
+  slug               String
+  /// Vollständiger Name (Display Name)
+  name               String
+  /// Vorname (optional)
+  givenName          String?
+  /// Nachname (optional)
+  familyName         String?
   /// Spitzname (optional)
-  nickname          String?
-  /// E-Mail-Adresse (optional)
-  email             String?
-  /// Telefonnummer (optional)
-  phone             String?
+  nickname           String?
+  /// Private E-Mail-Adresse (optional)
+  emailPrivate       String?
+  /// Geschäftliche E-Mail-Adresse (optional)
+  emailWork          String?
+  /// Private Telefonnummer (optional)
+  phonePrivate       String?
+  /// Geschäftliche Telefonnummer (optional)
+  phoneWork          String?
+  /// Private Adresse, formatiert (optional)
+  addressHome        String?
+  /// Geschäftsadresse, formatiert (optional)
+  addressWork        String?
+  /// Firma/Arbeitgeber (optional)
+  company            String?
+  /// Position/Jobtitel (optional)
+  jobTitle           String?
   /// Notizen (optional, Markdown)
-  notes             String?
+  notes              String?
   /// Geburtstag (optional)
-  birthday          DateTime?
+  birthday           DateTime?
   /// Datum des ersten Treffens (optional)
-  firstMetAt        DateTime?
+  firstMetAt         DateTime?
   /// Beziehungsintensität (1-5, optional)
-  relationshipLevel Int?
+  relationshipLevel  Int?
   /// Archiviert?
-  isArchived        Boolean   @default(false)
+  isArchived         Boolean   @default(false)
+  /// Favorit?
+  isFavorite         Boolean   @default(false)
+  /// Primäre Website (optional)
+  websiteUrl         String?
+  /// Social Media URLs als JSON Array [{type, url}]
+  socialUrls         Json?
+  /// Google People API Resource Name (z.B. "people/c12345")
+  googleResourceName String?
+  /// Google ETag für Konflikt-Erkennung
+  googleEtag         String?
+  /// Profilbild-URL (von Google oder lokal)
+  photoUrl           String?
   /// Wohnort (optional)
-  locationId        String?
+  locationId         String?
   /// Erstellungszeitpunkt
-  createdAt         DateTime  @default(now())
+  createdAt          DateTime  @default(now())
   /// Letztes Update
-  updatedAt         DateTime  @updatedAt
+  updatedAt          DateTime  @updatedAt
 
   user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   location     Location?        @relation(fields: [locationId], references: [id])
   relationsAsA PersonRelation[] @relation("PersonA")
   relationsAsB PersonRelation[] @relation("PersonB")
   interactions Interaction[]
+  tasks        Task[]
 
   @@unique([userId, slug])
+  @@unique([userId, googleResourceName])
   @@index([userId, isArchived])
+  @@index([userId, isFavorite])
   @@index([locationId])
 }
 
@@ -908,31 +961,35 @@ model PersonRelation {
 }
 
 /// Interaktion: Kontakt mit einer Person.
-/// Beispiel: Telefonat, Treffen, E-Mail-Austausch.
+/// Beispiel: Telefonat, Treffen, E-Mail-Austausch, Journal-Erwähnung.
 model Interaction {
   /// Eindeutige ID
-  id         String   @id @default(uuid())
+  id             String   @id @default(uuid())
   /// Referenz auf den Kontakt
-  contactId  String
+  contactId      String
   /// Besitzer-User
-  userId     String
+  userId         String
   /// Zeitraum (optional)
-  timeBoxId  String?
+  timeBoxId      String?
+  /// Verknüpfter Journal-Eintrag (für kind=MENTION)
+  journalEntryId String?
   /// Art der Interaktion
-  kind       InteractionKind @default(GENERAL)
+  kind           InteractionKind @default(GENERAL)
   /// Notizen (optional)
-  notes      String?
+  notes          String?
   /// Zeitpunkt der Interaktion
-  occurredAt DateTime @default(now())
+  occurredAt     DateTime @default(now())
   /// Erstellungszeitpunkt
-  createdAt  DateTime @default(now())
+  createdAt      DateTime @default(now())
 
-  contact Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  timeBox TimeBox? @relation(fields: [timeBoxId], references: [id])
+  contact      Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeBox      TimeBox?      @relation(fields: [timeBoxId], references: [id])
+  journalEntry JournalEntry? @relation(fields: [journalEntryId], references: [id], onDelete: SetNull)
 
   @@index([userId, occurredAt])
   @@index([contactId])
+  @@index([journalEntryId])
 }
 
 /// Ort: Geografischer Ort (Wohnung, Restaurant, Reiseziel, etc.)
@@ -1005,6 +1062,70 @@ model LocationVisit {
   @@index([userId, timeBoxId])
   @@index([locationId])
   @@index([journalEntryId])
+}
+
+// =============================================================================
+// AUFGABEN & BENACHRICHTIGUNGEN
+// =============================================================================
+
+/// Aufgabe: Todo-Item, optional verknüpft mit Kontakt oder Entity.
+model Task {
+  /// Eindeutige ID
+  id          String     @id @default(uuid())
+  /// Besitzer-User
+  userId      String
+  /// Optionale Verknüpfung mit Entity (via Entity-Registry)
+  entityId    String?
+  /// Optionale Verknüpfung mit Kontakt
+  contactId   String?
+  /// Titel der Aufgabe
+  title       String
+  /// Beschreibung (optional)
+  description String?
+  /// Fälligkeitsdatum (optional)
+  dueDate     DateTime?
+  /// Status der Aufgabe
+  status      TaskStatus @default(PENDING)
+  /// Erledigungszeitpunkt
+  completedAt DateTime?
+  /// Erstellungszeitpunkt
+  createdAt   DateTime   @default(now())
+  /// Letztes Update
+  updatedAt   DateTime   @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contact Contact? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([contactId])
+  @@index([dueDate])
+}
+
+/// Benachrichtigung: Systemnachricht an den Benutzer.
+model Notification {
+  /// Eindeutige ID
+  id         String           @id @default(uuid())
+  /// Besitzer-User
+  userId     String
+  /// Typ der Benachrichtigung
+  type       NotificationType @default(GENERAL)
+  /// Titel
+  title      String
+  /// Nachricht (optional)
+  message    String?
+  /// Zusätzliche Daten als JSON (typ-spezifisch)
+  data       Json?
+  /// Gelesen?
+  isRead     Boolean          @default(false)
+  /// Archivierungszeitpunkt (NULL = nicht archiviert)
+  archivedAt DateTime?
+  /// Erstellungszeitpunkt
+  createdAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, archivedAt])
+  @@index([userId, isRead])
 }
 
 // =============================================================================
@@ -1188,6 +1309,8 @@ model SyncProvider {
   credentialsEncrypted String?
   /// Provider-spezifische Einstellungen als JSON
   settings             Json?
+  /// Sync-Token für inkrementelle Synchronisation (Google People API)
+  syncToken            String?
   /// Ist der Provider aktiv?
   isActive             Boolean          @default(true)
   /// Letzter Sync-Zeitpunkt

@@ -77,7 +77,7 @@ const config: Config = {
         dark: {
           'primary': '#38bdf8',
           'primary-focus': '#0ea5e9',
-          'primary-content': '#0f172a',
+          'primary-content': '#ffffff',
           'base-100': '#0f172a',
           'base-200': '#1e293b',
           'base-300': '#334155',

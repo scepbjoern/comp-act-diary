@@ -10,9 +10,16 @@ import rehypeRaw from 'rehype-raw'
 import rehypeStringify from 'rehype-stringify'
 import { visit } from 'unist-util-visit'
 
+interface MentionContact {
+  id: string
+  slug: string
+  name: string
+}
+
 interface MarkdownRendererProps {
   markdown: string
   className?: string
+  mentionedContacts?: MentionContact[]
 }
 
 // Plugin to handle custom directives
@@ -102,7 +109,30 @@ function remarkCustomDirectives() {
   }
 }
 
-export function MarkdownRenderer({ markdown, className = '' }: MarkdownRendererProps) {
+// Convert @mentions to clickable links
+function processMentions(html: string, contacts: MentionContact[]): string {
+  if (!contacts || contacts.length === 0) return html
+  
+  let processedHtml = html
+  
+  // Sort contacts by name length (longest first) to avoid partial matches
+  const sortedContacts = [...contacts].sort((a, b) => b.name.length - a.name.length)
+  
+  for (const contact of sortedContacts) {
+    // Escape special regex characters in name
+    const escapedName = contact.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    // Match @Name or just the name (case-insensitive)
+    const regex = new RegExp(`@?\\b(${escapedName})\\b`, 'gi')
+    processedHtml = processedHtml.replace(regex, (_match) => {
+      // Don't replace if already inside an anchor tag
+      return `<a href="/prm/${contact.slug}" class="mention-link text-primary hover:underline font-medium">@${contact.name}</a>`
+    })
+  }
+  
+  return processedHtml
+}
+
+export function MarkdownRenderer({ markdown, className = '', mentionedContacts = [] }: MarkdownRendererProps) {
   const [html, setHtml] = useState('')
 
   useEffect(() => {
@@ -118,14 +148,21 @@ export function MarkdownRenderer({ markdown, className = '' }: MarkdownRendererP
           .use(rehypeStringify)
           .process(markdown || '')
         
-        setHtml(String(file))
+        let renderedHtml = String(file)
+        
+        // Process mentions if contacts are provided
+        if (mentionedContacts.length > 0) {
+          renderedHtml = processMentions(renderedHtml, mentionedContacts)
+        }
+        
+        setHtml(renderedHtml)
       } catch (error) {
         console.error('Markdown rendering error:', error)
         setHtml('<p>Error rendering markdown</p>')
       }
     }
     renderMarkdown()
-  }, [markdown])
+  }, [markdown, mentionedContacts])
 
   return (
     <div 

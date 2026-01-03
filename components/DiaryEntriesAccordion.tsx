@@ -6,6 +6,7 @@ import { MicrophoneButton } from './MicrophoneButton'
 import { CameraPicker } from './CameraPicker'
 import { AudioPlayerH5 } from './AudioPlayerH5'
 import { RichTextEditor } from './RichTextEditor'
+import { DiaryContentWithMentions } from './DiaryContentWithMentions'
 import { OriginalTranscriptPanel } from './OriginalTranscriptPanel'
 import { JournalEntrySection } from './JournalEntrySection'
 import { AISettingsPopup } from './AISettingsPopup'
@@ -410,7 +411,9 @@ export function DiaryEntriesAccordion({
                     onEdit={(newContent) => onUpdateContent?.(n.id, newContent)}
                     onGenerate={() => handleGenerateContent(n.id)}
                     onRegenerate={() => handleGenerateContent(n.id)}
-                  />
+                  >
+                    <DiaryContentWithMentions noteId={n.id} markdown={n.text} />
+                  </JournalEntrySection>
                 )}
                 
                 {/* Analysis Section (yellow background) */}
@@ -430,7 +433,7 @@ export function DiaryEntriesAccordion({
                   onRegenerate={() => handleGenerateAnalysis(n.id)}
                 />
                 
-                {/* Audio section */}
+                {/* Audio section - compact with inline delete */}
                 {n.audioFilePath && (
                   <div className="flex items-center gap-2">
                     <div className="flex-1">
@@ -449,7 +452,7 @@ export function DiaryEntriesAccordion({
                   </div>
                 )}
                 
-                {/* Original transcript (gray background, collapsed by default) */}
+                {/* Original transcript - lazy loaded with edit capability */}
                 {(n.audioFileId || n.originalTranscript) && (
                   <OriginalTranscriptPanel
                     noteId={n.id}
@@ -469,7 +472,7 @@ export function DiaryEntriesAccordion({
                   />
                 )}
                 
-                {/* Photos */}
+                {/* Photos - includes both uploaded photos and images from markdown */}
                 {(() => {
                   const textToScan = editingNoteId === n.id ? editingText : n.text
                   const markdownImages = extractImageUrls(textToScan)

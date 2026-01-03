@@ -69,6 +69,113 @@ const WEEKLY_REFLECTIONS = [
   'Diese Woche hatte ich an zwei Tagen leichte Rückfälle (Kaffee), aber insgesamt bin ich auf einem guten Weg. Nächste Woche möchte ich es besser machen.',
 ]
 
+// Schweizer Testdaten für Kontakte
+const SAMPLE_CONTACTS = [
+  {
+    name: 'Max Mustermann',
+    givenName: 'Max',
+    familyName: 'Mustermann',
+    nickname: 'Maxi',
+    emailPrivate: 'max.mustermann@gmail.com',
+    emailWork: 'max.mustermann@firma.ch',
+    phonePrivate: '+41 79 123 45 67',
+    phoneWork: '+41 44 987 65 43',
+    addressHome: 'Bahnhofstrasse 10, 8001 Zürich',
+    addressWork: 'Paradeplatz 1, 8001 Zürich',
+    company: 'Schweizer Bank AG',
+    jobTitle: 'Senior Consultant',
+    birthday: new Date(1985, 5, 15),
+    notes: 'Alter Schulfreund, arbeitet im Finanzsektor.',
+    isFavorite: true,
+  },
+  {
+    name: 'Anna Meier',
+    givenName: 'Anna',
+    familyName: 'Meier',
+    emailPrivate: 'anna.meier@bluewin.ch',
+    phonePrivate: '+41 78 234 56 78',
+    addressHome: 'Seestrasse 25, 8002 Zürich',
+    company: 'ETH Zürich',
+    jobTitle: 'Professorin für Informatik',
+    birthday: new Date(1980, 2, 22),
+    notes: 'Kennengelernt an einer Konferenz. Sehr interessante Gespräche über KI.',
+    isFavorite: true,
+  },
+  {
+    name: 'Peter Brunner',
+    givenName: 'Peter',
+    familyName: 'Brunner',
+    nickname: 'Peti',
+    emailPrivate: 'peter.brunner@sunrise.ch',
+    phonePrivate: '+41 76 345 67 89',
+    addressHome: 'Hauptstrasse 42, 3011 Bern',
+    birthday: new Date(1990, 8, 3),
+    notes: 'Cousin mütterlicherseits.',
+  },
+  {
+    name: 'Sarah Weber',
+    givenName: 'Sarah',
+    familyName: 'Weber',
+    emailPrivate: 'sarah.weber@gmail.com',
+    emailWork: 'sweber@startup.io',
+    phonePrivate: '+41 79 456 78 90',
+    phoneWork: '+41 44 111 22 33',
+    addressHome: 'Limmatquai 88, 8001 Zürich',
+    company: 'TechStartup GmbH',
+    jobTitle: 'CEO & Gründerin',
+    websiteUrl: 'https://sarahweber.ch',
+    socialUrls: JSON.stringify([
+      { type: 'linkedin', url: 'https://linkedin.com/in/sarahweber' },
+      { type: 'twitter', url: 'https://twitter.com/sarahweber' }
+    ]),
+    notes: 'Erfolgreiche Unternehmerin, guter Kontakt für Startup-Fragen.',
+    isFavorite: false,
+  },
+  {
+    name: 'Thomas Keller',
+    givenName: 'Thomas',
+    familyName: 'Keller',
+    emailPrivate: 'thomas.keller@gmx.ch',
+    phonePrivate: '+41 77 567 89 01',
+    addressHome: 'Bergweg 5, 6003 Luzern',
+    birthday: new Date(1975, 11, 8),
+    notes: 'Nachbar aus der alten Wohnung.',
+  },
+  {
+    name: 'Lisa Schmid',
+    givenName: 'Lisa',
+    familyName: 'Schmid',
+    emailPrivate: 'lisa.schmid@outlook.com',
+    phonePrivate: '+41 78 678 90 12',
+    addressHome: 'Rösslimatte 12, 4001 Basel',
+    company: 'Kantonsspital Basel',
+    jobTitle: 'Ärztin',
+    birthday: new Date(1988, 3, 28),
+    notes: 'Meine Hausärztin, sehr kompetent.',
+  },
+]
+
+// Beziehungen zwischen Kontakten
+const SAMPLE_RELATIONS = [
+  { personAIndex: 0, personBIndex: 2, relationType: 'Freund' },
+  { personAIndex: 1, personBIndex: 3, relationType: 'Kollegin' },
+  { personAIndex: 0, personBIndex: 1, relationType: 'Bekannter' },
+]
+
+// Beispiel-Tasks für Kontakte
+const SAMPLE_TASKS = [
+  { contactIndex: 0, title: 'Max zum Mittagessen einladen', dueDate: new Date(2025, 11, 20), status: 'PENDING' as const },
+  { contactIndex: 1, title: 'Fachbuch-Empfehlung nachfragen', dueDate: new Date(2025, 11, 15), status: 'COMPLETED' as const },
+  { contactIndex: 3, title: 'Startup-Pitch anschauen', dueDate: new Date(2025, 11, 10), status: 'PENDING' as const },
+  { contactIndex: 5, title: 'Termin für Checkup vereinbaren', dueDate: new Date(2025, 11, 25), status: 'PENDING' as const },
+]
+
+// Beispiel-Notifications
+const SAMPLE_NOTIFICATIONS = [
+  { type: 'BIRTHDAY_REMINDER' as const, title: 'Geburtstag: Max Mustermann', message: 'Max Mustermann hat am 15. Juni Geburtstag.' },
+  { type: 'GENERAL' as const, title: 'Willkommen bei PRM', message: 'Dein Personal Relationship Manager ist bereit.' },
+]
+
 const MONTHLY_REFLECTION = `
 # Monatsrückblick November 2025
 
@@ -93,6 +200,145 @@ const MONTHLY_REFLECTION = `
 - Neue Rezepte für fermentierte Lebensmittel ausprobieren
 - Meditation in den Alltag integrieren
 `
+
+async function seedContactsAndRelations(userId: string) {
+  console.log('Seeding contacts, relations, tasks, and notifications...')
+  
+  const contactIds: string[] = []
+  
+  // Erstelle Kontakte
+  for (const contactData of SAMPLE_CONTACTS) {
+    const slug = toSlug(contactData.name)
+    let contact = await prisma.contact.findFirst({
+      where: { userId, slug }
+    })
+    if (!contact) {
+      contact = await prisma.contact.create({
+        data: {
+          userId,
+          slug,
+          name: contactData.name,
+          givenName: contactData.givenName,
+          familyName: contactData.familyName,
+          nickname: contactData.nickname,
+          emailPrivate: contactData.emailPrivate,
+          emailWork: contactData.emailWork,
+          phonePrivate: contactData.phonePrivate,
+          phoneWork: contactData.phoneWork,
+          addressHome: contactData.addressHome,
+          addressWork: contactData.addressWork,
+          company: contactData.company,
+          jobTitle: contactData.jobTitle,
+          birthday: contactData.birthday,
+          notes: contactData.notes,
+          isFavorite: contactData.isFavorite ?? false,
+          websiteUrl: contactData.websiteUrl,
+          socialUrls: contactData.socialUrls ? JSON.parse(contactData.socialUrls as string) : undefined,
+        }
+      })
+    }
+    contactIds.push(contact.id)
+  }
+  console.log(`  Created ${contactIds.length} contacts`)
+  
+  // Erstelle Beziehungen zwischen Kontakten
+  for (const rel of SAMPLE_RELATIONS) {
+    const personAId = contactIds[rel.personAIndex]
+    const personBId = contactIds[rel.personBIndex]
+    if (personAId && personBId) {
+      const exists = await prisma.personRelation.findFirst({
+        where: { personAId, personBId, relationType: rel.relationType }
+      })
+      if (!exists) {
+        await prisma.personRelation.create({
+          data: {
+            userId,
+            personAId,
+            personBId,
+            relationType: rel.relationType,
+          }
+        })
+      }
+    }
+  }
+  console.log(`  Created ${SAMPLE_RELATIONS.length} relations`)
+  
+  // Erstelle Interaktionen (z.B. Treffen, Anrufe)
+  const interactionTypes: Array<{ contactIndex: number; kind: 'MEETING' | 'CALL' | 'EMAIL'; notes: string; daysAgo: number }> = [
+    { contactIndex: 0, kind: 'MEETING', notes: 'Mittagessen im Restaurant zum Löwen', daysAgo: 5 },
+    { contactIndex: 0, kind: 'CALL', notes: 'Kurzes Telefonat wegen Weihnachtsfeier', daysAgo: 2 },
+    { contactIndex: 1, kind: 'EMAIL', notes: 'Paper-Empfehlung erhalten', daysAgo: 10 },
+    { contactIndex: 3, kind: 'MEETING', notes: 'Startup-Pitch besucht', daysAgo: 14 },
+    { contactIndex: 5, kind: 'MEETING', notes: 'Checkup-Termin', daysAgo: 30 },
+  ]
+  
+  for (const interaction of interactionTypes) {
+    const contactId = contactIds[interaction.contactIndex]
+    if (contactId) {
+      const occurredAt = new Date()
+      occurredAt.setDate(occurredAt.getDate() - interaction.daysAgo)
+      
+      const exists = await prisma.interaction.findFirst({
+        where: { contactId, kind: interaction.kind, notes: interaction.notes }
+      })
+      if (!exists) {
+        await prisma.interaction.create({
+          data: {
+            userId,
+            contactId,
+            kind: interaction.kind,
+            notes: interaction.notes,
+            occurredAt,
+          }
+        })
+      }
+    }
+  }
+  console.log(`  Created ${interactionTypes.length} interactions`)
+  
+  // Erstelle Tasks für Kontakte
+  for (const taskData of SAMPLE_TASKS) {
+    const contactId = contactIds[taskData.contactIndex]
+    if (contactId) {
+      const exists = await prisma.task.findFirst({
+        where: { userId, contactId, title: taskData.title }
+      })
+      if (!exists) {
+        await prisma.task.create({
+          data: {
+            userId,
+            contactId,
+            title: taskData.title,
+            dueDate: taskData.dueDate,
+            status: taskData.status,
+            completedAt: taskData.status === 'COMPLETED' ? new Date() : undefined,
+          }
+        })
+      }
+    }
+  }
+  console.log(`  Created ${SAMPLE_TASKS.length} tasks`)
+  
+  // Erstelle Notifications
+  for (const notif of SAMPLE_NOTIFICATIONS) {
+    const exists = await prisma.notification.findFirst({
+      where: { userId, title: notif.title }
+    })
+    if (!exists) {
+      await prisma.notification.create({
+        data: {
+          userId,
+          type: notif.type,
+          title: notif.title,
+          message: notif.message,
+        }
+      })
+    }
+  }
+  console.log(`  Created ${SAMPLE_NOTIFICATIONS.length} notifications`)
+  
+  return contactIds
+}
 
 async function seedSystemMetrics() {
   console.log('Seeding system MetricDefinitions...')
@@ -475,6 +721,9 @@ async function main() {
   // 4. Create test user with full test data
   const { user: testUser, habits: testHabits } = await createUserWithHabits('test', 'Testy', 'test')
   await seedTestData(testUser.id, testHabits, journalTypes)
+  
+  // 5. Seed contacts, relations, tasks and notifications for test user
+  await seedContactsAndRelations(testUser.id)
 
   console.log('\n=== Seed completed ===')
   console.log('Users created:')

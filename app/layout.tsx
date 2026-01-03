@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { getPrisma } from '@/lib/prisma'
 import { SiteNav } from '@/components/SiteNav'
+import NotificationBell from '@/components/NotificationBell'
 import pkg from '../package.json'
 
 export const metadata = {
@@ -137,7 +138,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               />
               <span>CompACT Diary</span>
             </Link>
-            <SiteNav user={user ? { id: user.id, username: user.username, displayName: user.displayName, profileImageUrl: user.profileImageUrl } : null} />
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              <SiteNav user={user ? { id: user.id, username: user.username, displayName: user.displayName, profileImageUrl: user.profileImageUrl } : null} />
+            </div>
           </div>
         </header>
         <main className="container py-4 flex-1">

@@ -37,6 +37,7 @@ export interface JournalEntrySectionProps {
   onDelete?: () => void
   onGenerate?: () => void
   onRegenerate?: () => void
+  children?: React.ReactNode
 }
 
 // =============================================================================
@@ -58,6 +59,7 @@ export function JournalEntrySection({
   onDelete,
   onGenerate,
   onRegenerate,
+  children,
 }: JournalEntrySectionProps) {
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed)
   const [isEditing, setIsEditing] = useState(false)
@@ -194,9 +196,13 @@ export function JournalEntrySection({
               </div>
             </div>
           ) : hasContent ? (
-            <div className="prose prose-sm max-w-none">
-              <MarkdownRenderer markdown={content} />
-            </div>
+            children ? (
+              children
+            ) : (
+              <div className="prose prose-sm max-w-none">
+                <MarkdownRenderer markdown={content} />
+              </div>
+            )
           ) : (
             <p className="text-sm text-base-content/50 italic">
               Kein Inhalt vorhanden

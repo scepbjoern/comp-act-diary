@@ -10,6 +10,7 @@ import { RichTextEditor } from '@/components/RichTextEditor'
 import { SaveIndicator } from '@/components/SaveIndicator'
 import dynamic from 'next/dynamic'
 import type { DayNote } from '@/types/day'
+import DiaryInteractionPanel from './DiaryInteractionPanel'
 
 const DiaryEntriesAccordion = dynamic(() => import('@/components/DiaryEntriesAccordion').then(mod => ({ default: mod.DiaryEntriesAccordion })), {
   loading: () => <div className="text-sm text-gray-400">Lädt...</div>
@@ -367,6 +368,12 @@ export function DiarySection({
           )}
         </div>
       </div>
+
+      {/* Interaction panel for linking contacts - always visible */}
+      <DiaryInteractionPanel
+        date={date}
+        onInteractionAdded={() => {}}
+      />
 
       {/* Existing diary entries */}
       <DiaryEntriesAccordion
