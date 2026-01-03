@@ -7,7 +7,7 @@ import { ImproveTextButton } from './ImproveTextButton'
 import { CameraPicker } from './CameraPicker'
 import { AudioPlayerH5 } from './AudioPlayerH5'
 import { RichTextEditor } from './RichTextEditor'
-import { MarkdownRenderer } from './MarkdownRenderer'
+import { DiaryContentWithMentions } from './DiaryContentWithMentions'
 import { OriginalTranscriptPanel } from './OriginalTranscriptPanel'
 
 type DayNote = {
@@ -216,7 +216,7 @@ export function DiaryEntriesAccordion({
                   </div>
                 </div>
               ) : (
-                <MarkdownRenderer markdown={n.text} />
+                <DiaryContentWithMentions noteId={n.id} markdown={n.text} />
               )}
               
               {/* Audio section - compact with inline delete */}

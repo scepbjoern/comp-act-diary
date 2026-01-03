@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/prisma'
+import { findMentionsInText, createMentionInteractions } from '@/lib/mentions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -84,6 +85,21 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         timeBoxId: day.timeBoxId,
       }
     })
+  }
+
+  // Automatically detect and create mentions
+  try {
+    const mentions = await findMentionsInText(day.userId, text)
+    if (mentions.length > 0) {
+      await createMentionInteractions(
+        day.userId,
+        entry.id,
+        mentions.map(m => m.contactId),
+        entry.createdAt
+      )
+    }
+  } catch (mentionError) {
+    console.error('Error processing mentions:', mentionError)
   }
 
   // Load all journal entries for this day

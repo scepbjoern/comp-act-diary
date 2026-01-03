@@ -757,6 +757,8 @@ export default function SettingsPage() {
           })}
         </ul>
       </div>
+      
+      
       <div className="card p-4 space-y-3 max-w-xl">
         <h2 className="font-medium">
           <span className="inline-flex items-center gap-1">
@@ -764,7 +766,7 @@ export default function SettingsPage() {
             <span>Links</span>
           </span>
         </h2>
-        <div className="text-sm text-gray-400">Hier kannst du eigene Links anlegen, die im Menü unter „Links“ erscheinen.</div>
+        <div className="text-sm text-gray-400">Hier kannst du eigene Links anlegen, die im Menü unter Links erscheinen.</div>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
           <label className="md:col-span-2 text-sm">
             <div className="text-gray-400">Name</div>

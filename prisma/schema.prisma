@@ -901,6 +901,8 @@ model Contact {
   googleResourceName String?
   /// Google ETag für Konflikt-Erkennung
   googleEtag         String?
+  /// Profilbild-URL (von Google oder lokal)
+  photoUrl           String?
   /// Wohnort (optional)
   locationId         String?
   /// Erstellungszeitpunkt

@@ -14,3 +14,5 @@ export function getPrisma(): PrismaClient {
   }
   return globalThis.__prisma__
 }
+
+export const prisma = getPrisma()

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/prisma'
 import path from 'path'
 import fs from 'fs/promises'
+import { findMentionsInText, createMentionInteractions } from '@/lib/mentions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -64,6 +65,23 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
 
   if (Object.keys(data).length > 0) {
     await prisma.journalEntry.update({ where: { id: noteId }, data })
+    
+    // Automatically detect and create mentions when content is updated
+    if (data.content) {
+      try {
+        const mentions = await findMentionsInText(user.id, data.content)
+        if (mentions.length > 0) {
+          await createMentionInteractions(
+            user.id,
+            noteId,
+            mentions.map(m => m.contactId),
+            entry.createdAt
+          )
+        }
+      } catch (mentionError) {
+        console.error('Error processing mentions:', mentionError)
+      }
+    }
   }
 
   const notes = await loadNotesForTimeBox(entry.timeBoxId, entry.userId)
