@@ -160,3 +160,301 @@ export function renderTextWithMentions(
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
+
+// =============================================================================
+// BATCH MENTION PROCESSING
+// =============================================================================
+
+export interface BatchMentionParams {
+  userId: string
+  dateFrom: string
+  dateTo: string
+  typeCodes: string[]
+}
+
+export interface BatchMentionEntry {
+  id: string
+  title: string | null
+  date: string
+  typeCode: string
+  contentPreview: string
+  existingMentionCount: number
+}
+
+export interface BatchMentionEntryResult {
+  entryId: string
+  entryTitle: string | null
+  entryDate: string
+  success: boolean
+  mentionsFound: number
+  mentionsCreated: number
+  error?: string
+}
+
+export interface BatchMentionResult {
+  totalProcessed: number
+  successCount: number
+  errorCount: number
+  totalMentionsFound: number
+  totalMentionsCreated: number
+  results: BatchMentionEntryResult[]
+}
+
+/**
+ * Get entries that can be processed for mention detection
+ */
+export async function getEntriesForMentionBatch(
+  params: BatchMentionParams
+): Promise<BatchMentionEntry[]> {
+  const { userId, dateFrom, dateTo, typeCodes } = params
+
+  // Parse dates
+  const fromDate = new Date(dateFrom + 'T00:00:00Z')
+  const toDate = new Date(dateTo + 'T23:59:59Z')
+
+  // Find TimeBoxes in date range
+  const timeBoxes = await prisma.timeBox.findMany({
+    where: {
+      userId,
+      startAt: {
+        gte: fromDate,
+        lte: toDate,
+      },
+    },
+    select: { id: true, startAt: true },
+  })
+
+  if (timeBoxes.length === 0) return []
+
+  const timeBoxIds = timeBoxes.map(tb => tb.id)
+  const timeBoxDateMap = new Map(timeBoxes.map(tb => [tb.id, tb.startAt]))
+
+  // Find JournalEntryTypes by code
+  const entryTypes = await prisma.journalEntryType.findMany({
+    where: {
+      code: { in: typeCodes },
+      OR: [{ userId }, { userId: null }],
+    },
+  })
+
+  if (entryTypes.length === 0) return []
+
+  const typeIds = entryTypes.map(t => t.id)
+  const typeCodeMap = new Map(entryTypes.map(t => [t.id, t.code]))
+
+  // Get journal entries
+  const entriesRaw = await prisma.journalEntry.findMany({
+    where: {
+      userId,
+      timeBoxId: { in: timeBoxIds },
+      typeId: { in: typeIds },
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      title: true,
+      content: true,
+      timeBoxId: true,
+      typeId: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  // Filter entries with content
+  const entries = entriesRaw.filter(e => e.content && e.content.length > 0)
+
+  // Get existing mention counts for each entry
+  const mentionCounts = await prisma.interaction.groupBy({
+    by: ['journalEntryId'],
+    where: {
+      userId,
+      journalEntryId: { in: entries.map(e => e.id) },
+      kind: 'MENTION',
+    },
+    _count: { id: true },
+  })
+
+  const countMap = new Map(mentionCounts.map(mc => [mc.journalEntryId, mc._count.id]))
+
+  return entries.map(entry => {
+    const date = timeBoxDateMap.get(entry.timeBoxId)
+    return {
+      id: entry.id,
+      title: entry.title,
+      date: date ? date.toISOString().slice(0, 10) : entry.createdAt.toISOString().slice(0, 10),
+      typeCode: typeCodeMap.get(entry.typeId) || 'unknown',
+      contentPreview: (entry.content || '').slice(0, 100) + ((entry.content || '').length > 100 ? '...' : ''),
+      existingMentionCount: countMap.get(entry.id) || 0,
+    }
+  })
+}
+
+/**
+ * Run batch mention detection on entries
+ */
+export async function runBatchMentionDetection(
+  params: BatchMentionParams
+): Promise<BatchMentionResult> {
+  const { userId, dateFrom, dateTo, typeCodes } = params
+
+  // Parse dates
+  const fromDate = new Date(dateFrom + 'T00:00:00Z')
+  const toDate = new Date(dateTo + 'T23:59:59Z')
+
+  // Find TimeBoxes in date range
+  const timeBoxes2 = await prisma.timeBox.findMany({
+    where: {
+      userId,
+      startAt: {
+        gte: fromDate,
+        lte: toDate,
+      },
+    },
+    select: { id: true, startAt: true },
+  })
+
+  if (timeBoxes2.length === 0) {
+    return {
+      totalProcessed: 0,
+      successCount: 0,
+      errorCount: 0,
+      totalMentionsFound: 0,
+      totalMentionsCreated: 0,
+      results: [],
+    }
+  }
+
+  const timeBoxIds = timeBoxes2.map(tb => tb.id)
+  const timeBoxDateMap = new Map(timeBoxes2.map(tb => [tb.id, tb.startAt]))
+
+  // Find JournalEntryTypes by code
+  const entryTypes = await prisma.journalEntryType.findMany({
+    where: {
+      code: { in: typeCodes },
+      OR: [{ userId }, { userId: null }],
+    },
+  })
+
+  if (entryTypes.length === 0) {
+    return {
+      totalProcessed: 0,
+      successCount: 0,
+      errorCount: 0,
+      totalMentionsFound: 0,
+      totalMentionsCreated: 0,
+      results: [],
+    }
+  }
+
+  const typeIds = entryTypes.map(t => t.id)
+
+  // Get journal entries with content
+  const entriesRaw2 = await prisma.journalEntry.findMany({
+    where: {
+      userId,
+      timeBoxId: { in: timeBoxIds },
+      typeId: { in: typeIds },
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      title: true,
+      content: true,
+      timeBoxId: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  // Filter entries with content
+  const entries = entriesRaw2.filter(e => e.content && e.content.length > 0)
+
+  const results: BatchMentionEntryResult[] = []
+  let totalMentionsFound = 0
+  let totalMentionsCreated = 0
+
+  for (const entry of entries) {
+    const date = timeBoxDateMap.get(entry.timeBoxId)
+    const dateStr = date ? date.toISOString().slice(0, 10) : entry.createdAt.toISOString().slice(0, 10)
+
+    try {
+      // Find mentions in the content
+      const mentions = await findMentionsInText(userId, entry.content || '')
+      const mentionsFound = mentions.length
+      totalMentionsFound += mentionsFound
+
+      if (mentionsFound > 0) {
+        // Get unique contact IDs (deduplicated by findMentionsInText already, 
+        // but we also dedupe here for multiple occurrences of same contact)
+        const uniqueContactIds = [...new Set(mentions.map(m => m.contactId))]
+
+        // Count existing mentions for this entry
+        const existingMentions = await prisma.interaction.findMany({
+          where: {
+            userId,
+            journalEntryId: entry.id,
+            kind: 'MENTION',
+          },
+          select: { contactId: true },
+        })
+        const existingContactIds = new Set(existingMentions.map(m => m.contactId))
+
+        // Filter to only new contacts
+        const newContactIds = uniqueContactIds.filter(id => !existingContactIds.has(id))
+
+        // Create interactions for new mentions only
+        if (newContactIds.length > 0) {
+          await createMentionInteractions(
+            userId,
+            entry.id,
+            newContactIds,
+            entry.createdAt
+          )
+        }
+
+        totalMentionsCreated += newContactIds.length
+
+        results.push({
+          entryId: entry.id,
+          entryTitle: entry.title,
+          entryDate: dateStr,
+          success: true,
+          mentionsFound,
+          mentionsCreated: newContactIds.length,
+        })
+      } else {
+        results.push({
+          entryId: entry.id,
+          entryTitle: entry.title,
+          entryDate: dateStr,
+          success: true,
+          mentionsFound: 0,
+          mentionsCreated: 0,
+        })
+      }
+    } catch (error) {
+      results.push({
+        entryId: entry.id,
+        entryTitle: entry.title,
+        entryDate: dateStr,
+        success: false,
+        mentionsFound: 0,
+        mentionsCreated: 0,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  const successCount = results.filter(r => r.success).length
+  const errorCount = results.filter(r => !r.success).length
+
+  return {
+    totalProcessed: entries.length,
+    successCount,
+    errorCount,
+    totalMentionsFound,
+    totalMentionsCreated,
+    results,
+  }
+}

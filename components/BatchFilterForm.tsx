@@ -11,6 +11,7 @@ import {
   IconFilter,
   IconPlayerPlay,
   IconEye,
+  IconAt,
 } from '@tabler/icons-react'
 
 // =============================================================================
@@ -30,6 +31,8 @@ export interface BatchFilterFormData {
   typeCodes: string[]
   steps: ('title' | 'content' | 'analysis' | 'summary')[]
   overwriteMode: 'empty_only' | 'overwrite_all'
+  // Mention detection (separate from AI steps)
+  detectMentions: boolean
 }
 
 interface BatchFilterFormProps {
@@ -55,6 +58,7 @@ export function BatchFilterForm({ onPreview, isLoading }: BatchFilterFormProps) 
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [selectedSteps, setSelectedSteps] = useState<('title' | 'content' | 'analysis' | 'summary')[]>([])
   const [overwriteMode, setOverwriteMode] = useState<'empty_only' | 'overwrite_all'>('empty_only')
+  const [detectMentions, setDetectMentions] = useState(false)
   const [errors, setErrors] = useState<{ typeCodes?: string; steps?: string }>({})
 
   // Load journal entry types
@@ -116,7 +120,7 @@ export function BatchFilterForm({ onPreview, isLoading }: BatchFilterFormProps) 
     if (selectedTypes.length === 0) {
       newErrors.typeCodes = 'Mindestens ein Typ auswählen'
     }
-    if (selectedSteps.length === 0) {
+    if (selectedSteps.length === 0 && !detectMentions) {
       newErrors.steps = 'Mindestens eine Aktion auswählen'
     }
     
@@ -132,6 +136,7 @@ export function BatchFilterForm({ onPreview, isLoading }: BatchFilterFormProps) 
       typeCodes: selectedTypes,
       steps: selectedSteps,
       overwriteMode,
+      detectMentions,
     })
   }
 
@@ -254,6 +259,29 @@ export function BatchFilterForm({ onPreview, isLoading }: BatchFilterFormProps) 
         {errors.steps && (
           <span className="text-error text-xs mt-1">{errors.steps}</span>
         )}
+      </div>
+
+      {/* Mention Detection */}
+      <div className="card bg-base-200 p-4">
+        <div className="flex items-center gap-2 mb-3 font-medium">
+          <IconAt size={18} className="text-primary" />
+          Kontakt-Erwähnungen
+        </div>
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              className="w-4 h-4 accent-primary"
+              checked={detectMentions}
+              onChange={(e) => setDetectMentions(e.target.checked)}
+            />
+            <span>Mentions erkennen und Interaktionen erstellen</span>
+          </label>
+          <p className="text-xs text-base-content/60">
+            Durchsucht den Text nach Kontaktnamen und erstellt automatisch MENTION-Interaktionen.
+            Bereits erkannte Mentions werden nicht doppelt erstellt.
+          </p>
+        </div>
       </div>
 
       {/* Overwrite Mode */}

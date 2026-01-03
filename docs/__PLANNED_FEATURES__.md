@@ -2,6 +2,7 @@
 - für jeden Tag, wenn man gerade in einem aktuellen Tag ist, immer in der Datenbank geschaut wird, ob es vom Vorjahr und vom Vormonat Tagebucheinträge gibt von diesem einen Tag. Und falls ja, wird dieser Eintrag, aber auch diejenigen der Vorjahre, immer kurz angezeigt, so das Wichtigste zusammengefasst. Dies soll erlauben, dass man mit der Zeit ein bisschen das Bewusstsein schärft, so im Sinne von Carpe Diem, dass man sieht auch, dass vor einem Jahr vielleicht es besser war oder auch schlechter war. Und beides kann ja ermuntern und zur Reflexion beitragen.
 - Die App Monika macht keinen Sinn mehr, wenn ich meine neue eigene App habe. Daher die wichtigsten Dinge daraus auch in meiner App implementieren und auch die Einträge exportieren und sichern.
 - Bildgenerierung: Es sollen Bilder generiert werden können in der App. Passend zu einzelnen Tagebucheinträgen oder dem ganzen Tag oder einer Reflexion, usw. sollen Bildgenerierungsmodelle eingesetzt werden.
+- Volltextsuche über die gesamte Datenbank (ohne Vektorisierung, sondern einfach über Datenbankindizierung!?)
 
 
 ## Verschlüsselung
