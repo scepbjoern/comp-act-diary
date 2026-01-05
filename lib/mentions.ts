@@ -21,34 +21,41 @@ export async function findMentionsInText(
   // Get all contacts for the user
   const contacts = await prisma.contact.findMany({
     where: { userId, isArchived: false },
-    select: { id: true, name: true, slug: true, givenName: true, familyName: true },
+    select: { id: true, name: true, slug: true, givenName: true, familyName: true, namesToDetectAsMention: true },
   })
 
   const mentions: MentionResult[] = []
   const textLower = text.toLowerCase()
 
   for (const contact of contacts) {
-    // Search for full name
-    const nameLower = contact.name.toLowerCase()
-    let index = textLower.indexOf(nameLower)
-    
-    while (index !== -1) {
-      // Check word boundaries to avoid partial matches
-      const before = index === 0 || /\s|[.,!?;:'"()]/.test(text[index - 1])
-      const after = index + contact.name.length >= text.length || 
-                    /\s|[.,!?;:'"()]/.test(text[index + contact.name.length])
+    // Build list of names to search for: full name + alternative names
+    const namesToSearch = [contact.name]
+    if (contact.namesToDetectAsMention && contact.namesToDetectAsMention.length > 0) {
+      namesToSearch.push(...contact.namesToDetectAsMention)
+    }
+
+    for (const searchName of namesToSearch) {
+      const nameLower = searchName.toLowerCase()
+      let index = textLower.indexOf(nameLower)
       
-      if (before && after) {
-        mentions.push({
-          contactId: contact.id,
-          contactName: contact.name,
-          contactSlug: contact.slug,
-          startIndex: index,
-          endIndex: index + contact.name.length,
-        })
+      while (index !== -1) {
+        // Check word boundaries to avoid partial matches
+        const before = index === 0 || /\s|[.,!?;:'"()]/.test(text[index - 1])
+        const after = index + searchName.length >= text.length || 
+                      /\s|[.,!?;:'"()]/.test(text[index + searchName.length])
+        
+        if (before && after) {
+          mentions.push({
+            contactId: contact.id,
+            contactName: contact.name, // Always use full name for display
+            contactSlug: contact.slug,
+            startIndex: index,
+            endIndex: index + searchName.length,
+          })
+        }
+        
+        index = textLower.indexOf(nameLower, index + 1)
       }
-      
-      index = textLower.indexOf(nameLower, index + 1)
     }
   }
 
@@ -129,7 +136,7 @@ export async function createMentionInteractions(
 export async function getMentionsForEntry(
   userId: string,
   journalEntryId: string
-): Promise<Array<{ contactId: string; contactName: string; contactSlug: string }>> {
+): Promise<Array<{ contactId: string; contactName: string; contactSlug: string; namesToDetectAsMention: string[] }>> {
   const interactions = await prisma.interaction.findMany({
     where: {
       userId,
@@ -138,7 +145,7 @@ export async function getMentionsForEntry(
     },
     include: {
       contact: {
-        select: { id: true, name: true, slug: true },
+        select: { id: true, name: true, slug: true, namesToDetectAsMention: true },
       },
     },
   })
@@ -147,6 +154,7 @@ export async function getMentionsForEntry(
     contactId: i.contact.id,
     contactName: i.contact.name,
     contactSlug: i.contact.slug,
+    namesToDetectAsMention: i.contact.namesToDetectAsMention || [],
   }))
 }
 
@@ -155,20 +163,43 @@ export async function getMentionsForEntry(
  */
 export function renderTextWithMentions(
   text: string,
-  mentions: Array<{ contactName: string; contactSlug: string }>
+  mentions: Array<{ contactName: string; contactSlug: string; namesToDetectAsMention?: string[] }>
 ): string {
   if (!mentions.length) return text
 
   let result = text
   
-  // Sort by name length descending to avoid partial replacements
-  const sortedMentions = [...mentions].sort((a, b) => b.contactName.length - a.contactName.length)
+  // Build list of all names to replace: full name + alternative names
+  // Each entry maps a name to search for -> the contact info for the link
+  const namesToReplace: Array<{ searchName: string; contactName: string; contactSlug: string }> = []
   
-  for (const mention of sortedMentions) {
-    const regex = new RegExp(`\\b${escapeRegex(mention.contactName)}\\b`, 'gi')
+  for (const mention of mentions) {
+    // Add full name
+    namesToReplace.push({
+      searchName: mention.contactName,
+      contactName: mention.contactName,
+      contactSlug: mention.contactSlug,
+    })
+    // Add alternative names
+    if (mention.namesToDetectAsMention) {
+      for (const altName of mention.namesToDetectAsMention) {
+        namesToReplace.push({
+          searchName: altName,
+          contactName: mention.contactName,
+          contactSlug: mention.contactSlug,
+        })
+      }
+    }
+  }
+  
+  // Sort by searchName length descending to avoid partial replacements
+  namesToReplace.sort((a, b) => b.searchName.length - a.searchName.length)
+  
+  for (const entry of namesToReplace) {
+    const regex = new RegExp(`\\b${escapeRegex(entry.searchName)}\\b`, 'gi')
     result = result.replace(
       regex,
-      `<a href="/prm/${mention.contactSlug}" class="text-primary hover:underline font-medium">${mention.contactName}</a>`
+      `<a href="/prm/${entry.contactSlug}" class="text-primary hover:underline font-medium">${entry.contactName}</a>`
     )
   }
 

@@ -7,6 +7,7 @@ interface MentionContact {
   id: string
   slug: string
   name: string
+  namesToDetectAsMention?: string[]
 }
 
 interface DiaryContentWithMentionsProps {
@@ -26,10 +27,11 @@ export function DiaryContentWithMentions({ noteId, markdown, className }: DiaryC
         if (res.ok) {
           const data = await res.json()
           if (data.mentions && data.mentions.length > 0) {
-            setMentionedContacts(data.mentions.map((m: { contactId: string; contactName: string; contactSlug: string }) => ({
+            setMentionedContacts(data.mentions.map((m: { contactId: string; contactName: string; contactSlug: string; namesToDetectAsMention: string[] }) => ({
               id: m.contactId,
               name: m.contactName,
               slug: m.contactSlug,
+              namesToDetectAsMention: m.namesToDetectAsMention || [],
             })))
           }
         }

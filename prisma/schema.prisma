@@ -909,6 +909,8 @@ model Contact {
   googleEtag         String?
   /// Profilbild-URL (von Google oder lokal)
   photoUrl           String?
+  /// Alternative Namen für Mention-Erkennung (z.B. ["Anna", "Annalena", "Anna-Lena"])
+  namesToDetectAsMention String[]
   /// Wohnort (optional)
   locationId         String?
   /// Erstellungszeitpunkt

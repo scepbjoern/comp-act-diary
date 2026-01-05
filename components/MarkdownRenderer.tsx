@@ -14,6 +14,7 @@ interface MentionContact {
   id: string
   slug: string
   name: string
+  namesToDetectAsMention?: string[]
 }
 
 interface MarkdownRendererProps {
@@ -115,17 +116,38 @@ function processMentions(html: string, contacts: MentionContact[]): string {
   
   let processedHtml = html
   
-  // Sort contacts by name length (longest first) to avoid partial matches
-  const sortedContacts = [...contacts].sort((a, b) => b.name.length - a.name.length)
+  // Build list of all names to replace: full name + alternative names
+  const namesToReplace: Array<{ searchName: string; contactName: string; contactSlug: string }> = []
   
-  for (const contact of sortedContacts) {
+  for (const contact of contacts) {
+    // Add full name
+    namesToReplace.push({
+      searchName: contact.name,
+      contactName: contact.name,
+      contactSlug: contact.slug,
+    })
+    // Add alternative names
+    if (contact.namesToDetectAsMention) {
+      for (const altName of contact.namesToDetectAsMention) {
+        namesToReplace.push({
+          searchName: altName,
+          contactName: contact.name,
+          contactSlug: contact.slug,
+        })
+      }
+    }
+  }
+  
+  // Sort by searchName length descending to avoid partial replacements
+  namesToReplace.sort((a, b) => b.searchName.length - a.searchName.length)
+  
+  for (const entry of namesToReplace) {
     // Escape special regex characters in name
-    const escapedName = contact.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const escapedName = entry.searchName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     // Match @Name or just the name (case-insensitive)
     const regex = new RegExp(`@?\\b(${escapedName})\\b`, 'gi')
     processedHtml = processedHtml.replace(regex, (_match) => {
-      // Don't replace if already inside an anchor tag
-      return `<a href="/prm/${contact.slug}" class="mention-link text-primary hover:underline font-medium">@${contact.name}</a>`
+      return `<a href="/prm/${entry.contactSlug}" class="mention-link text-primary hover:underline font-medium">@${entry.contactName}</a>`
     })
   }
   

@@ -40,6 +40,7 @@ export const ContactCreateSchema = z.object({
   websiteUrl: z.string().url('Ungültige Website-URL').optional().nullable().or(z.literal('')),
   socialUrls: z.array(SocialUrlSchema).optional().nullable(),
   locationId: z.string().uuid('Ungültige Orts-ID').optional().nullable(),
+  namesToDetectAsMention: z.array(z.string().min(1)).optional().nullable(),
 })
 
 export type ContactCreate = z.infer<typeof ContactCreateSchema>

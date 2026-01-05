@@ -19,6 +19,9 @@ export default function ContactForm({ initialData, mode }: ContactFormProps) {
   const [socialUrls, setSocialUrls] = useState<Array<{ type: string; url: string }>>(
     (initialData?.socialUrls as Array<{ type: string; url: string }>) || []
   )
+  const [namesToDetect, setNamesToDetect] = useState<string>(
+    (initialData?.namesToDetectAsMention as string[] || []).join(', ')
+  )
 
   const {
     register,
@@ -57,6 +60,9 @@ export default function ContactForm({ initialData, mode }: ContactFormProps) {
       const payload = {
         ...data,
         socialUrls: socialUrls.length > 0 ? socialUrls : null,
+        namesToDetectAsMention: namesToDetect.trim()
+          ? namesToDetect.split(',').map(n => n.trim()).filter(n => n.length > 0)
+          : null,
       }
 
       const url = mode === 'edit' && initialData?.id 
@@ -193,6 +199,22 @@ export default function ContactForm({ initialData, mode }: ContactFormProps) {
                 placeholder="Maxi"
                 {...register('nickname')}
               />
+            </div>
+
+            <div className="form-control sm:col-span-2">
+              <label className="label">
+                <span className="label-text">Alternative Namen für Erwähnungserkennung</span>
+              </label>
+              <input
+                type="text"
+                className="input input-bordered"
+                placeholder="Anna, Annalena, Anna-Lena"
+                value={namesToDetect}
+                onChange={(e) => setNamesToDetect(e.target.value)}
+              />
+              <label className="label">
+                <span className="label-text-alt text-base-content/60">Kommagetrennte Liste von Namen, die als Erwähnung dieser Person erkannt werden sollen</span>
+              </label>
             </div>
 
             <div className="form-control">

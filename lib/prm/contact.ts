@@ -194,6 +194,7 @@ export async function createContact(
       websiteUrl: data.websiteUrl || null,
       socialUrls: data.socialUrls as Prisma.InputJsonValue,
       locationId: data.locationId,
+      namesToDetectAsMention: data.namesToDetectAsMention || [],
     },
     include: {
       relationsAsA: { include: { personB: true } },
@@ -252,6 +253,7 @@ export async function updateContact(
       ...(data.websiteUrl !== undefined && { websiteUrl: data.websiteUrl || null }),
       ...(data.socialUrls !== undefined && { socialUrls: data.socialUrls as Prisma.InputJsonValue }),
       ...(data.locationId !== undefined && { locationId: data.locationId }),
+      ...(data.namesToDetectAsMention !== undefined && { namesToDetectAsMention: data.namesToDetectAsMention || [] }),
     },
     include: {
       relationsAsA: { include: { personB: true } },
