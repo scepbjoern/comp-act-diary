@@ -22,6 +22,8 @@ type Me = {
     weekStart: string
     summaryModel?: string
     summaryPrompt?: string
+    transcriptionPrompt?: string
+    transcriptionGlossary?: string[]
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     customModels?: any[]  // Legacy - now managed via LlmModel table
   } | null
@@ -77,6 +79,9 @@ export default function SettingsPage() {
   const [stdSymptomIconDrafts, setStdSymptomIconDrafts] = useState<Record<string, string>>({})
   const [summaryModel, setSummaryModel] = useState('openai/gpt-oss-120b')
   const [summaryPrompt, setSummaryPrompt] = useState('Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
+  const [transcriptionPrompt, setTranscriptionPrompt] = useState('')
+  const [transcriptionGlossary, setTranscriptionGlossary] = useState<string[]>([])
+  const [newGlossaryItem, setNewGlossaryItem] = useState('')
   
   // Sort models alphabetically for summary selection
   const sortedModelsForSummary = useMemo(() => {
@@ -117,6 +122,8 @@ export default function SettingsPage() {
         setAutosaveIntervalSec(u.settings?.autosaveIntervalSec ?? 5)
         setSummaryModel(u.settings?.summaryModel || 'openai/gpt-oss-120b')
         setSummaryPrompt(u.settings?.summaryPrompt || 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
+        setTranscriptionPrompt(u.settings?.transcriptionPrompt || '')
+        setTranscriptionGlossary(u.settings?.transcriptionGlossary || [])
       }
       if (habitsRes.ok) {
         const data = await habitsRes.json()
@@ -438,6 +445,32 @@ export default function SettingsPage() {
     }
   }
 
+  async function saveTranscriptionSettings() {
+    startSaving()
+    try {
+      const res = await fetch('/api/me', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: { transcriptionPrompt, transcriptionGlossary } })
+      })
+      await res.json().catch(() => ({}))
+    } finally {
+      doneSaving()
+    }
+  }
+
+  function addGlossaryItem() {
+    const item = newGlossaryItem.trim()
+    if (!item) return
+    if (!transcriptionGlossary.includes(item)) {
+      setTranscriptionGlossary([...transcriptionGlossary, item])
+    }
+    setNewGlossaryItem('')
+  }
+
+  function removeGlossaryItem(index: number) {
+    setTranscriptionGlossary(transcriptionGlossary.filter((_, i) => i !== index))
+  }
+
   async function addHabit() {
     const title = newHabit.trim()
     if (!title) return
@@ -703,6 +736,80 @@ export default function SettingsPage() {
             Der Prompt definiert, wie die KI Zusammenfassungen erstellt. 
             Die Tagebucheinträge werden automatisch als Kontext mitgegeben.
           </p>
+        </div>
+      </div>
+
+      {/* Transcription Settings */}
+      <div className="card p-4 space-y-3 max-w-xl">
+        <h2 className="font-medium">
+          <span className="inline-flex items-center gap-1">
+            <TablerIcon name="microphone" />
+            <span>Transkriptions-Einstellungen</span>
+          </span>
+        </h2>
+        
+        <div className="space-y-4">
+          <label className="block text-sm">
+            <span className="text-gray-400 mb-1 block">Anweisungen für die Transkribierung</span>
+            <textarea
+              value={transcriptionPrompt}
+              onChange={(e) => setTranscriptionPrompt(e.target.value)}
+              rows={3}
+              className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
+              placeholder="z.B. Der Sprecher spricht Schweizerdeutsch mit deutschem Akzent. Bitte transkribiere in Hochdeutsch."
+            />
+            <span className="text-xs text-gray-500 mt-1 block">
+              Optionale Anweisungen, um die Transkribierung zu verbessern (Sprache, Stil, Kontext).
+            </span>
+          </label>
+
+          <div className="space-y-2">
+            <span className="text-gray-400 text-sm block">Glossar (Namen, Produktbezeichnungen, Fachbegriffe)</span>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newGlossaryItem}
+                onChange={(e) => setNewGlossaryItem(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addGlossaryItem() } }}
+                className="flex-1 bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
+                placeholder="z.B. CompACT Diary, Zürich, Dr. Müller"
+              />
+              <button 
+                className="pill" 
+                onClick={addGlossaryItem}
+                disabled={!newGlossaryItem.trim()}
+              >
+                Hinzufügen
+              </button>
+            </div>
+            {transcriptionGlossary.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {transcriptionGlossary.map((item, index) => (
+                  <span 
+                    key={index} 
+                    className="inline-flex items-center gap-1 bg-base-200 px-2 py-1 rounded text-sm"
+                  >
+                    {item}
+                    <button 
+                      onClick={() => removeGlossaryItem(index)}
+                      className="text-gray-400 hover:text-error ml-1"
+                      title="Entfernen"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <span className="text-xs text-gray-500 block">
+              Glossar-Einträge helfen, Namen und Fachbegriffe korrekt zu erkennen. Sie werden als &quot;Glossar: x, y, z&quot; an die Transkribierung übergeben.
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button className="pill !bg-green-600 !text-white hover:bg-pill-light dark:hover:bg-pill hover:text-gray-900 dark:hover:text-gray-100" onClick={saveTranscriptionSettings}>Speichern</button>
+            <SaveIndicator saving={saving} savedAt={savedAt} />
+          </div>
         </div>
       </div>
 

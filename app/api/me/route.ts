@@ -35,6 +35,8 @@ export async function GET(req: NextRequest) {
         summaryPrompt: userSettings.summaryPrompt || DEFAULT_SUMMARY_PROMPT,
         customModels: userSettings.customModels || [],
         journalAISettings: userSettings.journalAISettings || {},
+        transcriptionPrompt: userSettings.transcriptionPrompt || '',
+        transcriptionGlossary: userSettings.transcriptionGlossary || [],
       },
     },
   })
@@ -85,6 +87,14 @@ export async function PATCH(req: NextRequest) {
       if (body.settings.journalAISettings && typeof body.settings.journalAISettings === 'object') {
         settingsPatch.journalAISettings = body.settings.journalAISettings
       }
+      if (typeof body.settings.transcriptionPrompt === 'string') {
+        settingsPatch.transcriptionPrompt = body.settings.transcriptionPrompt.trim()
+      }
+      if (Array.isArray(body.settings.transcriptionGlossary)) {
+        settingsPatch.transcriptionGlossary = body.settings.transcriptionGlossary.filter(
+          (item: unknown) => typeof item === 'string' && item.trim().length > 0
+        ).map((item: string) => item.trim())
+      }
     }
 
     let updatedUser = user
@@ -123,6 +133,8 @@ export async function PATCH(req: NextRequest) {
           summaryPrompt: updatedSettings.summaryPrompt || DEFAULT_SUMMARY_PROMPT,
           customModels: updatedSettings.customModels || [],
           journalAISettings: updatedSettings.journalAISettings || {},
+          transcriptionPrompt: updatedSettings.transcriptionPrompt || '',
+          transcriptionGlossary: updatedSettings.transcriptionGlossary || [],
         },
       },
     })
