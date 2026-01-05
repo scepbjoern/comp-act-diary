@@ -69,17 +69,24 @@ export async function POST(req: NextRequest) {
     if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
 
     const userSettings = (user?.settings as Record<string, any>) || {}
+    const glossary = userSettings.transcriptionGlossary || []
     const transcriptionPrompt = buildTranscriptionPrompt(
       userSettings.transcriptionPrompt,
-      userSettings.transcriptionGlossary
+      glossary
     )
+    
+    // Get per-model language setting
+    const modelLanguages = userSettings.transcriptionModelLanguages || {}
+    const transcriptionLanguage = modelLanguages[model]
 
     // Transcribe audio using shared library
     const transcriptionResult = await transcribeAudioFile({
       filePath: fullPath,
       mimeType,
       model,
+      language: transcriptionLanguage,
       prompt: transcriptionPrompt,
+      glossary,
       uploadsDir,
       onProgress: (msg) => console.log(msg),
     })

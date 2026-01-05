@@ -8,7 +8,6 @@ import {
   transcribeAudioFile,
   buildTranscriptionPrompt,
   getDefaultTranscriptionModel,
-  isWhisperModel,
 } from '@/lib/transcription'
 
 // Helper to get uploads directory
@@ -146,10 +145,15 @@ export async function POST(req: NextRequest) {
     if (!user) user = await prisma.user.findUnique({ where: { username: 'demo' } })
 
     const userSettings = (user?.settings as Record<string, any>) || {}
+    const glossary = userSettings.transcriptionGlossary || []
     const transcriptionPrompt = buildTranscriptionPrompt(
       userSettings.transcriptionPrompt,
-      userSettings.transcriptionGlossary
+      glossary
     )
+    
+    // Get per-model language setting
+    const modelLanguages = userSettings.transcriptionModelLanguages || {}
+    const transcriptionLanguage = modelLanguages[model]
 
     // Transcribe audio using shared library
     const mimeType = file.type || (extension === 'webm' ? 'audio/webm' : extension === 'm4a' ? 'audio/m4a' : 'audio/mpeg')
@@ -158,7 +162,9 @@ export async function POST(req: NextRequest) {
       filePath: fullPath,
       mimeType,
       model,
+      language: transcriptionLanguage,
       prompt: transcriptionPrompt,
+      glossary,
       uploadsDir: getUploadsDir(),
       onProgress: (msg) => console.log(msg),
     })

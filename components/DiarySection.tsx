@@ -237,12 +237,24 @@ export function DiarySection({
               {showRetranscribeOptions && (
                 <div className="absolute top-full left-0 mt-1 bg-surface border border-slate-700 rounded shadow-lg z-50 p-2 min-w-[200px]">
                   <div className="text-xs text-gray-400 mb-2">Modell auswählen:</div>
+                  
+                  <div className="text-xs text-gray-500 font-medium mb-1">Whisper:</div>
                   <button
                     className="btn btn-ghost btn-xs w-full justify-start text-left mb-1"
                     onClick={() => onRetranscribeAudio('openai/whisper-large-v3')}
                   >
                     openai/whisper-large-v3
                   </button>
+                  
+                  <div className="text-xs text-gray-500 font-medium mb-1 mt-2">Deepgram:</div>
+                  <button
+                    className="btn btn-ghost btn-xs w-full justify-start text-left mb-1"
+                    onClick={() => onRetranscribeAudio('deepgram/nova-3')}
+                  >
+                    deepgram/nova-3
+                  </button>
+                  
+                  <div className="text-xs text-gray-500 font-medium mb-1 mt-2">GPT:</div>
                   <button
                     className="btn btn-ghost btn-xs w-full justify-start text-left mb-1"
                     onClick={() => onRetranscribeAudio('gpt-4o-mini-transcribe')}

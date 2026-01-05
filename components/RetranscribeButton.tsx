@@ -13,6 +13,7 @@ export function RetranscribeButton({ audioFileId, onRetranscribed, disabled = fa
   const [showModelSelector, setShowModelSelector] = useState(false)
   
   const whisperModels = ['openai/whisper-large-v3']
+  const deepgramModels = ['deepgram/nova-3']
   const gptModels = ['gpt-4o-mini-transcribe', 'gpt-4o-transcribe']
   
   const handleRetranscribe = async (model: string) => {
@@ -74,6 +75,20 @@ export function RetranscribeButton({ audioFileId, onRetranscribed, disabled = fa
           <div className="space-y-1">
             <div className="text-xs text-gray-500 font-medium mb-1">Whisper Modelle:</div>
             {whisperModels.map(model => (
+              <button
+                key={model}
+                className="btn btn-ghost btn-xs w-full justify-start text-left"
+                onClick={() => handleRetranscribe(model)}
+                disabled={isRetranscribing}
+              >
+                {model}
+              </button>
+            ))}
+          </div>
+          
+          <div className="space-y-1 mt-2">
+            <div className="text-xs text-gray-500 font-medium mb-1">Deepgram Modelle:</div>
+            {deepgramModels.map(model => (
               <button
                 key={model}
                 className="btn btn-ghost btn-xs w-full justify-start text-left"

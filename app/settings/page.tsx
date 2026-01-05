@@ -24,6 +24,7 @@ type Me = {
     summaryPrompt?: string
     transcriptionPrompt?: string
     transcriptionGlossary?: string[]
+    transcriptionModelLanguages?: Record<string, string>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     customModels?: any[]  // Legacy - now managed via LlmModel table
   } | null
@@ -82,6 +83,16 @@ export default function SettingsPage() {
   const [transcriptionPrompt, setTranscriptionPrompt] = useState('')
   const [transcriptionGlossary, setTranscriptionGlossary] = useState<string[]>([])
   const [newGlossaryItem, setNewGlossaryItem] = useState('')
+  const [transcriptionModelLanguages, setTranscriptionModelLanguages] = useState<Record<string, string>>({})
+  
+  // Available transcription models with their default languages
+  const TRANSCRIPTION_MODELS = [
+    { id: 'openai/whisper-large-v3', name: 'Whisper Large V3 (Together.ai)', defaultLang: 'de' },
+    { id: 'deepgram/nova-3', name: 'Nova 3 (Deepgram)', defaultLang: 'de-CH' },
+    { id: 'gpt-4o-transcribe', name: 'GPT-4o Transcribe (OpenAI)', defaultLang: 'de' },
+    { id: 'gpt-4o-mini-transcribe', name: 'GPT-4o Mini Transcribe (OpenAI)', defaultLang: 'de' },
+    { id: 'whisper-1', name: 'Whisper 1 (OpenAI)', defaultLang: 'de' },
+  ]
   
   // Sort models alphabetically for summary selection
   const sortedModelsForSummary = useMemo(() => {
@@ -124,6 +135,7 @@ export default function SettingsPage() {
         setSummaryPrompt(u.settings?.summaryPrompt || 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
         setTranscriptionPrompt(u.settings?.transcriptionPrompt || '')
         setTranscriptionGlossary(u.settings?.transcriptionGlossary || [])
+        setTranscriptionModelLanguages(u.settings?.transcriptionModelLanguages || {})
       }
       if (habitsRes.ok) {
         const data = await habitsRes.json()
@@ -450,12 +462,19 @@ export default function SettingsPage() {
     try {
       const res = await fetch('/api/me', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings: { transcriptionPrompt, transcriptionGlossary } })
+        body: JSON.stringify({ settings: { transcriptionPrompt, transcriptionGlossary, transcriptionModelLanguages } })
       })
       await res.json().catch(() => ({}))
     } finally {
       doneSaving()
     }
+  }
+  
+  function updateModelLanguage(modelId: string, language: string) {
+    setTranscriptionModelLanguages(prev => ({
+      ...prev,
+      [modelId]: language
+    }))
   }
 
   function addGlossaryItem() {
@@ -803,6 +822,27 @@ export default function SettingsPage() {
             )}
             <span className="text-xs text-gray-500 block">
               Glossar-Einträge helfen, Namen und Fachbegriffe korrekt zu erkennen. Sie werden als &quot;Glossar: x, y, z&quot; an die Transkribierung übergeben.
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-gray-400 text-sm block">Sprach-Code pro Modell</span>
+            <div className="space-y-2">
+              {TRANSCRIPTION_MODELS.map((model) => (
+                <div key={model.id} className="flex items-center gap-2">
+                  <span className="text-sm flex-1 text-gray-300">{model.name}</span>
+                  <input
+                    type="text"
+                    value={transcriptionModelLanguages[model.id] || ''}
+                    onChange={(e) => updateModelLanguage(model.id, e.target.value)}
+                    className="w-24 bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
+                    placeholder={model.defaultLang}
+                  />
+                </div>
+              ))}
+            </div>
+            <span className="text-xs text-gray-500 block">
+              Sprach-Codes wie &quot;de&quot; (Deutsch), &quot;de-CH&quot; (Schweizerdeutsch), &quot;en&quot; (Englisch). Leer lassen für Standard.
             </span>
           </div>
 

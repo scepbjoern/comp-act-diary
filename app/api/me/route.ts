@@ -37,6 +37,7 @@ export async function GET(req: NextRequest) {
         journalAISettings: userSettings.journalAISettings || {},
         transcriptionPrompt: userSettings.transcriptionPrompt || '',
         transcriptionGlossary: userSettings.transcriptionGlossary || [],
+        transcriptionModelLanguages: userSettings.transcriptionModelLanguages || {},
       },
     },
   })
@@ -95,6 +96,9 @@ export async function PATCH(req: NextRequest) {
           (item: unknown) => typeof item === 'string' && item.trim().length > 0
         ).map((item: string) => item.trim())
       }
+      if (body.settings.transcriptionModelLanguages && typeof body.settings.transcriptionModelLanguages === 'object') {
+        settingsPatch.transcriptionModelLanguages = body.settings.transcriptionModelLanguages
+      }
     }
 
     let updatedUser = user
@@ -135,6 +139,7 @@ export async function PATCH(req: NextRequest) {
           journalAISettings: updatedSettings.journalAISettings || {},
           transcriptionPrompt: updatedSettings.transcriptionPrompt || '',
           transcriptionGlossary: updatedSettings.transcriptionGlossary || [],
+          transcriptionModelLanguages: updatedSettings.transcriptionModelLanguages || {},
         },
       },
     })

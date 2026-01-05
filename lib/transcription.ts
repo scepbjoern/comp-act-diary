@@ -1,4 +1,5 @@
 import { Together } from 'together-ai'
+import { createClient as createDeepgramClient } from '@deepgram/sdk'
 import { readFile } from 'fs/promises'
 import path from 'path'
 import {
@@ -12,16 +13,41 @@ import {
 } from '@/lib/audio-chunker'
 import { v4 as uuidv4 } from 'uuid'
 
-// Supported transcription models
+// Supported transcription models by provider
 export const WHISPER_MODELS = ['openai/whisper-large-v3'] as const
+export const DEEPGRAM_MODELS = ['deepgram/nova-3'] as const
+
 export type WhisperModel = (typeof WHISPER_MODELS)[number]
+export type DeepgramModel = (typeof DEEPGRAM_MODELS)[number]
+
+// All available transcription models
+export const ALL_TRANSCRIPTION_MODELS = [
+  ...WHISPER_MODELS,
+  ...DEEPGRAM_MODELS,
+  'gpt-4o-transcribe',
+  'gpt-4o-mini-transcribe', 
+  'whisper-1',
+] as const
 
 export function isWhisperModel(model: string): model is WhisperModel {
   return WHISPER_MODELS.includes(model as WhisperModel)
 }
 
+export function isDeepgramModel(model: string): model is DeepgramModel {
+  return DEEPGRAM_MODELS.includes(model as DeepgramModel)
+}
+
 export function getDefaultTranscriptionModel(): string {
   return WHISPER_MODELS[0]
+}
+
+// Default language codes per model
+export const DEFAULT_MODEL_LANGUAGES: Record<string, string> = {
+  'openai/whisper-large-v3': 'de',
+  'deepgram/nova-3': 'de-CH',
+  'gpt-4o-transcribe': 'de',
+  'gpt-4o-mini-transcribe': 'de',
+  'whisper-1': 'de',
 }
 
 // Build transcription prompt from user settings
@@ -47,6 +73,7 @@ export interface TranscriptionOptions {
   model: string
   language?: string
   prompt?: string // Only used for OpenAI models
+  glossary?: string[] // Used for OpenAI (in prompt) and Deepgram (as keyterms)
 }
 
 export interface TranscriptionResult {
@@ -62,12 +89,61 @@ export async function transcribeAudioBuffer(
   mimeType: string,
   options: TranscriptionOptions
 ): Promise<TranscriptionResult> {
-  const { model, language = 'de', prompt } = options
+  const { model, language, prompt, glossary } = options
+  
+  // Get default language for the model if not specified
+  const effectiveLanguage = language || DEFAULT_MODEL_LANGUAGES[model] || 'de'
   
   // Convert to bytes array for Blob/File creation
   const bytes = Array.from(buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer))
 
-  if (isWhisperModel(model)) {
+  if (isDeepgramModel(model)) {
+    // Use Deepgram for Nova models
+    const apiKey = process.env.DEEPGRAM_API_KEY
+    if (!apiKey) {
+      return { text: '', error: 'Missing DEEPGRAM_API_KEY' }
+    }
+
+    try {
+      const deepgram = createDeepgramClient(apiKey)
+      
+      // Build Deepgram options
+      const deepgramOptions: Record<string, unknown> = {
+        model: 'nova-3', // Extract model name without provider prefix
+        language: effectiveLanguage,
+        smart_format: true,
+        mip_opt_out: true, // Opt out of Model Improvement Partnership Program
+      }
+      
+      // Add keyterms from glossary (Deepgram's equivalent to prompt)
+      if (glossary && glossary.length > 0) {
+        deepgramOptions.keyterm = glossary
+      }
+      
+      const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
+        Buffer.from(bytes),
+        deepgramOptions
+      )
+
+      if (error) {
+        return {
+          text: '',
+          error: 'Deepgram transcription failed',
+          details: String(error),
+        }
+      }
+
+      // Extract transcript from Deepgram response
+      const transcript = result?.results?.channels?.[0]?.alternatives?.[0]?.transcript || ''
+      return { text: transcript }
+    } catch (err) {
+      return {
+        text: '',
+        error: 'Deepgram transcription failed',
+        details: err instanceof Error ? err.message : String(err),
+      }
+    }
+  } else if (isWhisperModel(model)) {
     // Use Together.ai for Whisper models
     // Note: Together.ai's Whisper implementation has issues with the prompt parameter
     // causing it to hallucinate glossary words, so we don't pass it
@@ -81,7 +157,7 @@ export async function transcribeAudioBuffer(
     try {
       const response = await together.audio.transcriptions.create({
         model,
-        language,
+        language: effectiveLanguage,
         file: new File([new Uint8Array(bytes)], filename, { type: mimeType }),
         // Deliberately NOT passing prompt for Together.ai - causes hallucinations
       })
@@ -105,7 +181,7 @@ export async function transcribeAudioBuffer(
     const blob = new Blob([new Uint8Array(bytes)], { type: mimeType })
     formData.append('file', blob, filename)
     formData.append('model', model)
-    formData.append('language', language)
+    formData.append('language', effectiveLanguage)
     
     // OpenAI handles prompts well for spelling guidance
     if (prompt) {
@@ -142,7 +218,9 @@ export interface TranscribeFileOptions {
   filePath: string
   mimeType: string
   model: string
+  language?: string // Language code (e.g., 'de', 'de-CH')
   prompt?: string // Only used for OpenAI models
+  glossary?: string[] // Used for OpenAI (in prompt) and Deepgram (as keyterms)
   uploadsDir: string
   onProgress?: (message: string) => void
 }
@@ -158,11 +236,12 @@ export interface TranscribeFileResult {
 export async function transcribeAudioFile(
   options: TranscribeFileOptions
 ): Promise<TranscribeFileResult> {
-  const { filePath, mimeType, model, prompt, uploadsDir, onProgress } = options
+  const { filePath, mimeType, model, language, prompt, glossary, uploadsDir, onProgress } = options
   const log = onProgress || console.log
 
   log(`Starting transcription with model: ${model}`)
-  log(`Is Whisper model: ${isWhisperModel(model)}`)
+  log(`Is Whisper model: ${isWhisperModel(model)}, Is Deepgram model: ${isDeepgramModel(model)}`)
+  log(`Language: ${language || DEFAULT_MODEL_LANGUAGES[model] || 'de'}`)
 
   // Analyze audio duration and determine if chunking is needed
   let audioDuration = 0
@@ -202,10 +281,13 @@ export async function transcribeAudioFile(
   // Transcribe each chunk
   const transcriptions: string[] = []
   log(`Number of chunks to transcribe: ${chunks.length}`)
-  if (prompt && !isWhisperModel(model)) {
+  if (prompt && !isWhisperModel(model) && !isDeepgramModel(model)) {
     log(`Custom transcription prompt: ${prompt.substring(0, 100)}...`)
   } else if (prompt && isWhisperModel(model)) {
     log('Note: Custom prompt ignored for Together.ai/Whisper (causes hallucinations)')
+  }
+  if (glossary && glossary.length > 0 && isDeepgramModel(model)) {
+    log(`Deepgram keyterms: ${glossary.join(', ')}`)
   }
 
   for (let i = 0; i < chunks.length; i++) {
@@ -219,7 +301,7 @@ export async function transcribeAudioFile(
       new Uint8Array(chunkBuffer),
       chunkFilename,
       mimeType,
-      { model, prompt }
+      { model, language, prompt, glossary }
     )
 
     if (result.error) {
