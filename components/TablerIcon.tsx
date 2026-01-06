@@ -43,6 +43,7 @@ import {
   IconRefresh,
   IconStairs,
   IconAlertTriangle,
+  IconAlertCircle,
   IconDatabase,
   IconDatabaseOff,
   IconEdit,
@@ -59,6 +60,12 @@ import {
   IconMessage2,
   IconSend,
   IconExternalLink,
+  IconScan,
+  IconPhoto,
+  IconFile,
+  IconFileTypePdf,
+  IconDownload,
+  IconTable,
 } from '@tabler/icons-react'
 
 // Mapping from old Material Icon names to Tabler Icons
@@ -147,6 +154,16 @@ const iconMap: Record<string, typeof IconSettings> = {
   
   // File icons
   'file-text': IconFileText,
+  file: IconFile,
+  photo: IconPhoto,
+  'file-type-pdf': IconFileTypePdf,
+  
+  // OCR icons
+  scan: IconScan,
+  x: IconX,
+  'alert-circle': IconAlertCircle,
+  download: IconDownload,
+  table: IconTable,
   
   // Additional icons
   brain: IconBrain,

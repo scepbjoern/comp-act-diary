@@ -37,6 +37,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   const title = body?.title ? String(body.title).trim() : null
   const audioFileId = body?.audioFileId ?? null
   const originalTranscript = body?.originalTranscript ? String(body.originalTranscript).trim() : null
+  const ocrAssetIds: string[] = Array.isArray(body?.ocrAssetIds) ? body.ocrAssetIds : []
   
   if (!NoteTypes.includes(type)) return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
   if (!text) return NextResponse.json({ error: 'Text required' }, { status: 400 })
@@ -85,6 +86,21 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         timeBoxId: day.timeBoxId,
       }
     })
+  }
+
+  // If ocrAssetIds provided, create MediaAttachments with role SOURCE
+  if (ocrAssetIds.length > 0) {
+    for (const assetId of ocrAssetIds) {
+      await prisma.mediaAttachment.create({
+        data: {
+          assetId,
+          entityId: entry.id,
+          userId: day.userId,
+          role: 'SOURCE',
+          timeBoxId: day.timeBoxId,
+        }
+      })
+    }
   }
 
   // Automatically detect and create mentions
@@ -136,7 +152,16 @@ async function loadNotesForTimeBox(timeBoxId: string, dayId: string) {
   return journalRows.map((j) => {
     const entryAttachments = attachmentsByEntry.get(j.id) || []
     const audioAtt = entryAttachments.find(a => a.asset.mimeType?.startsWith('audio/'))
-    const photoAtts = entryAttachments.filter(a => a.asset.mimeType?.startsWith('image/'))
+    // Only include images that are ATTACHMENT or GALLERY, not SOURCE (OCR sources)
+    // Also exclude images in ocr/ folder as fallback
+    const photoAtts = entryAttachments.filter(a => {
+      if (!a.asset.mimeType?.startsWith('image/')) return false
+      // Exclude OCR sources by role
+      if (a.role === 'SOURCE') return false
+      // Fallback: exclude by path pattern
+      if (a.asset.filePath?.startsWith('ocr/')) return false
+      return true
+    })
     
     return {
       id: j.id,
@@ -152,7 +177,10 @@ async function loadNotesForTimeBox(timeBoxId: string, dayId: string) {
       audioFilePath: audioAtt?.asset.filePath ?? null,
       audioFileId: audioAtt?.asset.id ?? null,
       keepAudio: true,
-      photos: photoAtts.map((p) => ({ id: p.asset.id, url: p.asset.filePath || '' })),
+      photos: photoAtts.map((p) => ({ 
+        id: p.asset.id, 
+        url: p.asset.filePath ? `/uploads/${p.asset.filePath}` : '' 
+      })),
     }
   })
 }

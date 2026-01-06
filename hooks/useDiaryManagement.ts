@@ -36,6 +36,7 @@ export function useDiaryManagement(
   const [newDiaryTitle, setNewDiaryTitle] = useState('')
   const [newDiaryAudioFileId, setNewDiaryAudioFileId] = useState<string | null>(null)
   const [newDiaryOriginalTranscript, setNewDiaryOriginalTranscript] = useState<string | null>(null)
+  const [newDiaryOcrAssetIds, setNewDiaryOcrAssetIds] = useState<string[]>([])
   const [newDiaryTime, setNewDiaryTime] = useState('')
   const [editorKey, setEditorKey] = useState(0)
   const [keepAudio, setKeepAudio] = useState(true)
@@ -306,6 +307,7 @@ export function useDiaryManagement(
     setNewDiaryText('')
     setNewDiaryAudioFileId(null)
     setNewDiaryOriginalTranscript(null)
+    setNewDiaryOcrAssetIds([])
     setNewDiaryTime('')
     setShowRetranscribeOptions(false)
     setIsRetranscribing(false)
@@ -328,6 +330,7 @@ export function useDiaryManagement(
           audioFileId: newDiaryAudioFileId,
           keepAudio,
           originalTranscript: newDiaryOriginalTranscript,
+          ocrAssetIds: newDiaryOcrAssetIds,
           time: newDiaryTime || new Date().toISOString().slice(11, 16),
           tzOffsetMinutes: new Date().getTimezoneOffset(),
         }),
@@ -341,6 +344,7 @@ export function useDiaryManagement(
       setNewDiaryText('')
       setNewDiaryAudioFileId(null)
       setNewDiaryOriginalTranscript(null)
+      setNewDiaryOcrAssetIds([])
       
       // Reset time to current time for next entry
       const now = new Date()
@@ -361,7 +365,7 @@ export function useDiaryManagement(
     } finally {
       onSavingChange(false)
     }
-  }, [dayId, newDiaryText, newDiaryTitle, newDiaryAudioFileId, keepAudio, newDiaryOriginalTranscript, newDiaryTime, date, onSavingChange, onToast])
+  }, [dayId, newDiaryText, newDiaryTitle, newDiaryAudioFileId, keepAudio, newDiaryOriginalTranscript, newDiaryOcrAssetIds, newDiaryTime, date, onSavingChange, onToast])
 
   return {
     // State
@@ -374,6 +378,7 @@ export function useDiaryManagement(
     newDiaryTitle,
     newDiaryAudioFileId,
     newDiaryOriginalTranscript,
+    newDiaryOcrAssetIds,
     newDiaryTime,
     editorKey,
     keepAudio,
@@ -389,6 +394,7 @@ export function useDiaryManagement(
     setNewDiaryTitle,
     setNewDiaryAudioFileId,
     setNewDiaryOriginalTranscript,
+    setNewDiaryOcrAssetIds,
     setNewDiaryTime,
     setEditorKey,
     setKeepAudio,

@@ -29,6 +29,7 @@
     "@deepgram/sdk": "^4.11.3",
     "@hookform/resolvers": "^5.2.2",
     "@mdxeditor/editor": "^3.21.0",
+    "@mistralai/mistralai": "^1.11.0",
     "@prisma/client": "6.19.0",
     "@tabler/icons-react": "^3.35.0",
     "@tailwindcss/typography": "^0.5.15",

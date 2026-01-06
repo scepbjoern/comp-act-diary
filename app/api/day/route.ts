@@ -111,7 +111,15 @@ export async function GET(req: NextRequest) {
   const notes = journalRows.map((j) => {
     const entryAttachments = attachmentsByEntry.get(j.id) || []
     const audioAtt = entryAttachments.find(a => a.asset.mimeType?.startsWith('audio/'))
-    const photoAtts = entryAttachments.filter(a => a.asset.mimeType?.startsWith('image/'))
+    // Only include images that are ATTACHMENT or GALLERY, not SOURCE (OCR sources)
+    const photoAtts = entryAttachments.filter(a => {
+      if (!a.asset.mimeType?.startsWith('image/')) return false
+      // Exclude OCR sources by role
+      if (a.role === 'SOURCE') return false
+      // Fallback: exclude by path pattern
+      if (a.asset.filePath?.startsWith('ocr/')) return false
+      return true
+    })
     
     return {
       id: j.id,
@@ -130,7 +138,10 @@ export async function GET(req: NextRequest) {
       audioFilePath: audioAtt?.asset.filePath ?? null,
       audioFileId: audioAtt?.asset.id ?? null,
       keepAudio: true,
-      photos: photoAtts.map((p) => ({ id: p.asset.id, url: p.asset.filePath || '' })),
+      photos: photoAtts.map((p) => ({ 
+        id: p.asset.id, 
+        url: p.asset.filePath ? `/uploads/${p.asset.filePath}` : '' 
+      })),
     }
   })
 

@@ -100,6 +100,7 @@ export default function HeutePage() {
     setNewDiaryTitle,
     setNewDiaryAudioFileId,
     setNewDiaryOriginalTranscript: _setNewDiaryOriginalTranscript,
+    setNewDiaryOcrAssetIds,
     setNewDiaryTime,
     setEditorKey,
     setKeepAudio,
@@ -557,6 +558,7 @@ export default function HeutePage() {
             onNewDiaryTextChange={setNewDiaryText}
             onNewDiaryTimeChange={setNewDiaryTime}
             onNewDiaryAudioFileIdChange={setNewDiaryAudioFileId}
+            onNewDiaryOcrAssetIdsChange={setNewDiaryOcrAssetIds}
             onEditorKeyIncrement={() => setEditorKey(prev => prev + 1)}
             onKeepAudioChange={setKeepAudio}
             onShowRetranscribeOptionsToggle={() => setShowRetranscribeOptions(!showRetranscribeOptions)}

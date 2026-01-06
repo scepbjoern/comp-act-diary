@@ -109,6 +109,16 @@ enum MediaRole {
   GALLERY    /// Teil einer Galerie
   ATTACHMENT /// Allgemeiner Anhang
   THUMBNAIL  /// Vorschaubild
+  SOURCE     /// OCR-Quelldatei (Bild/PDF)
+}
+
+/// Status der OCR-Verarbeitung
+enum OcrStatus {
+  PENDING    /// Noch nicht verarbeitet
+  PROCESSING /// In Bearbeitung
+  COMPLETED  /// Erfolgreich abgeschlossen
+  FAILED     /// Fehlgeschlagen
+  SKIPPED    /// Übersprungen (z.B. kein Text erkannt)
 }
 
 /// Art des Medienkonsums
@@ -1163,6 +1173,14 @@ model MediaAsset {
   thumbnailUrl     String?
   /// Aufnahmezeitpunkt (aus EXIF, optional)
   capturedAt       DateTime?
+  /// OCR-extrahierter Text (für Suche/Vorschau)
+  ocrText          String?
+  /// OCR-Metadaten als JSON (Seitenzahl, Konfidenz, etc.)
+  ocrMetadata      Json?
+  /// OCR-Verarbeitungsstatus
+  ocrStatus        OcrStatus?
+  /// Zeitpunkt der OCR-Verarbeitung
+  ocrProcessedAt   DateTime?
   /// Erstellungszeitpunkt (Import-Zeitpunkt)
   createdAt        DateTime  @default(now())
   /// Letztes Update
@@ -1174,6 +1192,7 @@ model MediaAsset {
   @@unique([userId, filePath])
   @@unique([userId, externalProvider, externalId])
   @@index([userId, capturedAt])
+  @@index([ocrStatus])
 }
 
 /// Medien-Anhang: Verknüpft ein MediaAsset mit einer Entität.

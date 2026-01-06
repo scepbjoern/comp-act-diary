@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { TablerIcon } from '@/components/TablerIcon'
 import { MicrophoneButton } from '@/components/MicrophoneButton'
 import AudioUploadButton from '@/components/AudioUploadButton'
+import OCRUploadButton from '@/components/OCRUploadButton'
 import { OriginalTranscriptSection } from '@/components/OriginalTextButton'
 import { IconSparkles } from '@tabler/icons-react'
 import { RichTextEditor } from '@/components/RichTextEditor'
@@ -39,6 +40,7 @@ interface DiarySectionProps {
   onNewDiaryTextChange: (text: string) => void
   onNewDiaryTimeChange: (time: string) => void
   onNewDiaryAudioFileIdChange: (id: string | null) => void
+  onNewDiaryOcrAssetIdsChange?: (ids: string[]) => void
   onEditorKeyIncrement: () => void
   onKeepAudioChange: (keep: boolean) => void
   onShowRetranscribeOptionsToggle: () => void
@@ -87,6 +89,7 @@ export function DiarySection({
   onNewDiaryTextChange,
   onNewDiaryTimeChange,
   onNewDiaryAudioFileIdChange,
+  onNewDiaryOcrAssetIdsChange,
   onEditorKeyIncrement,
   onKeepAudioChange,
   onShowRetranscribeOptionsToggle,
@@ -302,6 +305,22 @@ export function DiarySection({
               }
               // Set original transcript when first transcribing
               onOriginalPreserved(text)
+              onEditorKeyIncrement()
+            }}
+            compact
+          />
+
+          <OCRUploadButton
+            date={date}
+            time={newDiaryTime}
+            onOcrComplete={({ text, mediaAssetIds }: { text: string; mediaAssetIds: string[] }) => {
+              onNewDiaryTextChange(newDiaryText ? (newDiaryText + '\n\n' + text) : text)
+              // Set original transcript for OCR text
+              onOriginalPreserved(text)
+              // Store OCR asset IDs for linking when saving
+              if (mediaAssetIds.length > 0) {
+                onNewDiaryOcrAssetIdsChange?.(mediaAssetIds)
+              }
               onEditorKeyIncrement()
             }}
             compact

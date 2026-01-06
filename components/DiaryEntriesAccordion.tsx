@@ -8,6 +8,7 @@ import { AudioPlayerH5 } from './AudioPlayerH5'
 import { RichTextEditor } from './RichTextEditor'
 import { DiaryContentWithMentions } from './DiaryContentWithMentions'
 import { OriginalTranscriptPanel } from './OriginalTranscriptPanel'
+import { OCRSourcePanel } from './OCRSourcePanel'
 import { JournalEntrySection } from './JournalEntrySection'
 import { AISettingsPopup } from './AISettingsPopup'
 import { useJournalAI } from '@/hooks/useJournalAI'
@@ -472,6 +473,21 @@ export function DiaryEntriesAccordion({
                   />
                 )}
                 
+                {/* OCR Sources - show for entries without audio (likely OCR-sourced) */}
+                {!n.audioFileId && n.originalTranscript && (
+                  <OCRSourcePanel
+                    noteId={n.id}
+                    initialTranscript={n.originalTranscript}
+                    onRestoreToContent={(text) => {
+                      if (editingNoteId === n.id) {
+                        onTextChange(text)
+                      } else if (onUpdateContent) {
+                        onUpdateContent(n.id, text)
+                      }
+                    }}
+                  />
+                )}
+                
                 {/* Photos - includes both uploaded photos and images from markdown */}
                 {(() => {
                   const textToScan = editingNoteId === n.id ? editingText : n.text
@@ -486,7 +502,13 @@ export function DiaryEntriesAccordion({
                   
                   return (
                     <div className="flex flex-wrap gap-2">
-                      {allImages.map((img, idx) => (
+                      {allImages.map((img, idx) => {
+                        // Validate URL before rendering
+                        if (img.type === 'uploaded' && (!img.data.url || !img.data.url.trim())) {
+                          return null
+                        }
+                        
+                        return (
                         <div key={idx} className="relative group">
                           {img.type === 'uploaded' ? (
                             <>
@@ -518,7 +540,8 @@ export function DiaryEntriesAccordion({
                             />
                           )}
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )
                 })()}
