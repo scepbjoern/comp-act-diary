@@ -16,6 +16,3 @@ Zwischenfazit aus https://chatgpt.com/c/693c6f9b-1bb4-8325-a73c-688e9864e2f8:
 - https://www.reflection.app
 - https://www.rosebud.app/
 - https://www.mindsera.com/
-
-## OCR
-Neu soll es auch möglich sein, hochgeladene Bilder mit Textinhalten über OCR in Tagebucheinträge umzuwandeln. Das scheinbar beste Open-Source-Modell bis jetzt soll https://mistral.ai/news/mistral-ocr-3 sein. Das ganze kostet nur rund 2 USD pro 1000 Seiten.

@@ -1,5 +1,6 @@
 "use client"
 import React, { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useUIState } from '@/hooks/useUIState'
 import { useSymptomManagement } from '@/hooks/useSymptomManagement'
 import { useHabitManagement } from '@/hooks/useHabitManagement'
@@ -21,17 +22,26 @@ import { ymd } from '@/lib/date-utils'
 import type { Day, InlineData } from '@/types/day'
 
 export default function HeutePage() {
+  const searchParams = useSearchParams()
+  const highlightEntryId = searchParams.get('entry')
+  const urlDate = searchParams.get('date')
+  
+  // Initialize date from URL params or today (avoid window check during SSR)
   const [date, setDate] = useState(() => {
-    // Check for navigation target from /day/[date] route
-    if (typeof window !== 'undefined') {
-      const targetDate = sessionStorage.getItem('navigateToDate')
-      if (targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
-        sessionStorage.removeItem('navigateToDate')
-        return targetDate
-      }
+    if (urlDate && /^\d{4}-\d{2}-\d{2}$/.test(urlDate)) {
+      return urlDate
     }
     return ymd(new Date())
   })
+  
+  // Handle sessionStorage navigation after mount
+  useEffect(() => {
+    const targetDate = sessionStorage.getItem('navigateToDate')
+    if (targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+      sessionStorage.removeItem('navigateToDate')
+      setDate(targetDate)
+    }
+  }, [])
   const [day, setDay] = useState<Day | null>(null)
   const [daysWithData, setDaysWithData] = useState<Set<string>>(new Set())
   const [reflectionDays, setReflectionDays] = useState<Set<string>>(new Set())
@@ -189,6 +199,27 @@ export default function HeutePage() {
     }, 150)
     return () => { aborted = true; ctrl.abort(); clearTimeout(t) }
   }, [date])
+
+  // Scroll to and highlight entry from search result navigation
+  useEffect(() => {
+    if (highlightEntryId && notes.length > 0) {
+      // Small delay to ensure DOM is rendered
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`entry-${highlightEntryId}`)
+        if (element) {
+          // Scroll to the entry
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          // Add highlight animation
+          element.classList.add('highlight-pulse')
+          // Remove animation after it completes
+          setTimeout(() => {
+            element.classList.remove('highlight-pulse')
+          }, 2500)
+        }
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [highlightEntryId, notes])
 
   // Check if a reflection is due (business logic: > 6 Tage)
   useEffect(() => {

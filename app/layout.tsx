@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { getPrisma } from '@/lib/prisma'
 import { SiteNav } from '@/components/SiteNav'
 import NotificationBell from '@/components/NotificationBell'
+import { GlobalSearch } from '@/components/GlobalSearch'
 import pkg from '../package.json'
 
 export const metadata = {
@@ -139,6 +140,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               <span>CompACT Diary</span>
             </Link>
             <div className="flex items-center gap-2">
+              <GlobalSearch />
               <NotificationBell />
               <SiteNav user={user ? { id: user.id, username: user.username, displayName: user.displayName, profileImageUrl: user.profileImageUrl } : null} />
             </div>

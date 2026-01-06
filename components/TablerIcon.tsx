@@ -66,6 +66,15 @@ import {
   IconFileTypePdf,
   IconDownload,
   IconTable,
+  IconUser,
+  IconMapPin,
+  IconTag,
+  IconCheckbox,
+  IconHeart,
+  IconTarget,
+  IconRepeat,
+  IconBookmark,
+  IconMovie,
 } from '@tabler/icons-react'
 
 // Mapping from old Material Icon names to Tabler Icons
@@ -172,6 +181,18 @@ const iconMap: Record<string, typeof IconSettings> = {
   'message-2': IconMessage2,
   send: IconSend,
   'external-link': IconExternalLink,
+  
+  // Search result icons
+  notebook: IconNotebook,
+  user: IconUser,
+  'map-pin': IconMapPin,
+  tag: IconTag,
+  checkbox: IconCheckbox,
+  heart: IconHeart,
+  target: IconTarget,
+  repeat: IconRepeat,
+  bookmark: IconBookmark,
+  movie: IconMovie,
 }
 
 interface TablerIconProps {

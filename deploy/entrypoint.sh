@@ -5,12 +5,14 @@
 # Umgebungsvariablen:
 #   SYNC_SCHEMA=true  - Schema-Sync bei Start durchführen (default: false)
 #   SCHEMA_PATH       - Pfad zum Prisma-Schema (default: prisma/schema.prisma)
+#   SETUP_FTS=true    - Full-Text Search Setup bei Start (default: true)
 
 set -eu
 
 RETRY_DELAY="${RETRY_DELAY:-3}"
 SCHEMA_PATH="${SCHEMA_PATH:-prisma/schema.prisma}"
 SYNC_SCHEMA="${SYNC_SCHEMA:-false}"
+SETUP_FTS="${SETUP_FTS:-true}"
 
 log() {
   echo "[entrypoint] $*"
@@ -48,6 +50,22 @@ if [ "$SYNC_SCHEMA" = "true" ]; then
 else
   log "SYNC_SCHEMA nicht gesetzt → Kein Schema-Sync (Standard-Verhalten)."
   log "Setze SYNC_SCHEMA=true in docker-compose.yml wenn Schema-Änderungen deployt werden."
+fi
+
+# =============================================================================
+# FULL-TEXT SEARCH SETUP (idempotent, runs by default)
+# =============================================================================
+if [ "$SETUP_FTS" = "true" ]; then
+  log "SETUP_FTS=true → Richte Volltextsuche ein (idempotent)..."
+  psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f scripts/setup-fulltext-search.sql -q 2>/dev/null || {
+    log "FTS-Setup via psql fehlgeschlagen, versuche via Node.js..."
+    node -e "require('./scripts/setup-fulltext-search.ts')" 2>/dev/null || \
+    npx ts-node scripts/setup-fulltext-search.ts 2>/dev/null || \
+    log "Warnung: FTS-Setup konnte nicht ausgeführt werden. Suche funktioniert evtl. nicht optimal."
+  }
+  log "FTS-Setup abgeschlossen."
+else
+  log "SETUP_FTS=false → Kein Volltextsuche-Setup."
 fi
 
 log "DB-Schema sichergestellt. Starte App..."

@@ -219,7 +219,11 @@ export function DiaryEntriesAccordion({
           new Date(n.contentUpdatedAt) > new Date(n.createdAtIso || 0)
         
         return (
-          <div key={n.id} className="collapse collapse-arrow bg-base-200 border-2 border-slate-600">
+          <div 
+            key={n.id} 
+            id={`entry-${n.id}`}
+            className="collapse collapse-arrow bg-base-200 border-2 border-slate-600"
+          >
             <input type="checkbox" defaultChecked />
             <div className="collapse-title text-sm font-medium py-2">
               <div className="flex items-center gap-2">
