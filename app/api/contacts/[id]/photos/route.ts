@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
@@ -20,6 +20,7 @@ export async function GET(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
+    const prisma = getPrisma()
     const { id: contactId } = await params
 
     // Get contact's entity and media attachments
@@ -70,6 +71,7 @@ export async function POST(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
+    const prisma = getPrisma()
     const { id: contactId } = await params
 
     // Verify contact exists
@@ -187,6 +189,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
+    const prisma = getPrisma()
     const { id: contactId } = await params
     const body = await request.json()
     const { attachmentId, role } = body
@@ -252,6 +255,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
+    const prisma = getPrisma()
     const { id: contactId } = await params
     const { searchParams } = new URL(request.url)
     const attachmentId = searchParams.get('attachmentId')

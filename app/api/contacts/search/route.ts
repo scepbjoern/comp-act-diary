@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
 
 async function getUserId(): Promise<string | null> {
@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
+    const prisma = getPrisma()
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('q') || ''
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50)

@@ -41,7 +41,7 @@ interface DarmkurSectionProps {
   onEditingTimeChange: (time: string) => void
   onUploadPhotos: (noteId: string, files: FileList | File[]) => void
   onDeletePhoto: (photoId: string) => void
-  onViewPhoto: (noteId: string, index: number) => void
+  onViewPhoto: (noteId: string, index: number, url?: string) => void
   onMealTimeChange: (time: string) => void
   onMealTextChange: (text: string) => void
   onAddMealNote: () => void

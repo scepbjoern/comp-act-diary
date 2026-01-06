@@ -48,8 +48,8 @@ export function DebugDayPanel({ debugData }: DebugDayPanelProps) {
           <div>
             <h4 className="font-medium text-yellow-300 mb-2">👥 Kontakte ({contacts.length})</h4>
             <div className="flex flex-wrap gap-1">
-              {contacts.map((c) => (
-                <span key={c.id} className="px-2 py-0.5 bg-blue-800/50 rounded text-xs">
+              {contacts.map((c, idx) => (
+                <span key={`${c.id}-${idx}`} className="px-2 py-0.5 bg-blue-800/50 rounded text-xs">
                   {c.name}
                 </span>
               ))}

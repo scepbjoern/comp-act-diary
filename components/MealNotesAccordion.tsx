@@ -35,7 +35,7 @@ interface MealNotesAccordionProps {
   onTimeChange: (time: string) => void
   onUploadPhotos: (id: string, files: FileList | File[]) => void
   onDeletePhoto: (id: string) => void
-  onViewPhoto: (noteId: string, index: number) => void
+  onViewPhoto: (noteId: string, index: number, url?: string) => void
 }
 
 export function MealNotesAccordion({

@@ -574,7 +574,7 @@ export default function HeutePage() {
             onEditingTitleChange={setEditingTitle}
             onUploadPhotos={uploadPhotos}
             onDeletePhoto={deletePhoto}
-            onViewPhoto={(noteId, index) => setViewer({ noteId, index })}
+            onViewPhoto={(noteId, index, url) => setViewer({ noteId, index, url })}
             onDeleteAudio={deleteAudio}
             onHandleRetranscribe={handleRetranscribe}
             onGenerateTitle={handleGenerateTitle}
@@ -626,7 +626,7 @@ export default function HeutePage() {
             onEditingTimeChange={setEditingTime}
             onUploadPhotos={uploadPhotos}
             onDeletePhoto={deletePhoto}
-            onViewPhoto={(noteId, index) => setViewer({ noteId, index })}
+            onViewPhoto={(noteId, index, url) => setViewer({ noteId, index, url })}
             onMealTimeChange={setMealTime}
             onMealTextChange={setMealText}
             onAddMealNote={addMealNote}

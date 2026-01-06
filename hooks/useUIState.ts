@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 
 export function useUIState() {
   const [darmkurCollapsed, setDarmkurCollapsed] = useState(true)
-  const [viewer, setViewer] = useState<{ noteId: string; index: number } | null>(null)
+  const [viewer, setViewer] = useState<{ noteId: string; index: number; url?: string } | null>(null)
   const [swipeStartX, setSwipeStartX] = useState<number | null>(null)
   const [forceBarVisible, setForceBarVisible] = useState(false)
 

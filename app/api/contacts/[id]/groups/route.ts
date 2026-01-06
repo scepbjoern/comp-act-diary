@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
 
 async function getUserId(): Promise<string | null> {
@@ -19,6 +19,8 @@ export async function GET(
 
     const { id: contactId } = await params
 
+    const prisma = getPrisma()
+    
     // Get all taggings for this contact with their taxonomies
     const taggings = await prisma.tagging.findMany({
       where: {
@@ -65,6 +67,8 @@ export async function POST(
       return NextResponse.json({ error: 'groupId erforderlich' }, { status: 400 })
     }
 
+    const prisma = getPrisma()
+    
     // Ensure Entity exists
     let entity = await prisma.entity.findUnique({ where: { id: contactId } })
     if (!entity) {
@@ -122,6 +126,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
+    const prisma = getPrisma()
+    
     const { searchParams } = new URL(request.url)
     const taggingId = searchParams.get('taggingId')
 

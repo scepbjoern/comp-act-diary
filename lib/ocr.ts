@@ -38,6 +38,15 @@ export interface OcrOptions {
   includeImages?: boolean
   /** Table format: 'markdown', 'html', or null */
   tableFormat?: 'markdown' | 'html' | null
+  /** Specific pages to process (0-based indices or ranges like [0, 2, 5] or [0, 1, 2]) */
+  pages?: number[]
+}
+
+export interface OcrTable {
+  /** Table ID (e.g., tbl-0.md) */
+  id: string
+  /** Table content in markdown format */
+  content: string
 }
 
 export interface OcrPage {
@@ -48,7 +57,7 @@ export interface OcrPage {
   /** Extracted images (if includeImages=true) */
   images?: OcrImage[]
   /** Extracted tables */
-  tables?: string[]
+  tables?: OcrTable[]
 }
 
 export interface OcrImage {
@@ -154,12 +163,21 @@ export async function extractTextFromImage(
 
     // Extract pages from response
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pages: OcrPage[] = (response.pages || []).map((page: any, index: number) => ({
-      index,
-      markdown: page.markdown || '',
-      images: options.includeImages ? extractImages(page) : undefined,
-      tables: extractTables(page),
-    }))
+    const pages: OcrPage[] = (response.pages || []).map((page: any, index: number) => {
+      const images = extractImages(page)
+      const tables = extractTables(page)
+      const rawMarkdown = page.markdown || ''
+      
+      // Post-process markdown to handle images and tables
+      const processedMarkdown = postProcessMarkdown(rawMarkdown, images, tables, options)
+      
+      return {
+        index,
+        markdown: processedMarkdown,
+        images: options.includeImages ? images : undefined,
+        tables,
+      }
+    })
 
     // Combine all page markdown
     const text = pages.map((p) => p.markdown).join('\n\n')
@@ -188,13 +206,17 @@ export async function extractTextFromPDF(
   options: OcrOptions = {}
 ): Promise<OcrResult> {
   console.log(`[OCR] Extracting text from PDF (${pdfBuffer.length} bytes)`)
+  if (options.pages) {
+    console.log(`[OCR] Page selection: ${options.pages.join(', ')}`)
+  }
 
   const client = getMistralClient()
   const dataUrl = bufferToDataUrl(pdfBuffer, SUPPORTED_PDF_TYPE)
 
   try {
     // Build request options
-    const requestOptions: Parameters<typeof client.ocr.process>[0] = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const requestOptions: any = {
       model: OCR_MODEL,
       document: {
         type: 'document_url',
@@ -208,18 +230,34 @@ export async function extractTextFromPDF(
       requestOptions.tableFormat = options.tableFormat
     }
 
+    // Add page selection if specified
+    if (options.pages && options.pages.length > 0) {
+      requestOptions.pages = options.pages
+    }
+
     const response = await client.ocr.process(requestOptions)
 
     console.log(`[OCR] PDF processed successfully, ${response.pages?.length || 0} pages`)
 
     // Extract pages from response
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pages: OcrPage[] = (response.pages || []).map((page: any, index: number) => ({
-      index,
-      markdown: page.markdown || '',
-      images: options.includeImages ? extractImages(page) : undefined,
-      tables: extractTables(page),
-    }))
+    const pages: OcrPage[] = (response.pages || []).map((page: any, index: number) => {
+      console.log(`[OCR PDF] Page ${index} raw markdown (first 500 chars):`, (page.markdown || '').substring(0, 500))
+      console.log(`[OCR PDF] Page ${index} has ${page.images?.length || 0} images, ${page.tables?.length || 0} tables`)
+      const images = extractImages(page)
+      const tables = extractTables(page)
+      const rawMarkdown = page.markdown || ''
+      
+      // Post-process markdown to handle images and tables
+      const processedMarkdown = postProcessMarkdown(rawMarkdown, images, tables, options)
+      
+      return {
+        index,
+        markdown: processedMarkdown,
+        images: options.includeImages ? images : undefined,
+        tables,
+      }
+    })
 
     // Combine all page markdown with page separators
     const text = pages
@@ -350,13 +388,139 @@ function extractImages(page: { images?: Array<{ id?: string; imageBase64?: strin
 
 /**
  * Extract tables from OCR page response
+ * Mistral API returns tables with 'id' and 'content' (not 'tableMarkdown')
  */
-function extractTables(page: { tables?: Array<{ tableMarkdown?: string }> }): string[] {
+function extractTables(page: { tables?: Array<{ id?: string; content?: string; tableMarkdown?: string }> }): { id: string; content: string }[] {
+  console.log(`[OCR extractTables] Raw tables array:`, JSON.stringify(page.tables, null, 2))
   if (!page.tables) return []
 
-  return page.tables
-    .map((t) => t.tableMarkdown)
-    .filter((t): t is string => typeof t === 'string')
+  const tables = page.tables
+    .filter((t) => t.content || t.tableMarkdown)
+    .map((t, i) => ({
+      id: t.id || `tbl-${i}.md`,
+      content: t.content || t.tableMarkdown || '',
+    }))
+  console.log(`[OCR extractTables] Extracted ${tables.length} tables`)
+  return tables
+}
+
+/**
+ * Post-process OCR markdown to handle images and tables correctly
+ * @param markdown - Raw markdown from OCR
+ * @param images - Extracted images with base64 data
+ * @param tables - Extracted tables with id and content
+ * @param options - OCR options
+ */
+function postProcessMarkdown(
+  markdown: string,
+  images: OcrImage[],
+  tables: OcrTable[],
+  options: OcrOptions
+): string {
+  console.log(`[OCR postProcess] Input: ${markdown.length} chars, ${images.length} images, ${tables.length} tables`)
+  console.log(`[OCR postProcess] Options: includeImages=${options.includeImages}, tableFormat=${options.tableFormat}`)
+  
+  let result = markdown
+
+  // Handle images
+  if (options.includeImages && images.length > 0) {
+    // Replace image references with base64 data URLs
+    for (const img of images) {
+      const imgRef = new RegExp(`!\\[${escapeRegex(img.id)}\\]\\(${escapeRegex(img.id)}\\)`, 'g')
+      if (img.base64) {
+        // Determine mime type from extension
+        const ext = img.id.split('.').pop()?.toLowerCase() || 'jpeg'
+        const mimeType = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/jpeg'
+        result = result.replace(imgRef, `![${img.id}](data:${mimeType};base64,${img.base64})`)
+      } else {
+        // No base64 data, remove the reference
+        result = result.replace(imgRef, '')
+      }
+    }
+  } else {
+    // Remove all image references (img-X.jpeg pattern)
+    const imgPattern = /!\[img-\d+\.\w+\]\(img-\d+\.\w+\)/g
+    const imgMatches = result.match(imgPattern)
+    console.log(`[OCR postProcess] Removing ${imgMatches?.length || 0} image refs (includeImages=${options.includeImages})`)
+    result = result.replace(imgPattern, '')
+  }
+
+  // Handle tables
+  console.log(`[OCR postProcess] Tables in markdown: ${(result.match(/\[tbl-\d+\.md\]/g) || []).length} refs`)
+  if (options.tableFormat === 'markdown' && tables.length > 0) {
+    // Replace table links with actual table markdown content
+    console.log(`[OCR postProcess] Replacing table links with markdown tables`)
+    for (const table of tables) {
+      // Match the table link by its ID (e.g., [tbl-0.md](tbl-0.md))
+      const tblRef = new RegExp(`\\[${escapeRegex(table.id)}\\]\\(${escapeRegex(table.id)}\\)`, 'g')
+      console.log(`[OCR postProcess] Table ${table.id}: ${table.content.substring(0, 100)}...`)
+      result = result.replace(tblRef, `\n\n${table.content}\n\n`)
+    }
+  } else if (!options.tableFormat) {
+    // Remove table links and convert any inline tables to plain text
+    console.log(`[OCR postProcess] Removing table links and converting tables to plain text`)
+    result = result.replace(/\[tbl-\d+\.md\]\(tbl-\d+\.md\)/g, '')
+    // Convert markdown tables to plain text (extract cell contents)
+    result = convertMarkdownTablesToPlainText(result)
+  }
+
+  // Clean up multiple blank lines
+  result = result.replace(/\n{3,}/g, '\n\n').trim()
+
+  return result
+}
+
+/**
+ * Convert markdown tables to plain text
+ */
+function convertMarkdownTablesToPlainText(markdown: string): string {
+  const lines = markdown.split('\n')
+  const result: string[] = []
+  let inTable = false
+  const tableRows: string[] = []
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    
+    // Check if line is a table row (starts and ends with |)
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      inTable = true
+      // Skip separator rows (contain only |, -, :, spaces)
+      if (/^[|\-:\s]+$/.test(trimmed)) {
+        continue
+      }
+      // Extract cell contents
+      const cells = trimmed
+        .slice(1, -1) // Remove leading and trailing |
+        .split('|')
+        .map(cell => cell.trim())
+        .filter(cell => cell.length > 0)
+      tableRows.push(cells.join(' '))
+    } else {
+      // End of table or not a table row
+      if (inTable && tableRows.length > 0) {
+        // Add collected table rows as plain text
+        result.push(tableRows.join('\n'))
+        tableRows.length = 0
+      }
+      inTable = false
+      result.push(line)
+    }
+  }
+
+  // Handle remaining table rows at end of content
+  if (tableRows.length > 0) {
+    result.push(tableRows.join('\n'))
+  }
+
+  return result.join('\n')
+}
+
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 /**

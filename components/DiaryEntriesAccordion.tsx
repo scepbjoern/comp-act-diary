@@ -55,7 +55,7 @@ interface DiaryEntriesAccordionProps {
   onTitleChange: (title: string) => void
   onUploadPhotos: (id: string, files: FileList | File[]) => void
   onDeletePhoto: (id: string) => void
-  onViewPhoto: (noteId: string, index: number) => void
+  onViewPhoto: (noteId: string, index: number, url?: string) => void
   onDeleteAudio?: (id: string) => void
   onRetranscribe?: (noteId: string, newText: string) => void
   onUpdateContent?: (noteId: string, newContent: string) => void
@@ -507,6 +507,13 @@ export function DiaryEntriesAccordion({
                         if (img.type === 'uploaded' && (!img.data.url || !img.data.url.trim())) {
                           return null
                         }
+                        // Validate markdown image URLs - must start with / or http
+                        if (img.type === 'markdown') {
+                          const url = img.url
+                          if (!url || (!url.startsWith('/') && !url.startsWith('http') && !url.startsWith('data:'))) {
+                            return null
+                          }
+                        }
                         
                         return (
                         <div key={idx} className="relative group">
@@ -535,7 +542,7 @@ export function DiaryEntriesAccordion({
                               width={64}
                               height={64}
                               className="w-16 h-16 object-cover rounded border border-blue-500/50 cursor-zoom-in" 
-                              onClick={() => onViewPhoto(n.id, img.index)}
+                              onClick={() => onViewPhoto(n.id, img.index, img.url)}
                               title="Aus Markdown"
                             />
                           )}

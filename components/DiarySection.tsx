@@ -56,7 +56,7 @@ interface DiarySectionProps {
   onEditingTitleChange: (title: string) => void
   onUploadPhotos: (noteId: string, files: FileList | File[]) => void
   onDeletePhoto: (photoId: string) => void
-  onViewPhoto: (noteId: string, index: number) => void
+  onViewPhoto: (noteId: string, index: number, url?: string) => void
   onDeleteAudio: (noteId: string) => void
   onHandleRetranscribe: (noteId: string, model: string) => Promise<void>
   onGenerateTitle: () => Promise<void>

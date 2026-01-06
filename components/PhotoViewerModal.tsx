@@ -2,7 +2,7 @@ import Image from 'next/image'
 import type { DayNote } from '@/types/day'
 
 interface PhotoViewerModalProps {
-  viewer: { noteId: string; index: number } | null
+  viewer: { noteId: string; index: number; url?: string } | null
   notes: DayNote[]
   swipeStartX: number | null
   onClose: () => void
@@ -26,7 +26,10 @@ export function PhotoViewerModal({
   const photos = note?.photos || []
   const current = photos[viewer.index]
   
-  if (!current) return null
+  // Use direct URL if provided (markdown image), otherwise use photo from array
+  const imageUrl = viewer.url || (current ? `${current.url}?v=${current.id}` : null)
+  
+  if (!imageUrl) return null
 
   return (
     <div 
@@ -43,7 +46,7 @@ export function PhotoViewerModal({
         onClick={e => e.stopPropagation()}
       >
         <Image 
-          src={`${current.url}?v=${current.id}`} 
+          src={imageUrl} 
           alt="Foto" 
           width={800}
           height={600}

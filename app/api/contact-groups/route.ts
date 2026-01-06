@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
 
 async function getUserId(): Promise<string | null> {
@@ -14,6 +14,8 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
+    const prisma = getPrisma()
+    
     // Get all CONTACT_GROUP taxonomies for the user
     const groups = await prisma.taxonomy.findMany({
       where: {

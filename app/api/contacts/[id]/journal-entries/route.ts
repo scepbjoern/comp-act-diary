@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
 
 async function getUserId(): Promise<string | null> {
@@ -17,6 +17,7 @@ export async function GET(
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
     }
 
+    const prisma = getPrisma()
     const { id: contactId } = await params
 
     // Verify contact belongs to user
