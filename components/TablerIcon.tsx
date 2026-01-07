@@ -186,6 +186,7 @@ const iconMap: Record<string, typeof IconSettings> = {
   notebook: IconNotebook,
   user: IconUser,
   'map-pin': IconMapPin,
+  location_on: IconMapPin,
   tag: IconTag,
   checkbox: IconCheckbox,
   heart: IconHeart,

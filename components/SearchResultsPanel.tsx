@@ -21,7 +21,7 @@ const INITIAL_ITEMS_PER_GROUP = 5;
 
 export function SearchResultsPanel({
   results,
-  totalCount,
+  totalCount: _totalCount,
   onResultClick,
 }: SearchResultsPanelProps) {
   // Track which groups are expanded

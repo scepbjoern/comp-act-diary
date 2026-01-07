@@ -975,6 +975,22 @@ export default function SettingsPage() {
           )}
         </ul>
       </div>
+
+      {/* Location Tracking Settings Link */}
+      <div className="card p-4 space-y-3 max-w-xl">
+        <h2 className="font-medium">
+          <span className="inline-flex items-center gap-1">
+            <TablerIcon name="location_on" />
+            <span>Standort-Tracking</span>
+          </span>
+        </h2>
+        <div className="text-sm text-gray-400">
+          OwnTracks-Webhook konfigurieren, API-Tokens verwalten und Google Timeline importieren.
+        </div>
+        <a href="/settings/location" className="btn btn-primary btn-sm w-fit">
+          Standort-Einstellungen öffnen
+        </a>
+      </div>
       
     </div>
     {avatarOpen && (

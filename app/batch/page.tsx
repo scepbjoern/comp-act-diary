@@ -10,7 +10,7 @@ import { BatchFilterForm, type BatchFilterFormData } from '@/components/BatchFil
 import { BatchPreview, type AffectedEntry } from '@/components/BatchPreview'
 import { BatchProgress } from '@/components/BatchProgress'
 import { BatchResults } from '@/components/BatchResults'
-import { IconStack2 } from '@tabler/icons-react'
+import { IconStack2, IconMapPin } from '@tabler/icons-react'
 
 // =============================================================================
 // TYPES
@@ -268,6 +268,10 @@ export default function BatchPage() {
         <p className="text-base-content/70">
           Mehrere Journal-Einträge auf einmal mit KI verarbeiten
         </p>
+        <a href="/batch/geocode" className="btn btn-outline btn-sm gap-2 mt-2">
+          <IconMapPin size={16} />
+          Batch-Geocoding für GPS-Punkte
+        </a>
       </div>
 
       {/* State Machine */}

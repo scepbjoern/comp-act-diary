@@ -1308,13 +1308,15 @@ comp-act-diary/
 
 ### Schritt 16 (Mensch): OwnTracks einrichten
 
-**Ziel:** OwnTracks auf Android konfigurieren.
+**Ziel:** OwnTracks auf Android/iOS konfigurieren.
 
-**Schritte:**
-1. OwnTracks installieren
-2. Token erstellen, Webhook-URL kopieren
-3. OwnTracks: HTTP-Mode, URL eingeben
-4. Berichterstattung: Signifikante Änderungen
+> 📖 **Ausführliche Anleitung:** Siehe [LOCATION_TRACKING_SETUP-AND-TEST.md](../setup-and-testing_docs/LOCATION_TRACKING_SETUP-AND-TEST.md#owntracks-app-einrichten)
+
+**Kurzübersicht:**
+1. OwnTracks App installieren (Play Store / App Store)
+2. Token in der App unter `/settings/location` erstellen
+3. OwnTracks konfigurieren: HTTP-Mode, Webhook-URL, Bearer Token
+4. Tracking-Modus: "Significant changes" für optimalen Batterieverbrauch
 
 ---
 
@@ -1322,11 +1324,13 @@ comp-act-diary/
 
 **Ziel:** Historische Daten importieren und relevante Punkte geocoden.
 
-**Schritte:**
-1. Google Timeline exportieren
-2. In App importieren (nur RawGpsPoints!)
-3. Batch-Geocoding: Zeitraum oder Polygon wählen
-4. Ergebnisse prüfen, bei niedrigem Confidence überschreiben
+> 📖 **Ausführliche Anleitung:** Siehe [LOCATION_TRACKING_SETUP-AND-TEST.md](../setup-and-testing_docs/LOCATION_TRACKING_SETUP-AND-TEST.md#google-timeline-import)
+
+**Kurzübersicht:**
+1. Google Timeline via Takeout oder direkt exportieren (JSON)
+2. In App unter `/settings/location` importieren
+3. Batch-Geocoding unter `/batch/geocode`: Zeitraum oder Polygon wählen
+4. Ergebnisse prüfen, bei niedrigem Confidence manuell korrigieren
 5. Als Locations bestätigen
 
 ---
@@ -1376,38 +1380,22 @@ comp-act-diary/
 
 ## 11. Manuelles Testing
 
-### 11.1 OwnTracks-Testing
+> 📖 **Ausführliche Test-Anleitungen:** Siehe [LOCATION_TRACKING_SETUP-AND-TEST.md](../setup-and-testing_docs/LOCATION_TRACKING_SETUP-AND-TEST.md#testen-der-features)
 
-| Testfall | Schritte | Erwartetes Ergebnis |
-|----------|----------|---------------------|
-| **OwnTracks Setup** | 1. Token erstellen 2. OwnTracks konfigurieren | Token akzeptiert |
-| **Bewegungs-Tracking** | 1. Zu neuem Ort gehen 2. App öffnen | `RawGpsPoint` mit `geocodedAt = NULL` |
-| **Bekannter Ort** | Zu bestätigtem Ort gehen | `locationId` gesetzt, `LocationVisit` erstellt |
+Das Setup- und Test-Dokument enthält:
+- **OwnTracks-Setup und -Testing** inkl. cURL-Beispiele
+- **Google Timeline Import** mit Schritt-für-Schritt-Anleitung
+- **Batch-Geocoding** Durchführung und Kosten-Übersicht
+- **Fehlerbehebung** für häufige Probleme
 
-### 11.2 Import-Testing
+### Kurzübersicht der Testfälle
 
-| Testfall | Schritte | Erwartetes Ergebnis |
-|----------|----------|---------------------|
-| **Erster Import** | Timeline exportieren → importieren | Alle als `RawGpsPoint` (geocodedAt = NULL) |
-| **Inkrementeller Import** | Erneut importieren | Nur neue Daten, alte übersprungen |
-
-### 11.3 On-Demand Geocoding Testing ⭐
-
-| Testfall | Schritte | Erwartetes Ergebnis |
-|----------|----------|---------------------|
-| **Single Geocode** | 1 Punkt auswählen → "Geocoden" | Mapbox-Call, Ergebnis angezeigt |
-| **Batch nach Zeitraum** | Zeitraum wählen → "X Punkte geocoden" | Batch-API-Call, Ergebnisse mit Confidence |
-| **Batch nach Polygon** | Polygon zeichnen → "X Punkte geocoden" | Punkte innerhalb Polygon geocoded |
-| **Low Confidence** | Punkt mit 🔴 low confidence | Hinweis "Überschreiben empfohlen" |
-| **Override** | Name manuell ändern → Bestätigen | `geocodeOverridden = true`, Location erstellt |
-| **Kosten-Vorschau** | Punkte auswählen | Anzeige: "X Punkte × $0.005 = ~$Y" |
-
-### 11.4 Karten-Testing
-
-| Testfall | Schritte | Erwartetes Ergebnis |
-|----------|----------|---------------------|
-| **Tages-Karte** | Tag mit Visits öffnen → Karte anzeigen | Mapbox-Karte: bekannte Locations (farbig) + rohe Punkte (grau) |
-| **Polygon-Selektion** | Polygon auf Karte zeichnen | Punkte innerhalb werden selektiert |
+| Bereich | Testfälle |
+|---------|-----------|
+| **OwnTracks** | Token erstellen, Webhook-Verbindung, Bewegungs-Tracking |
+| **Import** | Erster Import, Inkrementeller Import, Fehlerhafte JSON |
+| **Geocoding** | Single, Batch (Zeitraum), Batch (Polygon), Override, Kosten |
+| **Karte** | Tages-Karte, Polygon-Selektion, Marker-Klick |
 
 ---
 

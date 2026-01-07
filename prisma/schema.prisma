@@ -165,6 +165,14 @@ enum SyncProviderType {
   SPOTIFY          /// Spotify Musikstreaming
   LAST_FM          /// Last.fm Scrobbling
   GOOGLE_CONTACTS  /// Google Contacts
+  GOOGLE_TIMELINE  /// Google Maps Timeline Import
+}
+
+/// Quelle eines GPS-Punkts (für Location Tracking)
+enum GpsSource {
+  OWNTRACKS     /// OwnTracks App (HTTP Mode)
+  GOOGLE_IMPORT /// Google Timeline JSON Import
+  MANUAL        /// Manuell eingegeben
 }
 
 /// Art einer Interaktion mit einem Kontakt
@@ -276,6 +284,8 @@ model User {
   llmModels             LlmModel[]
   tasks                 Task[]
   notifications         Notification[]
+  rawGpsPoints          RawGpsPoint[]
+  locationWebhookTokens LocationWebhookToken[]
 }
 
 /// Entity-Registry: Zentrale Tabelle für FK-basierte Polymorphie.
@@ -1039,6 +1049,7 @@ model Location {
   journalEntries JournalEntry[]
   contacts       Contact[]
   visits         LocationVisit[]
+  rawGpsPoints   RawGpsPoint[]
 
   @@unique([userId, slug])
   @@index([userId, isFavorite])
@@ -1074,6 +1085,99 @@ model LocationVisit {
   @@index([userId, timeBoxId])
   @@index([locationId])
   @@index([journalEntryId])
+}
+
+// =============================================================================
+// LOCATION TRACKING (OwnTracks + Google Timeline)
+// =============================================================================
+
+/// Roher GPS-Punkt: GPS-Daten vor Geocoding.
+/// Geocoding erfolgt NICHT automatisch - User muss explizit auslösen (Kostenkontrolle).
+model RawGpsPoint {
+  /// Eindeutige ID
+  id                  String    @id @default(uuid())
+  /// Besitzer-User
+  userId              String
+  /// Breitengrad
+  lat                 Float
+  /// Längengrad
+  lng                 Float
+  /// Genauigkeit in Metern (optional)
+  accuracy            Float?
+  /// Höhe in Metern (optional)
+  altitude            Float?
+  /// Geschwindigkeit in km/h (optional)
+  velocity            Float?
+  /// Batteriestatus in Prozent (optional)
+  battery             Int?
+  /// Batteriezustand (0=unknown, 1=unplugged, 2=charging, 3=full)
+  batteryState        Int?
+  /// OwnTracks Tracker ID (z.B. "ab")
+  trackerId           String?
+  /// OwnTracks Topic (z.B. "owntracks/user/device")
+  topic               String?
+  /// Quelle (OWNTRACKS, GOOGLE_IMPORT, MANUAL)
+  source              GpsSource
+  /// Original-Payload als JSON (für Debugging)
+  rawPayload          Json?
+  /// Zeitstempel der Erfassung
+  capturedAt          DateTime
+
+  // ─── GEOCODING STATUS (On-Demand) ───
+  /// Wann wurde dieser Punkt geocoded? NULL = noch nicht geocoded
+  geocodedAt          DateTime?
+  /// Geocoding-Ergebnis: Place Name von Mapbox
+  geocodedName        String?
+  /// Geocoding-Ergebnis: Adresse
+  geocodedAddress     String?
+  /// Geocoding-Ergebnis: Confidence Score (0.0-1.0)
+  geocodedConfidence  Float?
+  /// Geocoding-Ergebnis: Mapbox Place ID
+  mapboxPlaceId       String?
+  /// User hat Geocoding-Ergebnis manuell überschrieben?
+  geocodeOverridden   Boolean   @default(false)
+  /// Geocoding-Fehler (falls Geocoding fehlgeschlagen)
+  geocodeError        String?
+
+  // ─── LOCATION ZUORDNUNG ───
+  /// Zugeordnete Location (nach Geocoding + User-Bestätigung)
+  locationId          String?
+  /// LocationVisit erstellt?
+  visitCreated        Boolean   @default(false)
+
+  /// Erstellungszeitpunkt
+  createdAt           DateTime  @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location Location? @relation(fields: [locationId], references: [id])
+
+  @@index([userId, capturedAt])
+  @@index([userId, geocodedAt])
+  @@index([userId, locationId])
+  @@index([lat, lng])
+}
+
+/// Webhook-Token: Authentifizierungs-Token für OwnTracks Webhook-Zugriff.
+/// Ermöglicht Location-Tracking ohne Session-Auth.
+model LocationWebhookToken {
+  /// Eindeutige ID
+  id          String    @id @default(uuid())
+  /// Besitzer-User
+  userId      String
+  /// bcrypt-Hash des Tokens (Plain-Token wird nur einmal bei Erstellung angezeigt)
+  tokenHash   String
+  /// Gerätename zur Identifikation (z.B. "Pixel 7 Pro")
+  deviceName  String
+  /// Ist der Token aktiv?
+  isActive    Boolean   @default(true)
+  /// Letzter Zugriff
+  lastUsedAt  DateTime?
+  /// Erstellungszeitpunkt
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
 }
 
 // =============================================================================
@@ -1336,6 +1440,8 @@ model SyncProvider {
   isActive             Boolean          @default(true)
   /// Letzter Sync-Zeitpunkt
   lastSyncAt           DateTime?
+  /// Zeitstempel des neuesten importierten Datensatzes (für inkrementellen Import)
+  lastImportedDataAt   DateTime?
   /// Erstellungszeitpunkt
   createdAt            DateTime         @default(now())
   /// Letztes Update

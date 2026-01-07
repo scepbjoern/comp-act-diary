@@ -13,15 +13,12 @@ import {
 } from './searchQueryBuilder';
 import type {
   SearchableEntityType,
-  entityTypeLabels,
-  entityTypeIcons,
 } from '@/lib/validators/search';
 import type {
   SearchParams,
   SearchResponse,
   SearchResultGroup,
   SearchResultItem,
-  RawSearchResult,
 } from '@/types/search';
 
 // Re-export for convenience

@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { text, mediaAssetIds, date, time, typeCode, runPipeline, pipelineSteps } = parsed.data
+    const { text, mediaAssetIds, date, time: _time, typeCode, runPipeline, pipelineSteps } = parsed.data
 
     // Verify MediaAssets exist and belong to user
     const mediaAssets = await prisma.mediaAsset.findMany({

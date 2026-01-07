@@ -17,6 +17,7 @@ import { DaySummary } from '@/components/DaySummary'
 import { DarmkurSection } from '@/components/DarmkurSection'
 import { ResetDaySection } from '@/components/ResetDaySection'
 import { DebugDayPanel } from '@/components/DebugDayPanel'
+import DayLocationPanel from '@/components/DayLocationPanel'
 import { PhotoViewerModal } from '@/components/PhotoViewerModal'
 import { ymd } from '@/lib/date-utils'
 import type { Day, InlineData } from '@/types/day'
@@ -669,6 +670,8 @@ export default function HeutePage() {
             onMealTextChange={setMealText}
             onAddMealNote={addMealNote}
           />
+
+          <DayLocationPanel date={date} />
 
           <DebugDayPanel debugData={debugData} />
 

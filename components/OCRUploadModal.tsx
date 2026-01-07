@@ -46,8 +46,8 @@ export default function OCRUploadModal({
   isOpen,
   onClose,
   onComplete,
-  date,
-  time,
+  date: _date,
+  time: _time,
 }: OCRUploadModalProps) {
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([])
   const [stage, setStage] = useState<UploadStage>('idle')
@@ -343,6 +343,7 @@ export default function OCRUploadModal({
                 >
                   {/* Preview or Icon */}
                   {sf.preview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={sf.preview}
                       alt={sf.file.name}
