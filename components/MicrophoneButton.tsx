@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { TablerIcon } from './TablerIcon'
 import fixWebmDuration from 'fix-webm-duration'
+import { usePasscodeLock } from '@/hooks/usePasscodeLock'
 
 type RecordingState = 'idle' | 'recording' | 'paused' | 'uploading'
 
@@ -51,11 +52,23 @@ export function MicrophoneButton(props: {
   const [showCfg, setShowCfg] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string>('')
 
+  // Get passcode lock functions to pause timeout during recording
+  const { pauseTimeout, resumeTimeout } = usePasscodeLock()
+
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<BlobPart[]>([])
   const recordingStartTimeRef = useRef<Date | null>(null)
   const isInitialMountRef = useRef(true)
+
+  // Pause passcode timeout during recording
+  useEffect(() => {
+    if (state === 'recording' || state === 'paused') {
+      pauseTimeout()
+    } else {
+      resumeTimeout()
+    }
+  }, [state, pauseTimeout, resumeTimeout])
 
   useEffect(() => {
     // Restore model from DB settings

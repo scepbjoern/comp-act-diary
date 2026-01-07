@@ -38,6 +38,11 @@ export async function GET(req: NextRequest) {
         transcriptionPrompt: userSettings.transcriptionPrompt || '',
         transcriptionGlossary: userSettings.transcriptionGlossary || [],
         transcriptionModelLanguages: userSettings.transcriptionModelLanguages || {},
+        // Passcode settings
+        passcodeEnabled: userSettings.passcodeEnabled ?? false,
+        passcodeHash: userSettings.passcodeHash || null,
+        passcodeLength: userSettings.passcodeLength ?? 4,
+        passcodeTimeoutMinutes: userSettings.passcodeTimeoutMinutes ?? 5,
       },
     },
   })
@@ -98,6 +103,26 @@ export async function PATCH(req: NextRequest) {
       }
       if (body.settings.transcriptionModelLanguages && typeof body.settings.transcriptionModelLanguages === 'object') {
         settingsPatch.transcriptionModelLanguages = body.settings.transcriptionModelLanguages
+      }
+      // Passcode settings
+      if (typeof body.settings.passcodeEnabled === 'boolean') {
+        settingsPatch.passcodeEnabled = body.settings.passcodeEnabled
+      }
+      if (body.settings.passcodeHash !== undefined) {
+        // Allow null to clear the passcode
+        settingsPatch.passcodeHash = typeof body.settings.passcodeHash === 'string' ? body.settings.passcodeHash : null
+      }
+      if (typeof body.settings.passcodeLength === 'number') {
+        const len = Math.floor(body.settings.passcodeLength)
+        if (len >= 2 && len <= 6) {
+          settingsPatch.passcodeLength = len
+        }
+      }
+      if (typeof body.settings.passcodeTimeoutMinutes === 'number') {
+        const timeout = Math.floor(body.settings.passcodeTimeoutMinutes)
+        if (timeout >= 1 && timeout <= 60) {
+          settingsPatch.passcodeTimeoutMinutes = timeout
+        }
       }
     }
 

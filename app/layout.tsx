@@ -6,6 +6,7 @@ import { getPrisma } from '@/lib/prisma'
 import { SiteNav } from '@/components/SiteNav'
 import NotificationBell from '@/components/NotificationBell'
 import { GlobalSearch } from '@/components/GlobalSearch'
+import { PasscodeLockProvider } from '@/components/PasscodeLockProvider'
 import pkg from '../package.json'
 
 export const metadata = {
@@ -124,56 +125,58 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         />
       </head>
       <body className="min-h-screen flex flex-col">
-        <header className="sticky top-0 z-10 bg-surface/80 backdrop-blur border-b border-slate-700">
-          <div className="container h-14 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2 font-semibold">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/icons/logo_32.png"
-                alt="App Icon"
-                width={28}
-                height={28}
-                fetchPriority="high"
-                decoding="sync"
-                className="h-7 w-7 rounded-full border border-slate-700 bg-surface object-cover"
-              />
-              <span>CompACT Diary</span>
-            </Link>
-            <div className="flex items-center gap-2">
-              <GlobalSearch />
-              <NotificationBell />
-              <SiteNav user={user ? { id: user.id, username: user.username, displayName: user.displayName, profileImageUrl: user.profileImageUrl } : null} />
+        <PasscodeLockProvider>
+          <header className="sticky top-0 z-10 bg-surface/80 backdrop-blur border-b border-slate-700">
+            <div className="container h-14 flex items-center justify-between">
+              <Link href="/" className="flex items-center gap-2 font-semibold">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/icons/logo_32.png"
+                  alt="App Icon"
+                  width={28}
+                  height={28}
+                  fetchPriority="high"
+                  decoding="sync"
+                  className="h-7 w-7 rounded-full border border-slate-700 bg-surface object-cover"
+                />
+                <span>CompACT Diary</span>
+              </Link>
+              <div className="flex items-center gap-2">
+                <GlobalSearch />
+                <NotificationBell />
+                <SiteNav user={user ? { id: user.id, username: user.username, displayName: user.displayName, profileImageUrl: user.profileImageUrl } : null} />
+              </div>
             </div>
-          </div>
-        </header>
-        <main className="container py-4 flex-1">
-          {children}
-        </main>
-        <footer className="border-t border-slate-700 bg-surface/80">
-          <div className="container py-2 text-xs text-gray-400 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-            <span>
-              Version {version}
-            </span>
-            <span className="hidden sm:inline">•</span>
-            <a
-              href="https://github.com/scepbjoern/comp-act-diary"
-              target="_blank"
-              rel="noreferrer noopener"
-              className="hover:underline"
-            >
-              GitHub
-            </a>
-            <span className="hidden sm:inline">•</span>
-            <a
-              href="https://www.linkedin.com/in/bjoern-scheppler/"
-              target="_blank"
-              rel="noreferrer noopener"
-              className="hover:underline"
-            >
-              Autor
-            </a>
-          </div>
-        </footer>
+          </header>
+          <main className="container py-4 flex-1">
+            {children}
+          </main>
+          <footer className="border-t border-slate-700 bg-surface/80">
+            <div className="container py-2 text-xs text-gray-400 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+              <span>
+                Version {version}
+              </span>
+              <span className="hidden sm:inline">•</span>
+              <a
+                href="https://github.com/scepbjoern/comp-act-diary"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="hover:underline"
+              >
+                GitHub
+              </a>
+              <span className="hidden sm:inline">•</span>
+              <a
+                href="https://www.linkedin.com/in/bjoern-scheppler/"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="hover:underline"
+              >
+                Autor
+              </a>
+            </div>
+          </footer>
+        </PasscodeLockProvider>
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

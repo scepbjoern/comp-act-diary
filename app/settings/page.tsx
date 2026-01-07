@@ -7,6 +7,7 @@ import { Icon } from '@/components/Icon'
 import { TablerIcon } from '@/components/TablerIcon'
 import { LlmModelManager } from '@/components/LlmModelManager'
 import { AIConfigSection } from '@/components/AIConfigSection'
+import { PasscodeSettings } from '@/components/PasscodeSettings'
 import { useLlmModels } from '@/hooks/useLlmModels'
 
 type Me = {
@@ -599,6 +600,9 @@ export default function SettingsPage() {
           <button className="pill" onClick={saveUI}>Übernehmen</button>
         </div>
       </div>
+
+      {/* Passcode Protection */}
+      <PasscodeSettings onSave={() => doneSaving()} />
 
       <div className="card p-4 space-y-3">
         <h2 className="font-medium">
