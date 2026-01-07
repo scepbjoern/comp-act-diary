@@ -19,7 +19,8 @@ import { ResetDaySection } from '@/components/ResetDaySection'
 import { DebugDayPanel } from '@/components/DebugDayPanel'
 import DayLocationPanel from '@/components/DayLocationPanel'
 import { PhotoViewerModal } from '@/components/PhotoViewerModal'
-import { ymd } from '@/lib/date-utils'
+import { EdgeNavigationBars } from '@/components/EdgeNavigationBars'
+import { ymd, shiftDate } from '@/lib/date-utils'
 import type { Day, InlineData } from '@/types/day'
 
 export default function HeutePage() {
@@ -696,6 +697,10 @@ export default function HeutePage() {
         onDiscard={discardAll}
       />
       <Toasts toasts={toasts} dismiss={dismiss} />
+      <EdgeNavigationBars 
+        onPrevious={() => setDate(shiftDate(date, -1))} 
+        onNext={() => setDate(shiftDate(date, +1))} 
+      />
     </div>
   )
 }
