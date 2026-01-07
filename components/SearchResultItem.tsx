@@ -19,12 +19,11 @@ export function SearchResultItem({ item, onClick }: SearchResultItemProps) {
   const iconName = entityTypeIcons[item.type] || 'file';
 
   const handleClick = () => {
-    // Navigate first
+    // Close overlay first
+    onClick?.();
+    // Navigate and refresh to ensure page updates with new query params
     router.push(item.url);
-    // Then close overlay after a small delay to ensure navigation starts
-    setTimeout(() => {
-      onClick?.();
-    }, 100);
+    router.refresh();
   };
 
   return (

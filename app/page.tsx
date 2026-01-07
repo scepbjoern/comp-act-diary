@@ -42,6 +42,13 @@ export default function HeutePage() {
       setDate(targetDate)
     }
   }, [])
+  
+  // Sync date state with URL parameter changes (e.g., from search navigation)
+  useEffect(() => {
+    if (urlDate && /^\d{4}-\d{2}-\d{2}$/.test(urlDate) && urlDate !== date) {
+      setDate(urlDate)
+    }
+  }, [urlDate, date])
   const [day, setDay] = useState<Day | null>(null)
   const [daysWithData, setDaysWithData] = useState<Set<string>>(new Set())
   const [reflectionDays, setReflectionDays] = useState<Set<string>>(new Set())
