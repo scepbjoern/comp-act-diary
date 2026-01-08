@@ -45,8 +45,8 @@ export function useDaySummary(
     fetchSummary()
   }, [dayId])
 
-  const generateSummary = useCallback(async (force = false) => {
-    if (!dayId) return false
+  const generateSummary = useCallback(async (force = false): Promise<Summary | null> => {
+    if (!dayId) return null
 
     setLoading(true)
     try {
@@ -59,21 +59,22 @@ export function useDaySummary(
       const data = await res.json()
 
       if (!res.ok) {
-        onToast(data.message || data.error || 'Generierung fehlgeschlagen', 'error')
-        return false
+        const errorMsg = typeof data.error === 'object' ? JSON.stringify(data.error) : (data.message || data.error || 'Generierung fehlgeschlagen')
+        onToast(errorMsg, 'error')
+        return null
       }
 
       if (data.summary) {
         setSummary(data.summary)
         onToast('Zusammenfassung generiert', 'success')
-        return true
+        return data.summary as Summary
       }
 
-      return false
+      return null
     } catch (err) {
       console.error('Failed to generate summary', err)
       onToast('Generierung fehlgeschlagen', 'error')
-      return false
+      return null
     } finally {
       setLoading(false)
     }

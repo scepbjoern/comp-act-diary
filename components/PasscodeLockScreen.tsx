@@ -18,9 +18,12 @@ export function PasscodeLockScreen({ onUnlock, passcodeLength = 4 }: PasscodeLoc
   const [isChecking, setIsChecking] = useState(false)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
-  // Focus first input on mount
+  // Focus first input on mount with a small delay to ensure visibility
   useEffect(() => {
-    inputRefs.current[0]?.focus()
+    const timer = setTimeout(() => {
+      inputRefs.current[0]?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
   }, [])
 
   // Reset error state after animation

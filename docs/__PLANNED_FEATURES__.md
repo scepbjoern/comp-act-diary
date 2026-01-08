@@ -34,7 +34,5 @@ Zwischenfazit aus https://chatgpt.com/c/693c6f9b-1bb4-8325-a73c-688e9864e2f8:
     - Recurring Topics: See the themes and topics you think about most and dive into the details behind each one.
     - Personality: Based on the Big Five Personality Model, Mindsera provides insights into your personality over time.
     - Suggestions: Get tailored improvement tips, customized to your unique journey.
-    - Artworks: With some magic and artificial intelligence an original artwork is generated based on your writing.
     - Journaling templates based on mental models & frameworks: Ikigai, Energy Audit, Anti-Goals, Regret Minimization, ...
     - Color Themes: hier für das ganze Tagebuch, bei mir wäre es aber spannender als Teil der einzelnen Einträge basierend auf der KI-Einschätzung zu Mood
-    - Passcode: Zusätzlich zum Login, dass man einen vierstelligen Code eingeben muss, um die App anzeigen zu können

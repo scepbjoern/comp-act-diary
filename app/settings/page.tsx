@@ -7,8 +7,11 @@ import { Icon } from '@/components/Icon'
 import { TablerIcon } from '@/components/TablerIcon'
 import { LlmModelManager } from '@/components/LlmModelManager'
 import { AIConfigSection } from '@/components/AIConfigSection'
+import { ImageGenerationSettings } from '@/components/ImageGenerationSettings'
 import { PasscodeSettings } from '@/components/PasscodeSettings'
 import { useLlmModels } from '@/hooks/useLlmModels'
+import { type ImageGenerationSettings as ImageGenSettings } from '@/lib/imageModels'
+import { DEFAULT_IMAGE_GENERATION_SETTINGS } from '@/lib/defaultImagePrompt'
 
 type Me = {
   id: string
@@ -26,6 +29,7 @@ type Me = {
     transcriptionPrompt?: string
     transcriptionGlossary?: string[]
     transcriptionModelLanguages?: Record<string, string>
+    imageGenerationSettings?: ImageGenSettings
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     customModels?: any[]  // Legacy - now managed via LlmModel table
   } | null
@@ -81,10 +85,13 @@ export default function SettingsPage() {
   const [stdSymptomIconDrafts, setStdSymptomIconDrafts] = useState<Record<string, string>>({})
   const [summaryModel, setSummaryModel] = useState('openai/gpt-oss-120b')
   const [summaryPrompt, setSummaryPrompt] = useState('Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
+  const [transcriptionModel, setTranscriptionModel] = useState('openai/whisper-large-v3')
   const [transcriptionPrompt, setTranscriptionPrompt] = useState('')
   const [transcriptionGlossary, setTranscriptionGlossary] = useState<string[]>([])
   const [newGlossaryItem, setNewGlossaryItem] = useState('')
   const [transcriptionModelLanguages, setTranscriptionModelLanguages] = useState<Record<string, string>>({})
+  const [imageGenSettings, setImageGenSettings] = useState<ImageGenSettings>(DEFAULT_IMAGE_GENERATION_SETTINGS)
+  const [imageGenSaving, setImageGenSaving] = useState(false)
   
   // Available transcription models with their default languages
   const TRANSCRIPTION_MODELS = [
@@ -99,6 +106,11 @@ export default function SettingsPage() {
   const sortedModelsForSummary = useMemo(() => {
     return [...llmModels].sort((a, b) => a.name.localeCompare(b.name))
   }, [llmModels])
+  
+  // Sort transcription models alphabetically
+  const sortedModelsForTranscription = useMemo(() => {
+    return [...TRANSCRIPTION_MODELS].sort((a, b) => a.name.localeCompare(b.name))
+  }, [])
 
   // Avatar cropper state
   const [avatarOpen, setAvatarOpen] = useState(false)
@@ -137,6 +149,9 @@ export default function SettingsPage() {
         setTranscriptionPrompt(u.settings?.transcriptionPrompt || '')
         setTranscriptionGlossary(u.settings?.transcriptionGlossary || [])
         setTranscriptionModelLanguages(u.settings?.transcriptionModelLanguages || {})
+        if (u.settings?.imageGenerationSettings) {
+          setImageGenSettings({ ...DEFAULT_IMAGE_GENERATION_SETTINGS, ...u.settings.imageGenerationSettings })
+        }
       }
       if (habitsRes.ok) {
         const data = await habitsRes.json()
@@ -458,6 +473,18 @@ export default function SettingsPage() {
     }
   }
 
+  async function saveSummarySettings() {
+    startSaving()
+    try {
+      await fetch('/api/me', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: { summaryModel, summaryPrompt } })
+      })
+    } finally {
+      doneSaving()
+    }
+  }
+
   async function saveTranscriptionSettings() {
     startSaving()
     try {
@@ -468,6 +495,19 @@ export default function SettingsPage() {
       await res.json().catch(() => ({}))
     } finally {
       doneSaving()
+    }
+  }
+
+  async function saveImageGenSettings() {
+    setImageGenSaving(true)
+    try {
+      await fetch('/api/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: { imageGenerationSettings: imageGenSettings } })
+      })
+    } finally {
+      setImageGenSaving(false)
     }
   }
   
@@ -534,6 +574,8 @@ export default function SettingsPage() {
     } catch {}
   }
 
+  const [activeTab, setActiveTab] = useState<'profil' | 'darstellung' | 'erfassung' | 'ki' | 'daten'>('profil')
+
   return (
     <>
       <div className="space-y-6">
@@ -544,502 +586,518 @@ export default function SettingsPage() {
         </span>
       </h1>
 
-      <div className="card p-4 space-y-3">
-        <h2 className="font-medium">
-          <span className="inline-flex items-center gap-1">
-            <TablerIcon name="manage_accounts" />
-            <span>Profil</span>
-          </span>
-        </h2>
-        <form onSubmit={saveProfile} className="grid gap-3 max-w-md">
-          <label className="text-sm text-gray-400">Anzeigename
-            <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={displayName} onChange={e => setDisplayName(e.target.value)} />
-          </label>
-          <label className="text-sm text-gray-400">Benutzername
-            <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={username} onChange={e => setUsername(e.target.value)} />
-          </label>
-          {profileError && <div className="alert alert-error"><span className="text-sm">{profileError}</span></div>}
-          <div className="flex items-center gap-2">
-            <button type="submit" className="btn btn-success">Speichern</button>
-            <SaveIndicator saving={saving} savedAt={savedAt} />
-          </div>
-
-      
-        </form>
-        {/* Avatar controls */}
-        <div className="flex items-center gap-3 pt-2">
-          <div className="h-12 w-12 rounded-full overflow-hidden border border-base-300 bg-base-100 flex items-center justify-center">
-            {me?.profileImageUrl ? (
-              <NextImage src={me.profileImageUrl} alt="Avatar" width={48} height={48} className="h-full w-full object-cover" />
-            ) : (
-              <span className="text-sm text-gray-300 font-semibold">{(displayName || username || '?').slice(0,1).toUpperCase()}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="pill" onClick={openAvatarDialog}>Profilbild ändern</button>
-            {me?.profileImageUrl && <button className="pill" onClick={deleteAvatar}>Entfernen</button>}
-          </div>
-        </div>
-      </div>
-
-      <div className="card p-4 space-y-3 max-w-md">
-        <h2 className="font-medium">
-          <span className="inline-flex items-center gap-1">
-            <TablerIcon name="palette" />
-            <span>UI</span>
-          </span>
-        </h2>
-        <div className="flex items-center gap-3">
-          <label className="inline-flex items-center gap-2 text-sm">
-            <span>Theme</span>
-            <select value={theme} onChange={e => setTheme(e.target.value as 'dark' | 'bright')} className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm">
-              <option value="dark">Dark</option>
-              <option value="bright">Bright</option>
-            </select>
-          </label>
-          <button className="pill" onClick={saveUI}>Übernehmen</button>
-        </div>
-      </div>
-
-      {/* Passcode Protection */}
-      <PasscodeSettings onSave={() => doneSaving()} />
-
-      <div className="card p-4 space-y-3">
-        <h2 className="font-medium">
-          <span className="inline-flex items-center gap-1">
-            <TablerIcon name="checklist" />
-            <span>Gewohnheiten</span>
-          </span>
-        </h2>
-        <div className="max-w-xl space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
-            <label className="md:col-span-4 text-sm">
-              <div className="text-gray-400">Name</div>
-              <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" placeholder="Neue Gewohnheit…" value={newHabit} onChange={e => setNewHabit(e.target.value)} />
-            </label>
-            <label className="text-sm">
-              <div className="text-gray-400">Icon (Emoji oder Symbol)</div>
-              <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" placeholder="z. B. 😊 oder fitness_center" value={newHabitIcon} onChange={e => setNewHabitIcon(e.target.value)} />
-            </label>
-            <div>
-              <button className="pill" onClick={addHabit} disabled={!newHabit.trim()}>Hinzufügen</button>
-            </div>
-          </div>
-          <ul className="space-y-2">
-            {habits.map(h => (
-              <li key={h.id} className="text-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center w-6">{h.icon ? <Icon name={h.icon} /> : null}</span>
-                    <span className="font-medium">{h.title}</span>
-                    <span className="ml-2 text-xs text-gray-400">{h.userId ? 'Eigen' : 'Standard'}</span>
-                  </div>
-                  {h.userId && (
-                    <div className="flex items-center gap-2">
-                      <button className="pill" title="Löschen" aria-label="Löschen" onClick={() => deleteHabit(h.id, h.userId)}>
-                        <TablerIcon name="delete" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-2 mt-2">
-                  <label className="md:col-span-4 text-xs">
-                    <div className="text-gray-400">Icon (Emoji oder Symbol)</div>
-                    <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={habitIconDrafts[h.id] ?? (h.icon ?? '')} onChange={e => setHabitIconDrafts(d => ({ ...d, [h.id]: e.target.value }))} placeholder="z. B. 😊 oder fitness_center" />
+      {/* Tabs Navigation - DaisyUI radio tabs-lift with icons */}
+      <div className="tabs tabs-lift">
+        <label className="tab">
+          <input 
+            type="radio" 
+            name="settings_tabs" 
+            checked={activeTab === 'profil'}
+            onChange={() => setActiveTab('profil')}
+          />
+          <TablerIcon name="user" size={16} />
+          <span className="ml-1 hidden sm:inline">Profil</span>
+        </label>
+        <div className={`tab-content bg-base-100 border-base-300 p-4 ${activeTab === 'profil' ? '' : 'hidden'}`}>
+          {/* Profil Tab Content */}
+          <div className="space-y-4">
+            {/* Accordion: Profil */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300" open>
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="manage_accounts" size={18} />
+                  Profil
+                </span>
+              </summary>
+              <div className="collapse-content">
+                <form onSubmit={saveProfile} className="grid gap-3 max-w-md pt-2">
+                  <label className="text-sm text-gray-400">Anzeigename
+                    <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={displayName} onChange={e => setDisplayName(e.target.value)} />
                   </label>
-                  <div className="flex items-end gap-2">
-                    <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-base-100 border border-base-300"><Icon name={(habitIconDrafts[h.id] ?? h.icon) || ''} /></span>
-                    <button className="pill" title="Icon speichern" aria-label="Icon speichern" onClick={() => saveHabitIcon(h.id, habitIconDrafts[h.id] ?? (h.icon ?? ''))}>
-                      <TablerIcon name="save" />
-                    </button>
+                  <label className="text-sm text-gray-400">Benutzername
+                    <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={username} onChange={e => setUsername(e.target.value)} />
+                  </label>
+                  {profileError && <div className="alert alert-error"><span className="text-sm">{profileError}</span></div>}
+                  <div className="flex items-center gap-2">
+                    <button type="submit" className="btn btn-success">Speichern</button>
+                    <SaveIndicator saving={saving} savedAt={savedAt} />
                   </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      <div className="card p-4 space-y-3 max-w-xl">
-        <h2 className="font-medium">
-          <span className="inline-flex items-center gap-1">
-            <TablerIcon name="tune" />
-            <span>Erfassung</span>
-          </span>
-        </h2>
-        <div className="grid gap-3">
-          <label className="inline-flex items-center gap-2 text-sm">
-            <span>Autosave</span>
-            <input
-              type="checkbox"
-              checked={autosaveEnabled}
-              onChange={e => setAutosaveEnabled(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-            />
-            <span className="text-sm">Automatisches Speichern beim Tippen</span>
-          </label>
-          <label className="inline-flex items-center gap-2 text-sm">
-            <span>Intervall (Sek.)</span>
-            <input type="number" min={1} max={3600} value={autosaveIntervalSec} onChange={e => setAutosaveIntervalSec(Math.max(1, Math.min(3600, Number(e.target.value) || 1)))} className="w-28 bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" />
-          </label>
-          <div className="h-px bg-slate-800 my-2" />
-          <div className="text-sm text-gray-400">Foto-Komprimierung & Auflösung (clientseitig, wird in diesem Browser gespeichert)</div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="text-sm">
-              <div className="text-gray-400">Format</div>
-              <select
-                value={imageSettings.format}
-                onChange={e => setImageSettings(s => ({ ...s, format: e.target.value as ImageSettings['format'] }))}
-                className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
-              >
-                <option value="webp">WebP (empfohlen)</option>
-                <option value="jpeg">JPEG</option>
-                <option value="png">PNG</option>
-              </select>
-            </label>
-            <label className="text-sm">
-              <div className="text-gray-400">Qualität</div>
-              <input type="number" min={1} max={100} value={imageSettings.quality} onChange={e => setImageSettings(s => ({ ...s, quality: Math.max(1, Math.min(100, Number(e.target.value) || 80)) }))} className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" />
-            </label>
-            <label className="text-sm">
-              <div className="text-gray-400">Max. Breite</div>
-              <input type="number" min={100} max={8000} value={imageSettings.maxWidth} onChange={e => setImageSettings(s => ({ ...s, maxWidth: Math.max(100, Math.min(8000, Number(e.target.value) || 1600)) }))} className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" />
-            </label>
-            <label className="text-sm">
-              <div className="text-gray-400">Max. Höhe</div>
-              <input type="number" min={100} max={8000} value={imageSettings.maxHeight} onChange={e => setImageSettings(s => ({ ...s, maxHeight: Math.max(100, Math.min(8000, Number(e.target.value) || 1600)) }))} className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" />
-            </label>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="pill !bg-green-600 !text-white hover:bg-pill-light dark:hover:bg-pill hover:text-gray-900 dark:hover:text-gray-100" onClick={saveCapture}>Speichern</button>
-            <SaveIndicator saving={saving} savedAt={savedAt} />
-          </div>
-        </div>
-      </div>
-
-      <LlmModelManager startSaving={startSaving} doneSaving={doneSaving} saving={saving} savedAt={savedAt} />
-
-      {/* Summary AI Settings */}
-      <div className="card p-4 space-y-3 max-w-xl">
-        <h2 className="font-medium">
-          <span className="inline-flex items-center gap-1">
-            <Icon name="summarize" />
-            <span>KI-Zusammenfassung</span>
-          </span>
-        </h2>
-        
-        <div className="space-y-2">
-          <label className="block text-sm">
-            <span className="text-gray-400 mb-1 block">Modell</span>
-            <select
-              value={summaryModel}
-              onChange={(e) => setSummaryModel(e.target.value)}
-              className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
-            >
-              {sortedModelsForSummary.map((m) => (
-                <option key={m.modelId} value={m.modelId}>
-                  {m.name} ({m.inputCost || '-'} / {m.outputCost || '-'}) [{m.provider}]
-                </option>
-              ))}
-            </select>
-          </label>
-          
-          <label className="block text-sm">
-            <span className="text-gray-400 mb-1 block">System-Prompt</span>
-            <textarea
-              value={summaryPrompt}
-              onChange={(e) => setSummaryPrompt(e.target.value)}
-              rows={4}
-              className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm font-mono"
-              placeholder="System-Prompt für die Zusammenfassung..."
-            />
-          </label>
-          
-          <p className="text-xs text-gray-500">
-            Der Prompt definiert, wie die KI Zusammenfassungen erstellt. 
-            Die Tagebucheinträge werden automatisch als Kontext mitgegeben.
-          </p>
-        </div>
-      </div>
-
-      {/* Transcription Settings */}
-      <div className="card p-4 space-y-3 max-w-xl">
-        <h2 className="font-medium">
-          <span className="inline-flex items-center gap-1">
-            <TablerIcon name="microphone" />
-            <span>Transkriptions-Einstellungen</span>
-          </span>
-        </h2>
-        
-        <div className="space-y-4">
-          <label className="block text-sm">
-            <span className="text-gray-400 mb-1 block">Anweisungen für die Transkribierung</span>
-            <textarea
-              value={transcriptionPrompt}
-              onChange={(e) => setTranscriptionPrompt(e.target.value)}
-              rows={3}
-              className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
-              placeholder="z.B. Der Sprecher spricht Schweizerdeutsch mit deutschem Akzent. Bitte transkribiere in Hochdeutsch."
-            />
-            <span className="text-xs text-gray-500 mt-1 block">
-              Optionale Anweisungen, um die Transkribierung zu verbessern (Sprache, Stil, Kontext).
-            </span>
-          </label>
-
-          <div className="space-y-2">
-            <span className="text-gray-400 text-sm block">Glossar (Namen, Produktbezeichnungen, Fachbegriffe)</span>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newGlossaryItem}
-                onChange={(e) => setNewGlossaryItem(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addGlossaryItem() } }}
-                className="flex-1 bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
-                placeholder="z.B. CompACT Diary, Zürich, Dr. Müller"
-              />
-              <button 
-                className="pill" 
-                onClick={addGlossaryItem}
-                disabled={!newGlossaryItem.trim()}
-              >
-                Hinzufügen
-              </button>
-            </div>
-            {transcriptionGlossary.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {transcriptionGlossary.map((item, index) => (
-                  <span 
-                    key={index} 
-                    className="inline-flex items-center gap-1 bg-base-200 px-2 py-1 rounded text-sm"
-                  >
-                    {item}
-                    <button 
-                      onClick={() => removeGlossaryItem(index)}
-                      className="text-gray-400 hover:text-error ml-1"
-                      title="Entfernen"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+                </form>
               </div>
-            )}
-            <span className="text-xs text-gray-500 block">
-              Glossar-Einträge helfen, Namen und Fachbegriffe korrekt zu erkennen. Sie werden als &quot;Glossar: x, y, z&quot; an die Transkribierung übergeben.
-            </span>
-          </div>
+            </details>
 
-          <div className="space-y-2">
-            <span className="text-gray-400 text-sm block">Sprach-Code pro Modell</span>
-            <div className="space-y-2">
-              {TRANSCRIPTION_MODELS.map((model) => (
-                <div key={model.id} className="flex items-center gap-2">
-                  <span className="text-sm flex-1 text-gray-300">{model.name}</span>
-                  <input
-                    type="text"
-                    value={transcriptionModelLanguages[model.id] || ''}
-                    onChange={(e) => updateModelLanguage(model.id, e.target.value)}
-                    className="w-24 bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
-                    placeholder={model.defaultLang}
-                  />
-                </div>
-              ))}
-            </div>
-            <span className="text-xs text-gray-500 block">
-              Sprach-Codes wie &quot;de&quot; (Deutsch), &quot;de-CH&quot; (Schweizerdeutsch), &quot;en&quot; (Englisch). Leer lassen für Standard.
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button className="pill !bg-green-600 !text-white hover:bg-pill-light dark:hover:bg-pill hover:text-gray-900 dark:hover:text-gray-100" onClick={saveTranscriptionSettings}>Speichern</button>
-            <SaveIndicator saving={saving} savedAt={savedAt} />
-          </div>
-        </div>
-      </div>
-
-      {/* Journal AI Configuration */}
-      <div className="card p-4 space-y-3">
-        <h2 className="font-medium">
-          <span className="inline-flex items-center gap-1">
-            <TablerIcon name="brain" />
-            <span>Journal AI-Konfiguration</span>
-          </span>
-        </h2>
-        <AIConfigSection />
-      </div>
-
-      <div className="card p-4 space-y-3 max-w-xl">
-        <h2 className="font-medium">
-          <span className="inline-flex items-center gap-1">
-            <TablerIcon name="stethoscope" />
-            <span>Symptome</span>
-          </span>
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
-          <label className="md:col-span-4 text-sm">
-            <div className="text-gray-400">Name</div>
-            <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={newUserSymptom} onChange={e => setNewUserSymptom(e.target.value)} placeholder="z. B. Kopfschmerzen" />
-          </label>
-          <label className="text-sm">
-            <div className="text-gray-400">Icon (Emoji oder Symbol)</div>
-            <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={newUserSymptomIcon} onChange={e => setNewUserSymptomIcon(e.target.value)} placeholder="z. B. 😊 oder mood" />
-          </label>
-          <div>
-            <button className="pill" onClick={addUserSymptom} disabled={!newUserSymptom.trim()}>Hinzufügen</button>
-          </div>
-        </div>
-        <ul className="space-y-2">
-          {Object.entries(STD_SYMPTOM_LABELS).map(([type, label]) => {
-            const current = stdSymptomIconDrafts[type] ?? (stdSymptomIcons[type] ?? '')
-            return (
-              <li key={`std-${type}`} className="text-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center w-6"><Icon name={current} /></span>
-                    <span className="font-medium">{label}</span>
-                    <span className="ml-2 text-xs text-gray-400">Standard</span>
+            {/* Accordion: Avatar */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="photo" size={18} />
+                  Profilbild
+                </span>
+              </summary>
+              <div className="collapse-content">
+                <div className="flex items-center gap-4 pt-2">
+                  <div className="w-20 h-20 rounded-full bg-base-300 flex items-center justify-center overflow-hidden">
+                    {me?.profileImageUrl ? (
+                      <img src={me.profileImageUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-sm text-gray-300 font-semibold">{(displayName || username || '?').slice(0,1).toUpperCase()}</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="text-xs">
-                      <input className="w-44 bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={current} onChange={e => setStdSymptomIconDrafts(d => ({ ...d, [type]: e.target.value }))} placeholder="Emoji/Symbol" />
+                    <button className="pill" onClick={openAvatarDialog}>Profilbild ändern</button>
+                    {me?.profileImageUrl && <button className="pill" onClick={deleteAvatar}>Entfernen</button>}
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <label className="tab">
+          <input 
+            type="radio" 
+            name="settings_tabs" 
+            checked={activeTab === 'darstellung'}
+            onChange={() => setActiveTab('darstellung')}
+          />
+          <TablerIcon name="palette" size={16} />
+          <span className="ml-1 hidden sm:inline">Darstellung</span>
+        </label>
+        <div className={`tab-content bg-base-100 border-base-300 p-4 ${activeTab === 'darstellung' ? '' : 'hidden'}`}>
+          {/* Darstellung Tab Content */}
+          <div className="space-y-4">
+            {/* Accordion: Theme */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300" open>
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="palette" size={18} />
+                  Theme
+                </span>
+              </summary>
+              <div className="collapse-content">
+                <div className="flex items-center gap-3 pt-2">
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <span>Theme</span>
+                    <select value={theme} onChange={e => setTheme(e.target.value as 'dark' | 'bright')} className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm">
+                      <option value="dark">Dark</option>
+                      <option value="bright">Bright</option>
+                    </select>
+                  </label>
+                  <button className="pill" onClick={saveUI}>Übernehmen</button>
+                </div>
+              </div>
+            </details>
+
+            {/* Accordion: Passcode */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="lock" size={18} />
+                  Passcode-Schutz
+                </span>
+              </summary>
+              <div className="collapse-content pt-2">
+                <PasscodeSettings onSave={() => doneSaving()} />
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <label className="tab">
+          <input 
+            type="radio" 
+            name="settings_tabs" 
+            checked={activeTab === 'erfassung'}
+            onChange={() => setActiveTab('erfassung')}
+          />
+          <TablerIcon name="edit" size={16} />
+          <span className="ml-1 hidden sm:inline">Erfassung</span>
+        </label>
+        <div className={`tab-content bg-base-100 border-base-300 p-4 ${activeTab === 'erfassung' ? '' : 'hidden'}`}>
+          {/* Erfassung Tab Content */}
+          <div className="space-y-4">
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300" open>
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="tune" size={18} />
+                  Autosave & Komprimierung
+                </span>
+              </summary>
+              <div className="collapse-content">
+                <div className="grid gap-3 pt-2">
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <span>Autosave</span>
+                    <input
+                      type="checkbox"
+                      checked={autosaveEnabled}
+                      onChange={e => setAutosaveEnabled(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm">Automatisches Speichern beim Tippen</span>
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <span>Intervall (Sek.)</span>
+                    <input type="number" min={1} max={3600} value={autosaveIntervalSec} onChange={e => setAutosaveIntervalSec(Math.max(1, Math.min(3600, Number(e.target.value) || 1)))} className="w-28 bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" />
+                  </label>
+                  <div className="h-px bg-slate-800 my-2" />
+                  <div className="text-sm text-gray-400">Foto-Komprimierung & Auflösung</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="text-sm">
+                      <div className="text-gray-400">Format</div>
+                      <select
+                        value={imageSettings.format}
+                        onChange={e => setImageSettings(s => ({ ...s, format: e.target.value as ImageSettings['format'] }))}
+                        className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
+                      >
+                        <option value="webp">WebP (empfohlen)</option>
+                        <option value="jpeg">JPEG</option>
+                        <option value="png">PNG</option>
+                      </select>
                     </label>
-                    <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-base-100 border border-base-300"><Icon name={current || ''} /></span>
-                    <button className="pill" title="Icon speichern" aria-label="Icon speichern" onClick={() => saveStdSymptomIcon(type, current)}>
-                      <TablerIcon name="save" />
-                    </button>
-                  </div>
-                </div>
-              </li>
-            )
-          })}
-          {userSymptoms.map(s => {
-            const current = userSymptomIconDrafts[s.id] ?? (s.icon ?? '')
-            return (
-              <li key={`usr-${s.id}`} className="text-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="inline-flex items-center justify-center w-6">{current ? <Icon name={current} /> : null}</span>
-                    <span className="font-medium">{s.title}</span>
-                    <span className="ml-2 text-xs text-gray-400">Eigen</span>
+                    <label className="text-sm">
+                      <div className="text-gray-400">Qualität</div>
+                      <input type="number" min={1} max={100} value={imageSettings.quality} onChange={e => setImageSettings(s => ({ ...s, quality: Math.max(1, Math.min(100, Number(e.target.value) || 80)) }))} className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" />
+                    </label>
+                    <label className="text-sm">
+                      <div className="text-gray-400">Max. Breite</div>
+                      <input type="number" min={100} max={8000} value={imageSettings.maxWidth} onChange={e => setImageSettings(s => ({ ...s, maxWidth: Math.max(100, Math.min(8000, Number(e.target.value) || 1600)) }))} className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" />
+                    </label>
+                    <label className="text-sm">
+                      <div className="text-gray-400">Max. Höhe</div>
+                      <input type="number" min={100} max={8000} value={imageSettings.maxHeight} onChange={e => setImageSettings(s => ({ ...s, maxHeight: Math.max(100, Math.min(8000, Number(e.target.value) || 1600)) }))} className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" />
+                    </label>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="text-xs">
-                      <input className="w-44 bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={current} onChange={e => setUserSymptomIconDrafts(d => ({ ...d, [s.id]: e.target.value }))} placeholder="Emoji/Symbol" />
-                    </label>
-                    <span className="inline-flex items-center justify-center w-8 h-8 rounded bg-base-100 border border-base-300"><Icon name={current || ''} /></span>
-                    <button className="pill" title="Icon speichern" aria-label="Icon speichern" onClick={() => saveUserSymptomIcon(s.id, current)}>
-                      <TablerIcon name="save" />
-                    </button>
-                    <button className="pill" title="Löschen" aria-label="Löschen" onClick={() => deleteUserSymptom(s.id)}>
-                      <TablerIcon name="delete" />
-                    </button>
+                    <button className="pill !bg-green-600 !text-white" onClick={saveCapture}>Speichern</button>
+                    <SaveIndicator saving={saving} savedAt={savedAt} />
                   </div>
                 </div>
-              </li>
-            )
-          })}
-        </ul>
-      </div>
-      
-      
-      <div className="card p-4 space-y-3 max-w-xl">
-        <h2 className="font-medium">
-          <span className="inline-flex items-center gap-1">
-            <TablerIcon name="add_link" />
-            <span>Links</span>
-          </span>
-        </h2>
-        <div className="text-sm text-gray-400">Hier kannst du eigene Links anlegen, die im Menü unter Links erscheinen.</div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
-          <label className="md:col-span-2 text-sm">
-            <div className="text-gray-400">Name</div>
-            <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={newLinkName} onChange={e => setNewLinkName(e.target.value)} placeholder="z. B. Blog" />
-          </label>
-          <label className="md:col-span-3 text-sm">
-            <div className="text-gray-400">URL</div>
-            <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={newLinkUrl} onChange={e => setNewLinkUrl(e.target.value)} placeholder="https://… oder /docs/…" />
-          </label>
-          <div>
-            <button className="pill" onClick={addLink} disabled={!newLinkName.trim() || !newLinkUrl.trim()}>Hinzufügen</button>
+              </div>
+            </details>
           </div>
         </div>
-        <ul className="space-y-2">
-          {links.length === 0 ? (
-            <li className="text-sm text-gray-400">Noch keine eigenen Links.</li>
-          ) : (
-            links.map(l => (
-              <li key={l.id} className="flex items-center justify-between text-sm">
-                <div className="truncate">
-                  <span className="font-medium">{l.name}</span>
-                  <span className="ml-2 text-xs text-gray-400 truncate">{l.url}</span>
+
+        <label className="tab">
+          <input 
+            type="radio" 
+            name="settings_tabs" 
+            checked={activeTab === 'ki'}
+            onChange={() => setActiveTab('ki')}
+          />
+          <TablerIcon name="brain" size={16} />
+          <span className="ml-1 hidden sm:inline">KI & Modelle</span>
+        </label>
+        <div className={`tab-content bg-base-100 border-base-300 p-4 ${activeTab === 'ki' ? '' : 'hidden'}`}>
+          {/* KI Tab Content */}
+          <div className="space-y-4">
+            <LlmModelManager startSaving={startSaving} doneSaving={doneSaving} saving={saving} savedAt={savedAt} />
+            
+            {/* Accordion: KI-Zusammenfassung */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <Icon name="summarize" />
+                  KI-Zusammenfassung
+                </span>
+              </summary>
+              <div className="collapse-content">
+                <div className="space-y-2 pt-2">
+                  <label className="block text-sm">
+                    <span className="text-gray-400 mb-1 block">Modell</span>
+                    <select
+                      value={summaryModel}
+                      onChange={(e) => setSummaryModel(e.target.value)}
+                      className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
+                    >
+                      {sortedModelsForSummary.map((m) => (
+                        <option key={m.modelId} value={m.modelId}>
+                          {m.name} ({m.inputCost || '-'} / {m.outputCost || '-'}) [{m.provider}]
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-sm">
+                    <span className="text-gray-400 mb-1 block">System-Prompt</span>
+                    <textarea
+                      value={summaryPrompt}
+                      onChange={(e) => setSummaryPrompt(e.target.value)}
+                      rows={4}
+                      className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm font-mono"
+                      placeholder="System-Prompt für die Zusammenfassung..."
+                    />
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button className="btn btn-success btn-sm" onClick={saveSummarySettings}>Speichern</button>
+                    <SaveIndicator saving={saving} savedAt={savedAt} />
+                  </div>
                 </div>
-                <button className="pill" onClick={() => deleteLink(l.id)}>Löschen</button>
-              </li>
-            ))
-          )}
-        </ul>
+              </div>
+            </details>
+
+            {/* Accordion: Transkription */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="microphone" size={18} />
+                  Transkription
+                </span>
+              </summary>
+              <div className="collapse-content">
+                <div className="space-y-2 pt-2">
+                  <label className="block text-sm">
+                    <span className="text-gray-400 mb-1 block">Modell</span>
+                    <select
+                      value={transcriptionModel}
+                      onChange={(e) => setTranscriptionModel(e.target.value)}
+                      className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm"
+                    >
+                      {sortedModelsForTranscription.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button className="btn btn-success btn-sm" onClick={saveTranscriptionSettings}>Speichern</button>
+                    <SaveIndicator saving={saving} savedAt={savedAt} />
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            {/* Accordion: Journal AI */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="brain" size={18} />
+                  Journal AI-Konfiguration
+                </span>
+              </summary>
+              <div className="collapse-content pt-2">
+                <AIConfigSection />
+              </div>
+            </details>
+
+            {/* Accordion: Bildgenerierung */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="photo" size={18} />
+                  Bildgenerierung
+                </span>
+              </summary>
+              <div className="collapse-content pt-2">
+                <ImageGenerationSettings
+                  settings={imageGenSettings}
+                  onSettingsChange={setImageGenSettings}
+                  onSave={saveImageGenSettings}
+                  saving={imageGenSaving}
+                />
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <label className="tab">
+          <input 
+            type="radio" 
+            name="settings_tabs" 
+            checked={activeTab === 'daten'}
+            onChange={() => setActiveTab('daten')}
+          />
+          <TablerIcon name="database" size={16} />
+          <span className="ml-1 hidden sm:inline">Daten</span>
+        </label>
+        <div className={`tab-content bg-base-100 border-base-300 p-4 ${activeTab === 'daten' ? '' : 'hidden'}`}>
+          {/* Daten Tab Content */}
+          <div className="space-y-4">
+            {/* Accordion: Gewohnheiten */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="checklist" size={18} />
+                  Gewohnheiten
+                </span>
+              </summary>
+              <div className="collapse-content">
+                <div className="max-w-xl space-y-3 pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
+                    <label className="md:col-span-4 text-sm">
+                      <div className="text-gray-400">Name</div>
+                      <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" placeholder="Neue Gewohnheit…" value={newHabit} onChange={e => setNewHabit(e.target.value)} />
+                    </label>
+                    <label className="text-sm">
+                      <div className="text-gray-400">Icon</div>
+                      <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" placeholder="z.B. 😊" value={newHabitIcon} onChange={e => setNewHabitIcon(e.target.value)} />
+                    </label>
+                    <div>
+                      <button className="pill" onClick={addHabit} disabled={!newHabit.trim()}>Hinzufügen</button>
+                    </div>
+                  </div>
+                  <ul className="space-y-2">
+                    {habits.map(h => (
+                      <li key={h.id} className="text-sm flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6">{h.icon ? <Icon name={h.icon} /> : null}</span>
+                          <span className="font-medium">{h.title}</span>
+                          <span className="text-xs text-gray-400">{h.userId ? 'Eigen' : 'Standard'}</span>
+                        </div>
+                        {h.userId && (
+                          <button className="pill" onClick={() => deleteHabit(h.id, h.userId)}>
+                            <TablerIcon name="delete" />
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </details>
+
+            {/* Accordion: Symptome */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="stethoscope" size={18} />
+                  Symptome
+                </span>
+              </summary>
+              <div className="collapse-content">
+                <div className="max-w-xl space-y-3 pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
+                    <label className="md:col-span-4 text-sm">
+                      <div className="text-gray-400">Name</div>
+                      <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={newUserSymptom} onChange={e => setNewUserSymptom(e.target.value)} placeholder="z. B. Kopfschmerzen" />
+                    </label>
+                    <label className="text-sm">
+                      <div className="text-gray-400">Icon</div>
+                      <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={newUserSymptomIcon} onChange={e => setNewUserSymptomIcon(e.target.value)} placeholder="z. B. 😊" />
+                    </label>
+                    <div>
+                      <button className="pill" onClick={addUserSymptom} disabled={!newUserSymptom.trim()}>Hinzufügen</button>
+                    </div>
+                  </div>
+                  <ul className="space-y-2">
+                    {userSymptoms.map(s => (
+                      <li key={s.id} className="text-sm flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6">{s.icon ? <Icon name={s.icon} /> : null}</span>
+                          <span className="font-medium">{s.title}</span>
+                        </div>
+                        <button className="pill" onClick={() => deleteUserSymptom(s.id)}>
+                          <TablerIcon name="delete" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </details>
+
+            {/* Accordion: Links */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="link" size={18} />
+                  Schnelllinks
+                </span>
+              </summary>
+              <div className="collapse-content">
+                <div className="max-w-xl space-y-3 pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-end">
+                    <label className="text-sm">
+                      <div className="text-gray-400">Name</div>
+                      <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={newLinkName} onChange={e => setNewLinkName(e.target.value)} placeholder="Name" />
+                    </label>
+                    <label className="text-sm">
+                      <div className="text-gray-400">URL</div>
+                      <input className="w-full bg-base-100 border border-base-300 rounded px-2 py-1 text-sm" value={newLinkUrl} onChange={e => setNewLinkUrl(e.target.value)} placeholder="https://..." />
+                    </label>
+                  </div>
+                  <button className="pill" onClick={addLink} disabled={!newLinkName.trim() || !newLinkUrl.trim()}>Hinzufügen</button>
+                  <ul className="space-y-2">
+                    {links.map(l => (
+                      <li key={l.id} className="text-sm flex items-center justify-between">
+                        <div className="truncate">
+                          <span className="font-medium">{l.name}</span>
+                          <span className="ml-2 text-xs text-gray-400 truncate">{l.url}</span>
+                        </div>
+                        <button className="pill" onClick={() => deleteLink(l.id)}>Löschen</button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </details>
+
+            {/* Accordion: Standort */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="location_on" size={18} />
+                  Standort-Tracking
+                </span>
+              </summary>
+              <div className="collapse-content pt-2">
+                <div className="text-sm text-gray-400 mb-2">
+                  OwnTracks-Webhook konfigurieren, API-Tokens verwalten und Google Timeline importieren.
+                </div>
+                <a href="/settings/location" className="btn btn-primary btn-sm">
+                  Standort-Einstellungen öffnen
+                </a>
+              </div>
+            </details>
+          </div>
+        </div>
       </div>
 
-      {/* Location Tracking Settings Link */}
-      <div className="card p-4 space-y-3 max-w-xl">
-        <h2 className="font-medium">
-          <span className="inline-flex items-center gap-1">
-            <TablerIcon name="location_on" />
-            <span>Standort-Tracking</span>
-          </span>
-        </h2>
-        <div className="text-sm text-gray-400">
-          OwnTracks-Webhook konfigurieren, API-Tokens verwalten und Google Timeline importieren.
-        </div>
-        <a href="/settings/location" className="btn btn-primary btn-sm w-fit">
-          Standort-Einstellungen öffnen
-        </a>
+      {/* Close main container */}
       </div>
-      
-    </div>
-    {avatarOpen && (
-      <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setAvatarOpen(false)}>
-        <div className="bg-surface border border-slate-800 rounded-xl p-4 w-[360px]" onClick={e => e.stopPropagation()}>
-          <div className="text-sm font-medium mb-2">Profilbild zuschneiden</div>
-          <div
-            className="relative mx-auto mb-3 h-64 w-64 rounded-lg overflow-hidden bg-slate-900 border border-slate-800 touch-none select-none"
-            ref={previewRef}
-            onPointerDown={onAvatarPointerDown}
-            onPointerMove={onAvatarPointerMove}
-            onPointerUp={onAvatarPointerUp}
-            onPointerCancel={onAvatarPointerUp}
-          >
-            {avatarUrl ? (
-              // Preview via background image
-              <div
-                className="absolute inset-0"
-                style={{
-                  backgroundImage: `url(${avatarUrl})`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: `${preview?.left ?? 0}px ${preview?.top ?? 0}px`,
-                  backgroundSize: preview ? `${preview.width}px ${preview.height}px` : undefined,
-                }}
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">Bild wählen…</div>
-            )}
-          </div>
-          <div className="flex items-center gap-2 mb-3">
-            <input type="range" min={1} max={3} step={0.01} value={avatarScale} onChange={e => setAvatarScale(Number(e.target.value))} className="flex-1" />
-            <span className="text-xs text-gray-400 w-10 text-right">{avatarScale.toFixed(2)}×</span>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <label className="pill cursor-pointer">
-              <input type="file" accept="image/*" className="hidden" onChange={onAvatarFileChange} />Bild wählen
-            </label>
-            <div className="flex items-center gap-2">
-              <button className="pill" onClick={() => setAvatarOpen(false)}>Abbrechen</button>
-              <button className="pill !bg-green-600 !text-white hover:bg-pill-light dark:hover:bg-pill hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-60" onClick={saveAvatar} disabled={!avatarImg}>Zuschneiden & Speichern</button>
+
+      {/* Avatar Modal */}
+      {avatarOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setAvatarOpen(false)}>
+          <div className="bg-surface border border-slate-800 rounded-xl p-4 w-[360px]" onClick={e => e.stopPropagation()}>
+            <div className="text-sm font-medium mb-2">Profilbild zuschneiden</div>
+            <div
+              className="relative mx-auto mb-3 h-64 w-64 rounded-lg overflow-hidden bg-slate-900 border border-slate-800 touch-none select-none"
+              ref={previewRef}
+              onPointerDown={onAvatarPointerDown}
+              onPointerMove={onAvatarPointerMove}
+              onPointerUp={onAvatarPointerUp}
+              onPointerCancel={onAvatarPointerUp}
+            >
+              {avatarUrl ? (
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    backgroundImage: `url(${avatarUrl})`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: `${preview?.left ?? 0}px ${preview?.top ?? 0}px`,
+                    backgroundSize: preview ? `${preview.width}px ${preview.height}px` : undefined,
+                  }}
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400">Bild wählen…</div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mb-3">
+              <input type="range" min={1} max={3} step={0.01} value={avatarScale} onChange={e => setAvatarScale(Number(e.target.value))} className="flex-1" />
+              <span className="text-xs text-gray-400 w-10 text-right">{avatarScale.toFixed(2)}×</span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <label className="pill cursor-pointer">
+                <input type="file" accept="image/*" className="hidden" onChange={onAvatarFileChange} />Bild wählen
+              </label>
+              <div className="flex items-center gap-2">
+                <button className="pill" onClick={() => setAvatarOpen(false)}>Abbrechen</button>
+                <button className="pill !bg-green-600 !text-white" onClick={saveAvatar} disabled={!avatarImg}>Zuschneiden & Speichern</button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
     </>
   )
 }

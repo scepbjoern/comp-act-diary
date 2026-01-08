@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Icon } from '@/components/Icon'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
 
@@ -12,8 +13,9 @@ interface DaySummaryProps {
     sources: string[]
   } | null
   loading: boolean
-  onGenerate: () => void
-  onRegenerate: () => void
+  generateWithImage?: boolean
+  onGenerate: (withImage: boolean) => void
+  onRegenerate: (withImage: boolean) => void
   onDelete: () => void
 }
 
@@ -30,10 +32,13 @@ export function DaySummary({
   dayId,
   summary,
   loading,
+  generateWithImage = true,
   onGenerate,
   onRegenerate,
   onDelete
 }: DaySummaryProps) {
+  const [withImage, setWithImage] = useState(generateWithImage)
+
   if (!dayId) {
     return null
   }
@@ -52,7 +57,7 @@ export function DaySummary({
           <div className="flex items-center gap-2">
             <button
               className="btn btn-ghost btn-xs text-gray-400 hover:text-gray-200"
-              onClick={onRegenerate}
+              onClick={() => onRegenerate(withImage)}
               disabled={loading}
               title="Neu generieren"
             >
@@ -84,9 +89,18 @@ export function DaySummary({
           <p className="text-gray-400 text-sm">
             Noch keine Zusammenfassung vorhanden
           </p>
+          <label className="flex items-center justify-center gap-2 mb-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={withImage}
+              onChange={(e) => setWithImage(e.target.checked)}
+              className="w-4 h-4 accent-primary"
+            />
+            <span className="text-sm">Mit Bild generieren</span>
+          </label>
           <button
             className="btn btn-primary btn-sm"
-            onClick={onGenerate}
+            onClick={() => onGenerate(withImage)}
           >
             <Icon name="auto_awesome" />
             Zusammenfassung generieren

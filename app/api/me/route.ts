@@ -104,6 +104,10 @@ export async function PATCH(req: NextRequest) {
       if (body.settings.transcriptionModelLanguages && typeof body.settings.transcriptionModelLanguages === 'object') {
         settingsPatch.transcriptionModelLanguages = body.settings.transcriptionModelLanguages
       }
+      // Image generation settings
+      if (body.settings.imageGenerationSettings && typeof body.settings.imageGenerationSettings === 'object') {
+        settingsPatch.imageGenerationSettings = body.settings.imageGenerationSettings
+      }
       // Passcode settings
       if (typeof body.settings.passcodeEnabled === 'boolean') {
         settingsPatch.passcodeEnabled = body.settings.passcodeEnabled

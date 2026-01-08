@@ -11,6 +11,7 @@ import { OriginalTranscriptPanel } from './OriginalTranscriptPanel'
 import { OCRSourcePanel } from './OCRSourcePanel'
 import { JournalEntrySection } from './JournalEntrySection'
 import { AISettingsPopup } from './AISettingsPopup'
+import { JournalEntryImage } from './JournalEntryImage'
 import { useJournalAI } from '@/hooks/useJournalAI'
 import {
   IconSettings,
@@ -335,6 +336,12 @@ export function DiaryEntriesAccordion({
                     </button>
                   </div>
                 </div>
+
+                {/* Generated Image for Entry */}
+                <JournalEntryImage
+                  entryId={n.id}
+                  summaryText={n.aiSummary || n.text || ''}
+                />
 
                 {/* AI Summary Section (blue background) */}
                 <JournalEntrySection

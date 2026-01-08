@@ -37,6 +37,7 @@ enum EntityType {
   INVENTORY_ITEM      /// Inventar-Gegenstand
   TIME_TRACKING_ENTRY /// Zeiterfassungseintrag
   BOOKMARK            /// Lesezeichen
+  TIMEBOX             /// Zeitraum (Tag, Woche, etc.)
 }
 
 /// Art eines Zeitraums
@@ -286,6 +287,7 @@ model User {
   notifications         Notification[]
   rawGpsPoints          RawGpsPoint[]
   locationWebhookTokens LocationWebhookToken[]
+  generatedImages       GeneratedImage[]
 }
 
 /// Entity-Registry: Zentrale Tabelle für FK-basierte Polymorphie.
@@ -313,6 +315,7 @@ model Entity {
   externalSyncs    ExternalSync[]
   embeddings       Embedding[]
   entryTimeBoxes   EntryTimeBox[]
+  generatedImages  GeneratedImage[]
 
   @@index([userId, type])
   @@index([type])
@@ -1290,8 +1293,9 @@ model MediaAsset {
   /// Letztes Update
   updatedAt        DateTime  @updatedAt
 
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  attachments MediaAttachment[]
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments    MediaAttachment[]
+  generatedImage GeneratedImage?
 
   @@unique([userId, filePath])
   @@unique([userId, externalProvider, externalId])
@@ -1328,6 +1332,38 @@ model MediaAttachment {
   @@unique([assetId, entityId, role])
   @@index([userId, entityId])
   @@index([timeBoxId])
+}
+
+/// KI-generiertes Bild für eine Entität (Tag, Reflexion, etc.)
+/// Verknüpft mit MediaAsset für persistente lokale Speicherung.
+model GeneratedImage {
+  /// Eindeutige ID
+  id           String   @id @default(uuid())
+  /// Besitzer-User
+  userId       String
+  /// Referenz auf die Entität (via Entity-Registry, polymorph)
+  entityId     String
+  /// Referenz auf das MediaAsset (lokale Bilddatei)
+  assetId      String   @unique
+  /// Verwendetes Modell (z.B. "google/flash-image-2.5")
+  model        String
+  /// Verwendeter Prompt (für Reproduzierbarkeit)
+  prompt       String
+  /// Seitenverhältnis ("16:9", "4:3", "1:1", "9:16")
+  aspectRatio  String
+  /// Anzahl Generierungsschritte
+  steps        Int
+  /// Anzeigereihenfolge in der Galerie
+  displayOrder Int      @default(0)
+  /// Erstellungszeitpunkt
+  createdAt    DateTime @default(now())
+
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entity Entity     @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  asset  MediaAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([userId, entityId])
+  @@index([entityId, displayOrder])
 }
 
 // =============================================================================

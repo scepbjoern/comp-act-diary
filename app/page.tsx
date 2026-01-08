@@ -6,6 +6,7 @@ import { useSymptomManagement } from '@/hooks/useSymptomManagement'
 import { useHabitManagement } from '@/hooks/useHabitManagement'
 import { useDiaryManagement } from '@/hooks/useDiaryManagement'
 import { useDaySummary } from '@/hooks/useDaySummary'
+import { useGeneratedImages } from '@/hooks/useGeneratedImages'
 import { useSaveIndicator } from '@/components/SaveIndicator'
 import { SaveBar } from '@/components/SaveBar'
 import { Toasts, useToasts } from '@/components/Toast'
@@ -14,6 +15,9 @@ import { DateNavigation } from '@/components/DateNavigation'
 import { ReflectionDueBanner } from '@/components/ReflectionDueBanner'
 import { DiarySection } from '@/components/DiarySection'
 import { DaySummary } from '@/components/DaySummary'
+import { GeneratedImageGallery } from '@/components/GeneratedImageGallery'
+import { ImageGenerationModal } from '@/components/ImageGenerationModal'
+import { DEFAULT_IMAGE_PROMPT } from '@/lib/defaultImagePrompt'
 import { DarmkurSection } from '@/components/DarmkurSection'
 import { ResetDaySection } from '@/components/ResetDaySection'
 import { DebugDayPanel } from '@/components/DebugDayPanel'
@@ -150,8 +154,21 @@ export default function HeutePage() {
     deleteSummary
   } = useDaySummary(day?.id || null, push)
 
+  // Generated Images Hook (uses day's entity ID, which is the timeBoxId)
+  const {
+    images: generatedImages,
+    loading: imagesLoading,
+    generating: imageGenerating,
+    generateImage,
+    deleteImage
+  } = useGeneratedImages(day?.timeBoxId || null, push)
+
   // Inline analytics
   const [inlineData, setInlineData] = useState<InlineData | null>(null)
+  
+  // Image generation modal state
+  const [imageModalOpen, setImageModalOpen] = useState(false)
+  const [imagePromptTemplate, setImagePromptTemplate] = useState(DEFAULT_IMAGE_PROMPT)
 
   // Diary functions are now handled by useDiaryManagement hook
   
@@ -566,12 +583,48 @@ export default function HeutePage() {
 
       {day && (
         <>
+          {/* Generated Day Image */}
+          <GeneratedImageGallery
+            images={generatedImages}
+            loading={imagesLoading}
+            generating={imageGenerating}
+            hasSummary={!!summary}
+            onGenerate={() => generateImage(summary?.content || '')}
+            onDelete={deleteImage}
+            onOpenModal={() => setImageModalOpen(true)}
+          />
+          
+          {/* Image Generation Modal */}
+          <ImageGenerationModal
+            isOpen={imageModalOpen}
+            onClose={() => setImageModalOpen(false)}
+            onGenerate={(finalPrompt) => {
+              setImageModalOpen(false)
+              generateImage(summary?.content || '', finalPrompt)
+            }}
+            summaryText={summary?.content || ''}
+            defaultPromptTemplate={imagePromptTemplate}
+            generating={imageGenerating}
+            title="Tagesbild generieren"
+          />
+
           <DaySummary
             dayId={day.id}
             summary={summary}
             loading={summaryLoading}
-            onGenerate={generateSummary}
-            onRegenerate={regenerateSummary}
+            onGenerate={async (withImage) => {
+              const newSummary = await generateSummary()
+              if (newSummary && withImage) {
+                // Use the returned summary content directly
+                generateImage(newSummary.content)
+              }
+            }}
+            onRegenerate={async (withImage) => {
+              const newSummary = await regenerateSummary()
+              if (newSummary && withImage) {
+                generateImage(newSummary.content)
+              }
+            }}
             onDelete={deleteSummary}
           />
 
