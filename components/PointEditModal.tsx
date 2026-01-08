@@ -64,6 +64,9 @@ export default function PointEditModal({
   const _mapRef = useRef<mapboxgl.Map | null>(null)
 
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
+  
+  // DEBUG: Remove after fixing
+  console.log('PointEditModal - Mapbox Token:', mapboxToken ? 'SET' : 'NOT SET')
 
   // Load nearby POIs
   const loadNearbyPois = useCallback(async () => {
