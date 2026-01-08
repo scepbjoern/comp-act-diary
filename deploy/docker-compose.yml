@@ -31,6 +31,8 @@ services:
         NO_PROXY: ${NO_PROXY}
         UID: ${UID:-1000}
         GID: ${GID:-1000}
+        # Build-time variables for Next.js inlining
+        NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN:-}
       network: host
     restart: unless-stopped
     environment:

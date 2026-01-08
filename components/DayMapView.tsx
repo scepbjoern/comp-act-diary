@@ -62,17 +62,8 @@ export default function DayMapView({ date, visits = [], onPointClick }: DayMapVi
   const [selectedPoint, setSelectedPoint] = useState<RawGpsPoint | null>(null)
   const [selectedVisit, setSelectedVisit] = useState<LocationVisit | null>(null)
 
-  // TEMPORARY DEBUG - REMOVE AFTER TESTING!
-const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiYmpvZXJucyIsImEiOiJjbWs0MDd4dDYwMjk0M3ByNXV4YWpqeWQ2In0.FLDJwbpeNlfdO8GPicczBg'
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
   
-  // DEBUG: Check if token is available
-  console.log('DayMapView - Mapbox Token:', mapboxToken ? 'SET' : 'NOT SET')
-  console.log('DayMapView - All env vars:', {
-    MAPBOX_ACCESS_TOKEN: process.env.MAPBOX_ACCESS_TOKEN ? 'SET' : 'NOT SET',
-    NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ? 'SET' : 'NOT SET',
-    NODE_ENV: process.env.NODE_ENV,
-  })
-
   // Load raw GPS points for this day
   useEffect(() => {
     async function loadPoints() {
@@ -156,15 +147,6 @@ const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiY
   }
 
   if (!mapboxToken) {
-    // DEBUG: Detailed check
-    console.error('DayMapView - Token check failed:', {
-      token: mapboxToken,
-      tokenType: typeof mapboxToken,
-      tokenLength: mapboxToken?.length,
-      envKeys: Object.keys(process.env).filter(k => k.includes('MAPBOX')),
-      allPublicKeys: Object.keys(process.env).filter(k => k.startsWith('NEXT_PUBLIC_')),
-    })
-    
     return (
       <div className="h-64 bg-base-300 rounded-lg flex items-center justify-center">
         <p className="text-error text-sm">NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN nicht konfiguriert</p>
