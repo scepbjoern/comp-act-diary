@@ -21,5 +21,6 @@
     "class:\\s*'([^']*)'",
     "class:\\s*`([^`]*)`",
     "class=\\s*([^\\s>]+)"
-  ]
+  ],
+  "prisma.pinToPrisma6": true
 }
