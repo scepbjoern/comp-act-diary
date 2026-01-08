@@ -4,6 +4,10 @@
 - Bildgenerierung: Es sollen Bilder generiert werden können in der App. Passend zu einzelnen Tagebucheinträgen oder dem ganzen Tag oder einer Reflexion, usw. sollen Bildgenerierungsmodelle eingesetzt werden.
 - Export: Als JSON zwecks Backup/Migration; als PDF zwecks Reisetagebüchern
 - Location-Import von C:\Users\bjoer\SynologyDrive\Bjoern\Mapping and GPS and Geotagging\ExcelGIS
+- Reisetagebuch:
+    - https://www.journiapp.com/blog
+    - https://findpenguins.com/
+    - https://www.polarsteps.com/de/
 
 
 ## Verschlüsselung
