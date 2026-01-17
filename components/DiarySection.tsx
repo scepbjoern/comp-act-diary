@@ -12,6 +12,7 @@ import { SaveIndicator } from '@/components/SaveIndicator'
 import dynamic from 'next/dynamic'
 import type { DayNote } from '@/types/day'
 import DiaryInteractionPanel from './DiaryInteractionPanel'
+import { useReadMode } from '@/hooks/useReadMode'
 
 const DiaryEntriesAccordion = dynamic(() => import('@/components/DiaryEntriesAccordion').then(mod => ({ default: mod.DiaryEntriesAccordion })), {
   loading: () => <div className="text-sm text-gray-400">Lädt...</div>
@@ -114,6 +115,7 @@ export function DiarySection({
   onRefreshNotes,
   onSaveAndRunPipeline,
 }: DiarySectionProps) {
+  const { readMode } = useReadMode()
   const [isImproving, setIsImproving] = useState(false)
   const [isSavingWithPipeline, setIsSavingWithPipeline] = useState(false)
 
@@ -171,7 +173,8 @@ export function DiarySection({
         </span>
       </h2>
 
-      {/* New diary entry form */}
+      {/* New diary entry form - hidden in read mode */}
+      {!readMode && (
       <div className="space-y-2 md:p-3 md:rounded md:border md:border-slate-700 md:bg-slate-800/30">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-xs text-gray-400">Titel</span>
@@ -401,13 +404,16 @@ export function DiarySection({
           )}
         </div>
       </div>
+      )}
 
-      {/* Interaction panel for linking contacts - always visible */}
-      <DiaryInteractionPanel
-        date={date}
-        timeBoxId={timeBoxId}
-        onInteractionAdded={() => {}}
-      />
+      {/* Interaction panel for linking contacts - hidden in read mode */}
+      {!readMode && (
+        <DiaryInteractionPanel
+          date={date}
+          timeBoxId={timeBoxId}
+          onInteractionAdded={() => {}}
+        />
+      )}
 
       {/* Existing diary entries */}
       <DiaryEntriesAccordion

@@ -10,6 +10,7 @@ import Image from 'next/image'
 import { IconPhoto, IconRefresh, IconTrash, IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 import { type GeneratedImage } from '@/hooks/useGeneratedImages'
 import { getShortModelName } from '@/lib/imageModels'
+import { useReadMode } from '@/hooks/useReadMode'
 
 // =============================================================================
 // TYPES
@@ -38,6 +39,7 @@ export function GeneratedImageGallery({
   onDelete,
   onOpenModal,
 }: GeneratedImageGalleryProps) {
+  const { readMode } = useReadMode()
   // Use modal if available, otherwise fall back to direct generation
   const handleGenerate = onOpenModal || onGenerate
   const [activeIndex, setActiveIndex] = useState(0)
@@ -78,8 +80,9 @@ export function GeneratedImageGallery({
     return null
   }
 
-  // No images yet, but has summary - compact button
+  // No images yet, but has summary - compact button (hidden in read mode)
   if (!hasImages && !loading) {
+    if (readMode) return null
     return (
       <div className="flex justify-center py-2">
         <button
@@ -167,24 +170,27 @@ export function GeneratedImageGallery({
           {getShortModelName(activeImage.model)} · {formatDate(activeImage.createdAt)}
         </span>
 
-        <div className="flex items-center gap-1">
-          <button
-            className="btn btn-ghost btn-xs text-base-content/40 hover:text-primary"
-            onClick={handleGenerate}
-            disabled={generating}
-            title="Neues Bild generieren"
-          >
-            <IconRefresh size={14} />
-          </button>
-          <button
-            className="btn btn-ghost btn-xs text-base-content/40 hover:text-error"
-            onClick={() => onDelete(activeImage.id)}
-            disabled={loading}
-            title="Bild löschen"
-          >
-            <IconTrash size={14} />
-          </button>
-        </div>
+        {/* Hide action buttons in read mode */}
+        {!readMode && (
+          <div className="flex items-center gap-1">
+            <button
+              className="btn btn-ghost btn-xs text-base-content/40 hover:text-primary"
+              onClick={handleGenerate}
+              disabled={generating}
+              title="Neues Bild generieren"
+            >
+              <IconRefresh size={14} />
+            </button>
+            <button
+              className="btn btn-ghost btn-xs text-base-content/40 hover:text-error"
+              onClick={() => onDelete(activeImage.id)}
+              disabled={loading}
+              title="Bild löschen"
+            >
+              <IconTrash size={14} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

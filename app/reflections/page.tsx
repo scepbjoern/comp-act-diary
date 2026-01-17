@@ -8,6 +8,7 @@ import { SaveBar } from '@/components/SaveBar'
 import { Toasts, useToasts } from '@/components/Toast'
 import { useSaveIndicator } from '@/components/SaveIndicator'
 import { IconSparkles } from '@tabler/icons-react'
+import { useReadMode } from '@/hooks/useReadMode'
 
 // Inline text improvement button (replaces ImproveTextButton)
 function InlineImproveButton({ text, onImprovedText, className }: { text: string; onImprovedText: (t: string) => void; className?: string }) {
@@ -64,6 +65,7 @@ type Reflection = {
 }
 
 export default function ReflectionsPage() {
+  const { readMode } = useReadMode()
   const [kind, setKind] = useState<ReflectionKind>('WEEK')
   const [changed, setChanged] = useState('')
   const [gratitude, setGratitude] = useState('')
@@ -220,6 +222,8 @@ export default function ReflectionsPage() {
           <span>Reflexion</span>
         </span>
       </h1>
+      {/* New reflection form - hidden in read mode */}
+      {!readMode && (
       <div className="card p-4 space-y-3">
         <h2 className="font-medium">Neue Reflexion</h2>
         <div className="flex flex-wrap items-center gap-3 text-sm">
@@ -283,6 +287,7 @@ export default function ReflectionsPage() {
         </div>
         {/* Save handled by sticky SaveBar */}
       </div>
+      )}
 
       <div className="space-y-3">
         {list.length === 0 ? (
@@ -298,10 +303,13 @@ export default function ReflectionsPage() {
                     {editingId === r.id ? (
                       <button className="pill" onClick={cancelEdit}>Abbrechen</button>
                     ) : (
-                      <>
-                        <button title="Bearbeiten" onClick={() => startEdit(r)}>✏️</button>
-                        <button title="Löschen" onClick={() => deleteReflection(r.id)}>🗑️</button>
-                      </>
+                      /* Hide edit/delete buttons in read mode */
+                      !readMode && (
+                        <>
+                          <button title="Bearbeiten" onClick={() => startEdit(r)}>✏️</button>
+                          <button title="Löschen" onClick={() => deleteReflection(r.id)}>🗑️</button>
+                        </>
+                      )
                     )}
                   </div>
                 </div>

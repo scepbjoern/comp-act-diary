@@ -1,10 +1,18 @@
+'use client'
+
 import { Icon } from '@/components/Icon'
+import { useReadMode } from '@/hooks/useReadMode'
 
 interface ResetDaySectionProps {
   onResetDay: () => Promise<void>
 }
 
 export function ResetDaySection({ onResetDay }: ResetDaySectionProps) {
+  const { readMode } = useReadMode()
+
+  // Hide entire section in read mode
+  if (readMode) return null
+
   return (
     <div className="card p-4 space-y-3">
       <h2 className="font-medium">

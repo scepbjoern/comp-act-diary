@@ -2,6 +2,7 @@
 
 import { IconStar, IconStarFilled, IconUser, IconPhone, IconMail, IconBriefcase } from '@tabler/icons-react'
 import Link from 'next/link'
+import { useReadMode } from '@/hooks/useReadMode'
 
 interface ContactCardProps {
   contact: {
@@ -24,6 +25,7 @@ interface ContactCardProps {
 }
 
 export default function ContactCard({ contact, onToggleFavorite }: ContactCardProps) {
+  const { readMode } = useReadMode()
   const email = contact.emailPrivate || contact.emailWork
   const phone = contact.phonePrivate || contact.phoneWork
   const hasGoogleSync = !!contact.googleResourceName
@@ -81,21 +83,26 @@ export default function ContactCard({ contact, onToggleFavorite }: ContactCardPr
             </div>
           </div>
           
-          <button
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              onToggleFavorite?.(contact.id)
-            }}
-            className="btn btn-ghost btn-sm btn-circle"
-            title={contact.isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
-          >
-            {contact.isFavorite ? (
-              <IconStarFilled size={18} className="text-warning" />
-            ) : (
-              <IconStar size={18} />
-            )}
-          </button>
+          {/* Hide favorite toggle in read mode, show static star for favorites */}
+          {readMode ? (
+            contact.isFavorite && <IconStarFilled size={18} className="text-warning" />
+          ) : (
+            <button
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onToggleFavorite?.(contact.id)
+              }}
+              className="btn btn-ghost btn-sm btn-circle"
+              title={contact.isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
+            >
+              {contact.isFavorite ? (
+                <IconStarFilled size={18} className="text-warning" />
+              ) : (
+                <IconStar size={18} />
+              )}
+            </button>
+          )}
         </div>
       </div>
     </Link>

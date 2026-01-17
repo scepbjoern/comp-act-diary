@@ -1,3 +1,5 @@
+'use client'
+
 import { Icon } from '@/components/Icon'
 import { DaySettings } from '@/components/DaySettings'
 import { SymptomsSection } from '@/components/SymptomsSection'
@@ -6,6 +8,7 @@ import { WeightSection } from '@/components/WeightSection'
 import { HabitsSection } from '@/components/HabitsSection'
 import { MealNotesSection } from '@/components/MealNotesSection'
 import type { Day, Habit, DayNote, InlineData } from '@/types/day'
+import { useReadMode } from '@/hooks/useReadMode'
 
 interface DarmkurSectionProps {
   day: Day
@@ -86,6 +89,11 @@ export function DarmkurSection({
   onMealTextChange,
   onAddMealNote,
 }: DarmkurSectionProps) {
+  const { readMode } = useReadMode()
+
+  // Hide entire section in read mode
+  if (readMode) return null
+
   return (
     <div className="card p-4 space-y-3">
       <button 

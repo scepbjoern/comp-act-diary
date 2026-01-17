@@ -10,6 +10,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { IconMapPin, IconMapPinOff, IconClock, IconChevronDown, IconChevronUp, IconList, IconMap } from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import { useReadMode } from '@/hooks/useReadMode'
 
 // Dynamic import for map (SSR incompatible)
 const DayMapView = dynamic(
@@ -78,6 +79,7 @@ const POI_ICONS: Record<string, string> = {
 }
 
 export default function DayLocationPanel({ date }: DayLocationPanelProps) {
+  const { readMode } = useReadMode()
   const router = useRouter()
   const [expanded, setExpanded] = useState(true)
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
@@ -346,12 +348,15 @@ export default function DayLocationPanel({ date }: DayLocationPanelProps) {
                     )}
                   </div>
 
-                  <button 
-                    onClick={handleBatchGeocode}
-                    className="btn btn-sm btn-outline btn-primary mt-3 w-full"
-                  >
-                    Alle geocoden ({totalUngeocodedRawPoints} Punkte)
-                  </button>
+                  {/* Hide geocode button in read mode */}
+                  {!readMode && (
+                    <button 
+                      onClick={handleBatchGeocode}
+                      className="btn btn-sm btn-outline btn-primary mt-3 w-full"
+                    >
+                      Alle geocoden ({totalUngeocodedRawPoints} Punkte)
+                    </button>
+                  )}
                 </div>
               )}
             </div>

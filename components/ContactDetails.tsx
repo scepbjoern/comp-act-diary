@@ -15,6 +15,7 @@ import InteractionEditor from './InteractionEditor'
 import TaskForm from './TaskForm'
 import ContactPhotoUpload from './ContactPhotoUpload'
 import ContactGroupsEditor from './ContactGroupsEditor'
+import { useReadMode } from '@/hooks/useReadMode'
 
 interface Contact {
   id: string
@@ -58,6 +59,7 @@ interface RelationWithPerson {
 }
 
 export default function ContactDetails({ contact }: ContactDetailsProps) {
+  const { readMode } = useReadMode()
   const router = useRouter()
   const [isFavorite, setIsFavorite] = useState(contact.isFavorite)
   const [archiving, setArchiving] = useState(false)
@@ -199,6 +201,8 @@ export default function ContactDetails({ contact }: ContactDetailsProps) {
           )}
         </div>
 
+        {/* Action buttons - hidden in read mode */}
+        {!readMode && (
         <div className="flex gap-2">
           <button
             onClick={handleToggleFavorite}
@@ -243,6 +247,7 @@ export default function ContactDetails({ contact }: ContactDetailsProps) {
             <IconTrash size={20} />
           </button>
         </div>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

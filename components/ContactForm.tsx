@@ -7,6 +7,7 @@ import { ContactCreateSchema, type ContactCreate } from '@/lib/validators/contac
 import { IconPlus, IconTrash, IconArrowLeft } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useReadMode } from '@/hooks/useReadMode'
 
 interface ContactFormProps {
   initialData?: Partial<ContactCreate> & { id?: string; slug?: string }
@@ -14,6 +15,7 @@ interface ContactFormProps {
 }
 
 export default function ContactForm({ initialData, mode }: ContactFormProps) {
+  const { readMode } = useReadMode()
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [socialUrls, setSocialUrls] = useState<Array<{ type: string; url: string }>>(
@@ -443,18 +445,20 @@ export default function ContactForm({ initialData, mode }: ContactFormProps) {
         </div>
       </div>
 
-      {/* Actions */}
+      {/* Actions - hide save button in read mode */}
       <div className="flex gap-3 justify-end">
         <Link
           href={mode === 'edit' && initialData?.slug ? `/prm/${initialData.slug}` : '/prm'}
           className="btn btn-ghost"
         >
-          Abbrechen
+          {readMode ? 'Zurück' : 'Abbrechen'}
         </Link>
-        <button type="submit" disabled={saving} className="btn btn-primary">
-          {saving && <span className="loading loading-spinner loading-xs"></span>}
-          {mode === 'edit' ? 'Speichern' : 'Kontakt erstellen'}
-        </button>
+        {!readMode && (
+          <button type="submit" disabled={saving} className="btn btn-primary">
+            {saving && <span className="loading loading-spinner loading-xs"></span>}
+            {mode === 'edit' ? 'Speichern' : 'Kontakt erstellen'}
+          </button>
+        )}
       </div>
     </form>
   )

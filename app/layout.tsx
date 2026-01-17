@@ -3,10 +3,9 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { getPrisma } from '@/lib/prisma'
-import { SiteNav } from '@/components/SiteNav'
-import NotificationBell from '@/components/NotificationBell'
-import { GlobalSearch } from '@/components/GlobalSearch'
 import { PasscodeLockProvider } from '@/components/PasscodeLockProvider'
+import { ReadModeProvider } from '@/hooks/useReadMode'
+import { HeaderClient } from '@/components/HeaderClient'
 import pkg from '../package.json'
 
 export const metadata = {
@@ -125,6 +124,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         />
       </head>
       <body className="min-h-screen flex flex-col">
+        <ReadModeProvider>
         <PasscodeLockProvider>
           <header className="sticky top-0 z-10 bg-surface/80 backdrop-blur border-b border-slate-700">
             <div className="container h-14 flex items-center justify-between">
@@ -141,11 +141,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 />
                 <span>CompACT Diary</span>
               </Link>
-              <div className="flex items-center gap-2">
-                <GlobalSearch />
-                <NotificationBell />
-                <SiteNav user={user ? { id: user.id, username: user.username, displayName: user.displayName, profileImageUrl: user.profileImageUrl } : null} />
-              </div>
+              <HeaderClient user={user ? { id: user.id, username: user.username, displayName: user.displayName, profileImageUrl: user.profileImageUrl } : null} />
             </div>
           </header>
           <main className="container py-4 flex-1">
@@ -177,6 +173,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             </div>
           </footer>
         </PasscodeLockProvider>
+        </ReadModeProvider>
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

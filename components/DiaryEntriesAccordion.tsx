@@ -13,6 +13,7 @@ import { JournalEntrySection } from './JournalEntrySection'
 import { AISettingsPopup } from './AISettingsPopup'
 import { JournalEntryImage } from './JournalEntryImage'
 import { useJournalAI } from '@/hooks/useJournalAI'
+import { useReadMode } from '@/hooks/useReadMode'
 import {
   IconSettings,
   IconSparkles,
@@ -84,6 +85,7 @@ export function DiaryEntriesAccordion({
   onUpdateContent,
   onRefreshNotes
 }: DiaryEntriesAccordionProps) {
+  const { readMode } = useReadMode()
   const [settingsPopupNoteId, setSettingsPopupNoteId] = useState<string | null>(null)
   const [loadingStates, setLoadingStates] = useState<Record<string, 'content' | 'analysis' | 'summary' | 'pipeline' | null>>({})
   
@@ -259,28 +261,32 @@ export function DiaryEntriesAccordion({
                         </button>
                       </>
                     ) : (
-                      <>
-                        <button 
-                          className="btn btn-ghost btn-xs" 
-                          title="Bearbeiten" 
-                          onClick={() => onEdit(n)}
-                        >
-                          <TablerIcon name="edit" size={16} />
-                          <span className="md:inline hidden ml-1">Bearbeiten</span>
-                        </button>
-                        <button 
-                          className="btn btn-ghost btn-xs text-red-400" 
-                          title="Löschen" 
-                          onClick={() => onDelete(n.id)}
-                        >
-                          <TablerIcon name="trash" size={16} />
-                          <span className="md:inline hidden ml-1">Löschen</span>
-                        </button>
-                      </>
+                      /* Hide edit/delete buttons in read mode */
+                      !readMode && (
+                        <>
+                          <button 
+                            className="btn btn-ghost btn-xs" 
+                            title="Bearbeiten" 
+                            onClick={() => onEdit(n)}
+                          >
+                            <TablerIcon name="edit" size={16} />
+                            <span className="md:inline hidden ml-1">Bearbeiten</span>
+                          </button>
+                          <button 
+                            className="btn btn-ghost btn-xs text-red-400" 
+                            title="Löschen" 
+                            onClick={() => onDelete(n.id)}
+                          >
+                            <TablerIcon name="trash" size={16} />
+                            <span className="md:inline hidden ml-1">Löschen</span>
+                          </button>
+                        </>
+                      )
                     )}
                   </div>
                   
-                  {/* AI action buttons */}
+                  {/* AI action buttons - hidden in read mode */}
+                  {!readMode && (
                   <div className="flex items-center gap-1">
                     <button
                       className="btn btn-ghost btn-xs"
@@ -335,6 +341,7 @@ export function DiaryEntriesAccordion({
                       ✨
                     </button>
                   </div>
+                  )}
                 </div>
 
                 {/* Generated Image for Entry */}

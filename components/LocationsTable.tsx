@@ -7,6 +7,7 @@
 
 import { useState, useCallback } from 'react'
 import { IconTrash, IconMapPin, IconRefresh, IconStar, IconStarFilled } from '@tabler/icons-react'
+import { useReadMode } from '@/hooks/useReadMode'
 
 interface Location {
   id: string
@@ -61,6 +62,7 @@ export default function LocationsTable({
   onGeocode,
   loading,
 }: LocationsTableProps) {
+  const { readMode } = useReadMode()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editField, setEditField] = useState<'name' | 'address' | 'city' | 'poiType' | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -144,7 +146,7 @@ export default function LocationsTable({
             <th>Stadt</th>
             <th>Typ</th>
             <th className="text-center">Besuche</th>
-            <th className="w-32">Aktionen</th>
+            {!readMode && <th className="w-32">Aktionen</th>}
           </tr>
         </thead>
         <tbody>
@@ -284,6 +286,8 @@ export default function LocationsTable({
               <td className="text-center">
                 {location._count?.visits || 0}
               </td>
+              {/* Hide action buttons in read mode */}
+              {!readMode && (
               <td onClick={(e) => e.stopPropagation()}>
                 <div className="flex gap-1">
                   <button
@@ -307,6 +311,7 @@ export default function LocationsTable({
                   </button>
                 </div>
               </td>
+              )}
             </tr>
           ))}
         </tbody>

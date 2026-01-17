@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { IconPlus, IconStar, IconArchive, IconRefresh, IconSearch, IconNetwork, IconSortAscending, IconFilter } from '@tabler/icons-react'
 import ContactCard from './ContactCard'
 import Link from 'next/link'
+import { useReadMode } from '@/hooks/useReadMode'
 
 interface Contact {
   id: string
@@ -27,6 +28,7 @@ interface ContactListProps {
 }
 
 export default function ContactList({ initialContacts = [], initialTotal = 0 }: ContactListProps) {
+  const { readMode } = useReadMode()
   const [contacts, setContacts] = useState<Contact[]>(initialContacts)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<'all' | 'favorites' | 'archived'>('all')
@@ -130,10 +132,13 @@ export default function ContactList({ initialContacts = [], initialTotal = 0 }: 
             <IconNetwork size={18} />
             Netzwerk
           </Link>
-          <Link href="/prm/new" className="btn btn-primary btn-sm">
-            <IconPlus size={18} />
-            Neuer Kontakt
-          </Link>
+          {/* Hide new contact button in read mode */}
+          {!readMode && (
+            <Link href="/prm/new" className="btn btn-primary btn-sm">
+              <IconPlus size={18} />
+              Neuer Kontakt
+            </Link>
+          )}
         </div>
       </div>
 

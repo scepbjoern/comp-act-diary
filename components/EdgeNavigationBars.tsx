@@ -20,7 +20,7 @@ export function EdgeNavigationBars({ onPrevious, onNext }: EdgeNavigationBarsPro
         aria-label="Vorheriger Tag"
         title="Vorheriger Tag"
         className="fixed left-0 top-1/2 -translate-y-1/2 z-40
-          w-6 h-24 
+          w-3 h-24 
           flex items-center justify-center
           bg-slate-700/10 hover:bg-slate-600/40
           text-slate-400/20 hover:text-slate-300
@@ -42,7 +42,7 @@ export function EdgeNavigationBars({ onPrevious, onNext }: EdgeNavigationBarsPro
         aria-label="Nächster Tag"
         title="Nächster Tag"
         className="fixed right-0 top-1/2 -translate-y-1/2 z-40
-          w-6 h-24
+          w-3 h-24
           flex items-center justify-center
           bg-slate-700/10 hover:bg-slate-600/40
           text-slate-400/20 hover:text-slate-300

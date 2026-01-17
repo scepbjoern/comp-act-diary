@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Icon } from '@/components/Icon'
 import { MarkdownRenderer } from '@/components/MarkdownRenderer'
+import { useReadMode } from '@/hooks/useReadMode'
 
 interface DaySummaryProps {
   dayId: string | null
@@ -37,6 +38,7 @@ export function DaySummary({
   onRegenerate,
   onDelete
 }: DaySummaryProps) {
+  const { readMode } = useReadMode()
   const [withImage, setWithImage] = useState(generateWithImage)
 
   if (!dayId) {
@@ -53,7 +55,8 @@ export function DaySummary({
           </span>
         </h2>
         
-        {summary && (
+        {/* Hide regenerate/delete buttons in read mode */}
+        {summary && !readMode && (
           <div className="flex items-center gap-2">
             <button
               className="btn btn-ghost btn-xs text-gray-400 hover:text-gray-200"
@@ -84,28 +87,35 @@ export function DaySummary({
         </div>
       )}
 
+      {/* Hide generate button in read mode, show info text instead */}
       {!loading && !summary && (
-        <div className="text-center py-8 space-y-3">
-          <p className="text-gray-400 text-sm">
-            Noch keine Zusammenfassung vorhanden
-          </p>
-          <label className="flex items-center justify-center gap-2 mb-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={withImage}
-              onChange={(e) => setWithImage(e.target.checked)}
-              className="w-4 h-4 accent-primary"
-            />
-            <span className="text-sm">Mit Bild generieren</span>
-          </label>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => onGenerate(withImage)}
-          >
-            <Icon name="auto_awesome" />
-            Zusammenfassung generieren
-          </button>
-        </div>
+        readMode ? (
+          <div className="text-center py-4">
+            <p className="text-gray-400 text-sm">Keine Zusammenfassung vorhanden</p>
+          </div>
+        ) : (
+          <div className="text-center py-8 space-y-3">
+            <p className="text-gray-400 text-sm">
+              Noch keine Zusammenfassung vorhanden
+            </p>
+            <label className="flex items-center justify-center gap-2 mb-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={withImage}
+                onChange={(e) => setWithImage(e.target.checked)}
+                className="w-4 h-4 accent-primary"
+              />
+              <span className="text-sm">Mit Bild generieren</span>
+            </label>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => onGenerate(withImage)}
+            >
+              <Icon name="auto_awesome" />
+              Zusammenfassung generieren
+            </button>
+          </div>
+        )
       )}
 
       {!loading && summary && (
