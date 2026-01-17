@@ -51,6 +51,7 @@ export function MicrophoneButton(props: {
   const [error, setError] = useState<string | null>(null)
   const [showCfg, setShowCfg] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string>('')
+  const [inputLevel, setInputLevel] = useState<number>(0)
 
   // Get passcode lock functions to pause timeout during recording
   const { pauseTimeout, resumeTimeout } = usePasscodeLock()
@@ -60,6 +61,13 @@ export function MicrophoneButton(props: {
   const chunksRef = useRef<BlobPart[]>([])
   const recordingStartTimeRef = useRef<Date | null>(null)
   const isInitialMountRef = useRef(true)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const analyserDataRef = useRef<Uint8Array<ArrayBuffer> | null>(null)
+  const analyserSourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
+  const analyserRafRef = useRef<number | null>(null)
+  const stateRef = useRef<RecordingState>('idle')
+  const cancelRecordingRef = useRef(false)
 
   // Pause passcode timeout during recording
   useEffect(() => {
@@ -69,6 +77,11 @@ export function MicrophoneButton(props: {
       resumeTimeout()
     }
   }, [state, pauseTimeout, resumeTimeout])
+
+  useEffect(() => {
+    stateRef.current = state
+    if (state !== 'recording') setInputLevel(0)
+  }, [state])
 
   useEffect(() => {
     // Restore model from DB settings
@@ -106,11 +119,72 @@ export function MicrophoneButton(props: {
     saveModel()
   }, [selectedModel])
 
+  function startLevelMeter(stream: MediaStream) {
+    try {
+      const audioContext = new AudioContext()
+      const analyser = audioContext.createAnalyser()
+      analyser.fftSize = 512
+      const dataArray = new Uint8Array(new ArrayBuffer(analyser.fftSize))
+      const source = audioContext.createMediaStreamSource(stream)
+      source.connect(analyser)
+
+      audioContextRef.current = audioContext
+      analyserRef.current = analyser
+      analyserDataRef.current = dataArray
+      analyserSourceRef.current = source
+
+      const updateLevel = () => {
+        if (!analyserRef.current || !analyserDataRef.current) return
+        if (stateRef.current !== 'recording') {
+          analyserRafRef.current = requestAnimationFrame(updateLevel)
+          return
+        }
+        analyserRef.current.getByteTimeDomainData(analyserDataRef.current)
+        let sum = 0
+        for (let i = 0; i < analyserDataRef.current.length; i += 1) {
+          const normalized = (analyserDataRef.current[i] - 128) / 128
+          sum += normalized * normalized
+        }
+        const rms = Math.sqrt(sum / analyserDataRef.current.length)
+        const nextLevel = Math.min(1, rms * 4)
+        setInputLevel(prev => (Math.abs(prev - nextLevel) > 0.02 ? nextLevel : prev))
+        analyserRafRef.current = requestAnimationFrame(updateLevel)
+      }
+
+      analyserRafRef.current = requestAnimationFrame(updateLevel)
+    } catch (err) {
+      console.warn('Audio level meter unavailable', err)
+    }
+  }
+
+  function stopLevelMeter() {
+    if (analyserRafRef.current !== null) {
+      cancelAnimationFrame(analyserRafRef.current)
+      analyserRafRef.current = null
+    }
+    try {
+      analyserSourceRef.current?.disconnect()
+    } catch {}
+    try {
+      analyserRef.current?.disconnect()
+    } catch {}
+    analyserSourceRef.current = null
+    analyserRef.current = null
+    analyserDataRef.current = null
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {})
+      audioContextRef.current = null
+    }
+    setInputLevel(0)
+  }
+
   async function startRec() {
     setError(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       mediaStreamRef.current = stream
+      cancelRecordingRef.current = false
+      startLevelMeter(stream)
       const mime = getSupportedMime()
       const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined)
       chunksRef.current = []
@@ -119,23 +193,31 @@ export function MicrophoneButton(props: {
         if (ev.data && ev.data.size > 0) chunksRef.current.push(ev.data)
       }
       rec.onstop = async () => {
+        const wasCancelled = cancelRecordingRef.current
         try {
-          let blob = new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' })
-          
-          // Fix WebM duration/seeking if it's a WebM file
-          if (blob.type.includes('webm') && recordingStartTimeRef.current) {
-            const duration = Date.now() - recordingStartTimeRef.current.getTime()
-            console.log('Fixing WebM duration/seeking...', duration, 'ms')
-            blob = await fixWebmDuration(blob, duration, { logger: false })
-            console.log('WebM fixed for seeking')
+          if (!wasCancelled) {
+            let blob = new Blob(chunksRef.current, { type: rec.mimeType || 'audio/webm' })
+            
+            // Fix WebM duration/seeking if it's a WebM file
+            if (blob.type.includes('webm') && recordingStartTimeRef.current) {
+              const duration = Date.now() - recordingStartTimeRef.current.getTime()
+              console.log('Fixing WebM duration/seeking...', duration, 'ms')
+              blob = await fixWebmDuration(blob, duration, { logger: false })
+              console.log('WebM fixed for seeking')
+            }
+            
+            await sendForTranscription(blob)
           }
-          
-          await sendForTranscription(blob)
         } catch (e: unknown) {
           setError(e instanceof Error ? e.message : 'Transkription fehlgeschlagen')
           setState('idle')
         } finally {
           cleanup()
+          cancelRecordingRef.current = false
+          if (wasCancelled) {
+            setState('idle')
+            setStatusMessage('')
+          }
         }
       }
       recorderRef.current = rec
@@ -150,6 +232,7 @@ export function MicrophoneButton(props: {
   function pauseRec() {
     if (recorderRef.current && recorderRef.current.state === 'recording') {
       recorderRef.current.pause()
+      audioContextRef.current?.suspend().catch(() => {})
       setState('paused')
     }
   }
@@ -157,6 +240,7 @@ export function MicrophoneButton(props: {
   function resumeRec() {
     if (recorderRef.current && recorderRef.current.state === 'paused') {
       recorderRef.current.resume()
+      audioContextRef.current?.resume().catch(() => {})
       setState('recording')
     }
   }
@@ -167,6 +251,16 @@ export function MicrophoneButton(props: {
     setStatusMessage('Datei wird hochgeladen...')
   }
 
+  function cancelRec() {
+    if (state === 'recording' || state === 'paused') {
+      cancelRecordingRef.current = true
+      setError(null)
+      setStatusMessage('')
+      setState('idle')
+      try { recorderRef.current?.stop() } catch {}
+    }
+  }
+
   function cleanup() {
     try {
       recorderRef.current?.stream.getTracks().forEach(t => t.stop())
@@ -175,6 +269,8 @@ export function MicrophoneButton(props: {
     mediaStreamRef.current = null
     chunksRef.current = []
     recordingStartTimeRef.current = null
+    cancelRecordingRef.current = false
+    stopLevelMeter()
   }
 
   function getSupportedMime(): string | null {
@@ -295,13 +391,29 @@ export function MicrophoneButton(props: {
         {state === 'uploading' && <TablerIcon name="hourglass-filled" size={ICON_SIZE} className="animate-spin text-amber-700" />}
       </span>
 
+      {(state === 'recording' || state === 'paused') && (
+        <div
+          className={[
+            'h-2 w-16 overflow-hidden rounded-full bg-slate-800/80 transition-opacity duration-150',
+            state === 'paused' ? 'opacity-0' : 'opacity-100',
+          ].join(' ')}
+          title="Eingangspegel"
+          aria-hidden="true"
+        >
+          <div
+            className="h-full origin-left bg-emerald-400 transition-transform duration-75"
+            style={{ transform: `scaleX(${Math.max(0, inputLevel)})` }}
+          />
+        </div>
+      )}
+
       {/* Stop button - only visible during recording or paused */}
       {(state === 'recording' || state === 'paused') && (
         <span
           role="button"
           tabIndex={0}
-          title="Aufnahme beenden"
-          aria-label="Aufnahme beenden"
+          title="Aufnahme beenden (transkribieren)"
+          aria-label="Aufnahme beenden (transkribieren)"
           className="inline-flex items-center justify-center cursor-pointer select-none text-red-500 hover:text-red-400"
           onClick={stopRec}
           onKeyDown={(e) => {
@@ -312,6 +424,26 @@ export function MicrophoneButton(props: {
           }}
         >
           <TablerIcon name="player-stop-filled" size={ICON_SIZE} />
+        </span>
+      )}
+
+      {/* Cancel button - discard recording */}
+      {(state === 'recording' || state === 'paused') && (
+        <span
+          role="button"
+          tabIndex={0}
+          title="Aufnahme verwerfen"
+          aria-label="Aufnahme verwerfen"
+          className="inline-flex items-center justify-center cursor-pointer select-none text-slate-400 hover:text-slate-200"
+          onClick={cancelRec}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              cancelRec()
+            }
+          }}
+        >
+          <TablerIcon name="x" size={ICON_SIZE} />
         </span>
       )}
 
