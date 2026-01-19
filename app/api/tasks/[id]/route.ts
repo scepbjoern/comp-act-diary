@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getTask, updateTask, deleteTask, completeTask, cancelTask, reopenTask } from '@/lib/task'
+import { getTask, updateTask, deleteTask, completeTask, cancelTask, reopenTask } from '@/lib/legacy/task'
 import { TaskUpdateSchema } from '@/lib/validators/task'
 import { cookies } from 'next/headers'
 

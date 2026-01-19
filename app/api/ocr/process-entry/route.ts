@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/core/prisma'
 import { OcrProcessEntryRequestSchema } from '@/lib/validators/ocr'
 import { getJournalAIService } from '@/lib/services/journalAIService'
 

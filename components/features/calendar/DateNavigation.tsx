@@ -1,4 +1,6 @@
-import { shiftDate, shiftMonth } from '@/lib/date-utils'
+'use client'
+
+import { shiftDate, shiftMonth } from '@/lib/utils/date-utils'
 
 interface DateNavigationProps {
   date: string

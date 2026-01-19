@@ -2,7 +2,7 @@
  * Beta page for ACT value details.
  * This is a placeholder page for search result navigation.
  */
-import { getPrisma } from '@/lib/prisma';
+import { getPrisma } from '@/lib/core/prisma';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { IconHeart, IconArrowLeft } from '@tabler/icons-react';

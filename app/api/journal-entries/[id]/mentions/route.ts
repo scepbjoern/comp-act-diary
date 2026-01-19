@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/core/prisma'
 import { cookies } from 'next/headers'
-import { findMentionsInText, createMentionInteractions, getMentionsForEntry } from '@/lib/mentions'
+import { findMentionsInText, createMentionInteractions, getMentionsForEntry } from '@/lib/utils/mentions'
 
 async function getUserId(): Promise<string | null> {
   const cookieStore = await cookies()
@@ -48,6 +48,7 @@ export async function POST(
     }
 
     // Get the journal entry to get the date
+    const prisma = getPrisma()
     const entry = await prisma.journalEntry.findFirst({
       where: { id: entryId, userId },
       include: { timeBox: true },

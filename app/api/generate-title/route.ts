@@ -8,14 +8,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import Together from 'together-ai'
 import { z } from 'zod'
-import { getPrisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/core/prisma'
 import {
   getDefaultAISettings,
   interpolatePrompt,
   formatDateForPrompt,
   type JournalAISettings,
-} from '@/lib/defaultPrompts'
-import { FALLBACK_MODEL_ID, inferProvider, getApiKeyForProvider, type LLMProvider } from '@/lib/llmModels'
+} from '@/lib/config/defaultPrompts'
+import { FALLBACK_MODEL_ID, inferProvider, getApiKeyForProvider, type LLMProvider } from '@/lib/config/llmModels'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

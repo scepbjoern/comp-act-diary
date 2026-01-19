@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/core/prisma'
 import { Prisma } from '@prisma/client'
 import type { TaskCreate, TaskUpdate, TaskFilter } from '@/lib/validators/task'
 

@@ -1,7 +1,7 @@
 import { Icon } from '@/components/ui/Icon'
 import { NumberPills } from '@/components/features/symptoms/NumberPills'
 import { Sparkline } from '@/components/features/analytics/Sparkline'
-import { SYMPTOM_LABELS } from '@/lib/constants'
+import { SYMPTOM_LABELS } from '@/lib/config/constants'
 import type { Day, InlineData } from '@/types/day'
 
 interface SymptomsSectionProps {

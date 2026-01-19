@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/core/prisma'
 import { cookies } from 'next/headers'
 
 async function getUserId(): Promise<string | null> {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
-import { DEFAULT_SYMPTOM_ICONS } from '@/lib/default-icons'
+import { getPrisma } from '@/lib/core/prisma'
+import { DEFAULT_SYMPTOM_ICONS } from '@/lib/utils/default-icons'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

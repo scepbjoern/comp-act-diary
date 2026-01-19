@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/core/prisma'
 import { reverseGeocodeSingle } from '@/lib/services/mapboxService'
 
 // Get current user from cookie

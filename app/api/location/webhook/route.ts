@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/core/prisma'
 import { owntracksPayloadSchema, normalizeOwnTracksPayload } from '@/lib/validators/location'
 import { saveRawGpsPoint, matchLocationByCoords } from '@/lib/services/locationService'
 import bcrypt from 'bcryptjs'

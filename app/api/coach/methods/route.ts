@@ -5,8 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
-import { listChatMethods, createChatMethod } from '@/lib/chatMethod'
+import { getPrisma } from '@/lib/core/prisma'
+import { listChatMethods, createChatMethod } from '@/lib/core/chatMethod'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

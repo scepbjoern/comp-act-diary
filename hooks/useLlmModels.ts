@@ -6,7 +6,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { LLMModel, LLMProvider } from '@/lib/llmModels'
+import { LLMModel, LLMProvider } from '@/lib/config/llmModels'
 
 export interface LlmModelData {
   id: string

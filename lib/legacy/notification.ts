@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/core/prisma'
 import { Prisma, NotificationType } from '@prisma/client'
 import type { NotificationCreate, NotificationFilter } from '@/lib/validators/task'
 

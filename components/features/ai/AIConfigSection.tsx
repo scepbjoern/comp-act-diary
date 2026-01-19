@@ -17,7 +17,7 @@ import {
 } from '@tabler/icons-react'
 import { useAISettings } from '@/hooks/useAISettings'
 import { useLlmModels, LlmModelData } from '@/hooks/useLlmModels'
-import { PROMPT_VARIABLES } from '@/lib/defaultPrompts'
+import { PROMPT_VARIABLES } from '@/lib/config/defaultPrompts'
 
 // =============================================================================
 // TYPES

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { IconPhoto, IconRefresh, IconTrash } from '@tabler/icons-react'
 import { useGeneratedImages } from '@/hooks/useGeneratedImages'
 import { ImageGenerationModal } from '@/components/features/media/ImageGenerationModal'
-import { DEFAULT_IMAGE_PROMPT } from '@/lib/defaultImagePrompt'
+import { DEFAULT_IMAGE_PROMPT } from '@/lib/config/defaultImagePrompt'
 
 interface JournalEntryImageProps {
   entryId: string

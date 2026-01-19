@@ -95,11 +95,30 @@ components/
 │   └── notifications/ # Benachrichtigungen
 ```
 
-### 2. Lib-Ordner Strukturierung ⏳
-**Status:** Ausstehend
+### 2. Lib-Ordner Strukturierung ✅
+**Status:** Abgeschlossen (2026-01-19)
 
-### 3. Client/Server Component Trennung ⏳
-**Status:** Ausstehend
+**Neue Struktur:**
+```
+lib/
+├── core/       # prisma, ai, chatMethod, mastra-agent
+├── config/     # constants, defaultPrompts, llmModels, imageModels
+├── utils/      # date-utils, mentions, default-icons
+├── media/      # audio-chunker, transcription, ocr
+├── services/   # Business Logic (unverändert)
+├── validators/ # Zod Schemas (unverändert)
+├── prm/        # PRM-spezifisch (unverändert)
+└── legacy/     # mockdb, notification, task
+```
+
+### 3. Client/Server Component Trennung ✅
+**Status:** Abgeschlossen (2026-01-19)
+
+**Durchgeführte Massnahmen:**
+- Audit aller 65+ Client Components durchgeführt
+- Fehlende 'use client' Direktive bei DateNavigation hinzugefügt
+- Pages sind bereits korrekt Server Components
+- Interaktive Komponenten benötigen korrekterweise 'use client'
 
 ### 4. Input Sanitization ⏳
 **Status:** Ausstehend
@@ -162,7 +181,7 @@ Noch nicht begonnen.
 1. TypeScript Strict Mode aktivieren
 2. Environment Variables Validation implementieren
 3. Error Boundaries hinzufügen
-4. Lib-Ordner Strukturierung
+4. Loading States & Suspense implementieren
 
 ---
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
-import { makeAIRequest } from '@/lib/ai'
+import { getPrisma } from '@/lib/core/prisma'
+import { makeAIRequest } from '@/lib/core/ai'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

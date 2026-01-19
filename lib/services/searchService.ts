@@ -3,7 +3,7 @@
  * Uses PostgreSQL FTS with pg_trgm for typo tolerance.
  */
 import { Prisma } from '@prisma/client';
-import { getPrisma } from '@/lib/prisma';
+import { getPrisma } from '@/lib/core/prisma';
 import {
   sanitizeSearchTerm,
   buildTsQuery,

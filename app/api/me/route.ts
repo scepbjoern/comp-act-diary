@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
-import { FALLBACK_MODEL_ID } from '@/lib/llmModels'
+import { getPrisma } from '@/lib/core/prisma'
+import { FALLBACK_MODEL_ID } from '@/lib/config/llmModels'
 
 const DEFAULT_SUMMARY_MODEL = FALLBACK_MODEL_ID
 const DEFAULT_SUMMARY_PROMPT = 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"'

@@ -10,8 +10,8 @@ import {
   type JournalAISettings,
   type JournalEntryTypeAISettings,
   getDefaultAISettings,
-} from '@/lib/defaultPrompts'
-import { FALLBACK_MODEL_ID } from '@/lib/llmModels'
+} from '@/lib/config/defaultPrompts'
+import { FALLBACK_MODEL_ID } from '@/lib/config/llmModels'
 
 // =============================================================================
 // TYPES

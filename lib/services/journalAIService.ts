@@ -11,14 +11,14 @@ import {
   inferProvider,
   getApiKeyForProvider,
   type LLMProvider,
-} from '@/lib/llmModels'
+} from '@/lib/config/llmModels'
 import {
   interpolatePrompt,
   formatDateForPrompt,
   getDefaultAISettings,
   type JournalEntryTypeAISettings,
   type JournalAISettings,
-} from '@/lib/defaultPrompts'
+} from '@/lib/config/defaultPrompts'
 
 // =============================================================================
 // TYPES

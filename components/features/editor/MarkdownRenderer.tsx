@@ -24,9 +24,12 @@ interface MarkdownRendererProps {
 }
 
 // Plugin to handle custom directives
+// Using eslint-disable for remark/unist library types which are complex and not fully exported
 function remarkCustomDirectives() {
-  return (tree: any) => {
-    visit(tree, (node: any) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (tree: unknown) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    visit(tree as any, (node: any) => {
       if (
         node.type === 'textDirective' ||
         node.type === 'leafDirective' ||
@@ -72,7 +75,8 @@ function remarkCustomDirectives() {
             className: 'spoiler border border-slate-700 rounded p-4 my-4 bg-slate-800/50',
           }
           // Insert summary as first child
-          node.children.unshift({
+          const children = node.children || (node.children = [])
+          children.unshift({
             type: 'html',
             value: `<summary class="cursor-pointer text-gray-400 hover:text-gray-300 font-medium">${title}</summary>`
           })
@@ -80,7 +84,7 @@ function remarkCustomDirectives() {
 
         // Admonition directives (note, tip, info, caution, danger)
         const admonitionTypes = ['note', 'tip', 'info', 'caution', 'danger']
-        if (admonitionTypes.includes(hast)) {
+        if (typeof hast === 'string' && admonitionTypes.includes(hast)) {
           const title = node.attributes?.title || hast.charAt(0).toUpperCase() + hast.slice(1)
           const colors = {
             note: 'border-blue-500 bg-blue-500/10',
@@ -100,7 +104,8 @@ function remarkCustomDirectives() {
           data.hProperties = {
             className: `admonition ${colors[hast as keyof typeof colors]} border-l-4 rounded p-4 my-4`,
           }
-          node.children.unshift({
+          const admonChildren = node.children || (node.children = [])
+          admonChildren.unshift({
             type: 'html',
             value: `<div class="font-bold text-sm mb-2">${icons[hast as keyof typeof icons]} ${title}</div>`
           })

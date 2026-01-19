@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { IconPhoto, IconX, IconSparkles } from '@tabler/icons-react'
-import { DEFAULT_IMAGE_PROMPT, interpolateImagePrompt } from '@/lib/defaultImagePrompt'
+import { DEFAULT_IMAGE_PROMPT, interpolateImagePrompt } from '@/lib/config/defaultImagePrompt'
 
 interface ImageGenerationModalProps {
   isOpen: boolean

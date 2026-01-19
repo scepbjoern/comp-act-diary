@@ -4,7 +4,7 @@
  * IMPORTANT: This service does NOT automatically geocode - that's a user decision!
  */
 
-import { prisma } from '@/lib/prisma'
+import { prisma } from '@/lib/core/prisma'
 import { GpsSource, PoiType, Prisma } from '@prisma/client'
 import type { GeoJsonPolygon } from '@/lib/validators/location'
 import type { MapboxGeocodeResult } from './mapboxService'

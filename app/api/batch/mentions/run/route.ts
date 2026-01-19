@@ -5,8 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { getPrisma } from '@/lib/prisma'
-import { runBatchMentionDetection } from '@/lib/mentions'
+import { getPrisma } from '@/lib/core/prisma'
+import { runBatchMentionDetection } from '@/lib/utils/mentions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

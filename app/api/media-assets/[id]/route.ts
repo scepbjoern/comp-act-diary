@@ -2,7 +2,7 @@
  * API route for updating MediaAsset metadata (e.g., capturedAt).
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/core/prisma'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

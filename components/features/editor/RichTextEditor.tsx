@@ -5,6 +5,12 @@ import dynamic from 'next/dynamic'
 import type { MDXEditorMethods } from '@mdxeditor/editor'
 import '@mdxeditor/editor/style.css'
 
+// Types for MDXEditor directive editor props
+interface DirectiveEditorProps {
+  mdastNode: { name: string; attributes?: Record<string, string> }
+  children?: React.ReactNode
+}
+
 // Dynamically import all MDX Editor components to avoid SSR issues
 const Editor = dynamic(
   async () => {
@@ -109,6 +115,7 @@ const Editor = dynamic(
                 ]
               }
             ]
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } as any)
         }
         setShowMenu(false)
@@ -210,12 +217,13 @@ const Editor = dynamic(
     // Custom directive descriptors
     const YouTubeDirectiveDescriptor = {
       name: 'youtube',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       testNode(node: any) {
         return node.name === 'youtube'
       },
       attributes: ['id'],
       hasChildren: false,
-      Editor: ({ mdastNode }: any) => {
+      Editor: ({ mdastNode }: DirectiveEditorProps) => {
         return (
           <div style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}>
             <p>YouTube Video: {mdastNode.attributes?.id || 'No ID'}</p>
@@ -234,6 +242,7 @@ const Editor = dynamic(
 
     const TOCDirectiveDescriptor = {
       name: 'toc',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       testNode(node: any) {
         return node.name === 'toc'
       },
@@ -250,12 +259,13 @@ const Editor = dynamic(
 
     const SpoilerDirectiveDescriptor = {
       name: 'spoiler',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       testNode(node: any) {
         return node.name === 'spoiler'
       },
       attributes: ['title'],
       hasChildren: true,
-      Editor: ({ mdastNode, children }: any) => {
+      Editor: ({ mdastNode, children }: DirectiveEditorProps) => {
         return (
           <details style={{ padding: '10px', border: '1px solid #64748b', borderRadius: '4px', backgroundColor: 'rgb(30, 41, 59)' }}>
             <summary style={{ cursor: 'pointer', color: '#94a3b8' }}>

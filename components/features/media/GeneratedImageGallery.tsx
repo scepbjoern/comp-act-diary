@@ -9,7 +9,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { IconPhoto, IconRefresh, IconTrash, IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 import { type GeneratedImage } from '@/hooks/useGeneratedImages'
-import { getShortModelName } from '@/lib/imageModels'
+import { getShortModelName } from '@/lib/config/imageModels'
 import { useReadMode } from '@/hooks/useReadMode'
 
 // =============================================================================

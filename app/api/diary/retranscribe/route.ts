@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { existsSync } from 'fs'
 import path from 'path'
-import { getPrisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/core/prisma'
 import {
   transcribeAudioFile,
   buildTranscriptionPrompt,
   getDefaultTranscriptionModel,
-} from '@/lib/transcription'
+} from '@/lib/media/transcription'
 
 function getUploadsDir(): string {
   return process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads')

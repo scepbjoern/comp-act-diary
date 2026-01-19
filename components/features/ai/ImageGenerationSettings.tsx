@@ -13,11 +13,11 @@ import {
   type ImageGenerationSettings as ImageGenSettings,
   MIN_STEPS,
   MAX_STEPS,
-} from '@/lib/imageModels'
+} from '@/lib/config/imageModels'
 import {
   DEFAULT_IMAGE_GENERATION_SETTINGS,
   IMAGE_PROMPT_VARIABLES,
-} from '@/lib/defaultImagePrompt'
+} from '@/lib/config/defaultImagePrompt'
 
 // =============================================================================
 // TYPES

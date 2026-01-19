@@ -10,8 +10,8 @@ import { AIConfigSection } from '@/components/features/ai/AIConfigSection'
 import { ImageGenerationSettings } from '@/components/features/ai/ImageGenerationSettings'
 import { PasscodeSettings } from '@/components/features/security/PasscodeSettings'
 import { useLlmModels } from '@/hooks/useLlmModels'
-import { type ImageGenerationSettings as ImageGenSettings } from '@/lib/imageModels'
-import { DEFAULT_IMAGE_GENERATION_SETTINGS } from '@/lib/defaultImagePrompt'
+import { type ImageGenerationSettings as ImageGenSettings } from '@/lib/config/imageModels'
+import { DEFAULT_IMAGE_GENERATION_SETTINGS } from '@/lib/config/defaultImagePrompt'
 
 type Me = {
   id: string
@@ -1102,3 +1102,4 @@ export default function SettingsPage() {
     </>
   )
 }
+

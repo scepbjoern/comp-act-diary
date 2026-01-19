@@ -16,12 +16,12 @@ import { DateNavigation } from '@/components/features/calendar/DateNavigation'
 import { ReflectionDueBanner } from '@/components/features/diary/ReflectionDueBanner'
 import { DiarySection } from '@/components/features/diary/DiarySection'
 import { DaySummary } from '@/components/features/day/DaySummary'
-import { DEFAULT_IMAGE_PROMPT } from '@/lib/defaultImagePrompt'
+import { DEFAULT_IMAGE_PROMPT } from '@/lib/config/defaultImagePrompt'
 import { DarmkurSection } from '@/components/features/meals/DarmkurSection'
 import { ResetDaySection } from '@/components/features/day/ResetDaySection'
 import { PhotoViewerModal } from '@/components/features/media/PhotoViewerModal'
 import { EdgeNavigationBars } from '@/components/layout/EdgeNavigationBars'
-import { ymd, shiftDate } from '@/lib/date-utils'
+import { ymd, shiftDate } from '@/lib/utils/date-utils'
 import type { Day, InlineData } from '@/types/day'
 
 // Dynamic Imports für Performance-Optimierung
@@ -809,3 +809,4 @@ export default function HeutePage() {
     </div>
   )
 }
+

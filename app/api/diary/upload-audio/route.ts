@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { writeFile, mkdir, stat, unlink } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
-import { getPrisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/core/prisma'
 import { v4 as uuidv4 } from 'uuid'
 import {
   transcribeAudioFile,
   buildTranscriptionPrompt,
   getDefaultTranscriptionModel,
-} from '@/lib/transcription'
+} from '@/lib/media/transcription'
 
 // Helper to get uploads directory
 function getUploadsDir(): string {

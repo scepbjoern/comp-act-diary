@@ -1,6 +1,6 @@
 import Together from 'together-ai'
 import OpenAI from 'openai'
-import { inferProvider, getApiKeyForProvider, type LLMProvider } from '@/lib/llmModels'
+import { inferProvider, getApiKeyForProvider, type LLMProvider } from '@/lib/config/llmModels'
 
 /**
  * Generic AI request helper supporting both OpenAI and TogetherAI

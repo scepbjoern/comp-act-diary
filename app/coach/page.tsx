@@ -24,7 +24,7 @@ import { DefaultChatTransport } from 'ai'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 import { MicrophoneButton } from '@/components/features/transcription/MicrophoneButton'
 
-import { FALLBACK_MODEL_ID } from '@/lib/llmModels'
+import { FALLBACK_MODEL_ID } from '@/lib/config/llmModels'
 import { useLlmModels } from '@/hooks/useLlmModels'
 
 type ChatMethod = {

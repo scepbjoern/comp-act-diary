@@ -14,8 +14,8 @@ import { streamText, convertToModelMessages } from 'ai'
 import { createTogetherAI } from '@ai-sdk/togetherai'
 import { createOpenAI } from '@ai-sdk/openai'
 import { NextRequest } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
-import { FALLBACK_MODEL_ID, inferProvider, type LLMProvider } from '@/lib/llmModels'
+import { getPrisma } from '@/lib/core/prisma'
+import { FALLBACK_MODEL_ID, inferProvider, type LLMProvider } from '@/lib/config/llmModels'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -142,3 +142,4 @@ export async function POST(req: NextRequest) {
     return new Response('Internal server error', { status: 500 })
   }
 }
+

@@ -1,7 +1,7 @@
 import { Icon } from '@/components/ui/Icon'
 import { NumberPills } from '@/components/features/symptoms/NumberPills'
 import { Sparkline } from '@/components/features/analytics/Sparkline'
-import { DEFAULT_STOOL_ICON } from '@/lib/default-icons'
+import { DEFAULT_STOOL_ICON } from '@/lib/utils/default-icons'
 import type { Day, InlineData } from '@/types/day'
 
 interface StoolSectionProps {

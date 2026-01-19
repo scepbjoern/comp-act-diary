@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { unlink } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
-import { getPrisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/core/prisma'
 
 function getUploadsDir(): string {
   return process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads')

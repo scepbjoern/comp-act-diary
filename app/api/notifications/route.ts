@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getNotifications, createNotification, markAllAsRead, archiveAllNotifications, getUnreadCount } from '@/lib/notification'
+import { getNotifications, createNotification, markAllAsRead, archiveAllNotifications, getUnreadCount } from '@/lib/legacy/notification'
 import { NotificationCreateSchema, NotificationFilterSchema } from '@/lib/validators/task'
 import { cookies } from 'next/headers'
 

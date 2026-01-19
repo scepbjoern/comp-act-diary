@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPrisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/core/prisma'
 import {
   transcribeAudioBuffer,
   buildTranscriptionPrompt,
   getDefaultTranscriptionModel,
-} from '@/lib/transcription'
+} from '@/lib/media/transcription'
 
 // POST /api/transcribe
 // FormData: file (audio/*), model (string)

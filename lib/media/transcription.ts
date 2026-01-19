@@ -10,7 +10,7 @@ import {
   mergeTranscriptions,
   formatDuration,
   AudioChunkInfo,
-} from '@/lib/audio-chunker'
+} from '@/lib/media/audio-chunker'
 import { v4 as uuidv4 } from 'uuid'
 
 // Supported transcription models by provider

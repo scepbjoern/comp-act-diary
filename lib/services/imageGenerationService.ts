@@ -14,12 +14,12 @@ import {
   getImageDimensions,
   isValidImageModel,
   DEFAULT_IMAGE_MODEL_ID,
-} from '@/lib/imageModels'
+} from '@/lib/config/imageModels'
 import {
   interpolateImagePrompt,
   mergeWithDefaults,
-} from '@/lib/defaultImagePrompt'
-import { getApiKeyForProvider } from '@/lib/llmModels'
+} from '@/lib/config/defaultImagePrompt'
+import { getApiKeyForProvider } from '@/lib/config/llmModels'
 
 // =============================================================================
 // TYPES

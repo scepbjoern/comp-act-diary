@@ -10,7 +10,7 @@ import { existsSync } from 'fs'
 import path from 'path'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
-import { getPrisma } from '@/lib/prisma'
+import { getPrisma } from '@/lib/core/prisma'
 import {
   extractTextFromPDF,
   extractTextFromImage,
@@ -22,7 +22,7 @@ import {
   type OcrResult,
   type OcrPage,
   type OcrUsageInfo,
-} from '@/lib/ocr'
+} from '@/lib/media/ocr'
 import { validateOcrFile } from '@/lib/validators/ocr'
 
 /**
