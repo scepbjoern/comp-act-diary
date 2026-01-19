@@ -847,7 +847,7 @@ Antworte als JSON-Array.
 
 ### Funktionalität
 
-1. **Automatische vs. manuelle Task-Extraktion:** Soll die KI-Extraktion automatisch nach jedem Speichern laufen, oder soll der User sie explizit triggern (z.B. via Button "Tasks erkennen")?
+1. **Automatische vs. manuelle Task-Extraktion:** Soll die KI-Extraktion automatisch nach jedem Speichern laufen, oder soll der User sie explizit triggern (z.B. via Button "Tasks erkennen")? -> explizit
 
 2. **Konfidenz-Schwellwert:** Ab welcher Konfidenz sollen Tasks automatisch vorselektiert sein im Suggestion-Modal? (Vorschlag: ≥70%)
 
