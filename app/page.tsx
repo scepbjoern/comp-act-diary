@@ -8,40 +8,40 @@ import { useHabitManagement } from '@/hooks/useHabitManagement'
 import { useDiaryManagement } from '@/hooks/useDiaryManagement'
 import { useDaySummary } from '@/hooks/useDaySummary'
 import { useGeneratedImages } from '@/hooks/useGeneratedImages'
-import { useSaveIndicator } from '@/components/SaveIndicator'
-import { SaveBar } from '@/components/SaveBar'
-import { Toasts, useToasts } from '@/components/Toast'
-import { Calendar } from '@/components/Calendar'
-import { DateNavigation } from '@/components/DateNavigation'
-import { ReflectionDueBanner } from '@/components/ReflectionDueBanner'
-import { DiarySection } from '@/components/DiarySection'
-import { DaySummary } from '@/components/DaySummary'
+import { useSaveIndicator } from '@/components/ui/SaveIndicator'
+import { SaveBar } from '@/components/ui/SaveBar'
+import { Toasts, useToasts } from '@/components/ui/Toast'
+import { Calendar } from '@/components/features/calendar/Calendar'
+import { DateNavigation } from '@/components/features/calendar/DateNavigation'
+import { ReflectionDueBanner } from '@/components/features/diary/ReflectionDueBanner'
+import { DiarySection } from '@/components/features/diary/DiarySection'
+import { DaySummary } from '@/components/features/day/DaySummary'
 import { DEFAULT_IMAGE_PROMPT } from '@/lib/defaultImagePrompt'
-import { DarmkurSection } from '@/components/DarmkurSection'
-import { ResetDaySection } from '@/components/ResetDaySection'
-import { PhotoViewerModal } from '@/components/PhotoViewerModal'
-import { EdgeNavigationBars } from '@/components/EdgeNavigationBars'
+import { DarmkurSection } from '@/components/features/meals/DarmkurSection'
+import { ResetDaySection } from '@/components/features/day/ResetDaySection'
+import { PhotoViewerModal } from '@/components/features/media/PhotoViewerModal'
+import { EdgeNavigationBars } from '@/components/layout/EdgeNavigationBars'
 import { ymd, shiftDate } from '@/lib/date-utils'
 import type { Day, InlineData } from '@/types/day'
 
 // Dynamic Imports für Performance-Optimierung
-const DayLocationPanel = dynamic(() => import('@/components/DayLocationPanel'), {
+const DayLocationPanel = dynamic(() => import('@/components/features/day/DayLocationPanel'), {
   loading: () => <div className="skeleton h-64 w-full"></div>,
   ssr: false
 })
 
 const GeneratedImageGallery = dynamic(
-  () => import('@/components/GeneratedImageGallery').then(mod => ({ default: mod.GeneratedImageGallery })),
+  () => import('@/components/features/media/GeneratedImageGallery').then(mod => ({ default: mod.GeneratedImageGallery })),
   { loading: () => <div className="skeleton h-32 w-full"></div> }
 )
 
 const ImageGenerationModal = dynamic(
-  () => import('@/components/ImageGenerationModal').then(mod => ({ default: mod.ImageGenerationModal })),
+  () => import('@/components/features/media/ImageGenerationModal').then(mod => ({ default: mod.ImageGenerationModal })),
   { loading: () => <div className="loading loading-spinner loading-lg"></div> }
 )
 
 const DebugDayPanel = dynamic(
-  () => import('@/components/DebugDayPanel').then(mod => ({ default: mod.DebugDayPanel })),
+  () => import('@/components/features/day/DebugDayPanel').then(mod => ({ default: mod.DebugDayPanel })),
   { loading: () => <div className="skeleton h-48 w-full"></div> }
 )
 

@@ -1,5 +1,5 @@
-import ContactList from '@/components/ContactList'
-import GoogleSyncStatus from '@/components/GoogleSyncStatus'
+import ContactList from '@/components/features/contacts/ContactList'
+import GoogleSyncStatus from '@/components/features/sync/GoogleSyncStatus'
 import { getContacts } from '@/lib/prm'
 import { cookies } from 'next/headers'
 

@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 
 const RelationshipGraph = dynamic(
-  () => import('@/components/RelationshipGraph'),
+  () => import('@/components/features/analytics/RelationshipGraph'),
   { 
     ssr: false,
     loading: () => (

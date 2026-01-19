@@ -11,17 +11,17 @@ import dynamic from 'next/dynamic'
 
 // Dynamic import for map components (SSR incompatible)
 const BatchGeocodeMap = dynamic(
-  () => import('@/components/BatchGeocodeMap'),
+  () => import('@/components/features/batch/BatchGeocodeMap'),
   { ssr: false, loading: () => <div className="h-96 bg-base-300 animate-pulse rounded-lg" /> }
 )
 
 const PointPreviewMap = dynamic(
-  () => import('@/components/PointPreviewMap'),
+  () => import('@/components/features/locations/PointPreviewMap'),
   { ssr: false, loading: () => <div className="h-64 bg-base-300 animate-pulse rounded-lg" /> }
 )
 
 const PointEditModal = dynamic(
-  () => import('@/components/PointEditModal'),
+  () => import('@/components/features/locations/PointEditModal'),
   { ssr: false }
 )
 

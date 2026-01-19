@@ -1,12 +1,12 @@
 "use client"
 import React, { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
-import { TablerIcon } from '@/components/TablerIcon'
-import { CameraPicker } from '@/components/CameraPicker'
-import { MicrophoneButton } from '@/components/MicrophoneButton'
-import { SaveBar } from '@/components/SaveBar'
-import { Toasts, useToasts } from '@/components/Toast'
-import { useSaveIndicator } from '@/components/SaveIndicator'
+import { TablerIcon } from '@/components/ui/TablerIcon'
+import { CameraPicker } from '@/components/features/media/CameraPicker'
+import { MicrophoneButton } from '@/components/features/transcription/MicrophoneButton'
+import { SaveBar } from '@/components/ui/SaveBar'
+import { Toasts, useToasts } from '@/components/ui/Toast'
+import { useSaveIndicator } from '@/components/ui/SaveIndicator'
 import { IconSparkles } from '@tabler/icons-react'
 import { useReadMode } from '@/hooks/useReadMode'
 

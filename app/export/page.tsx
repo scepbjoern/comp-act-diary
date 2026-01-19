@@ -1,6 +1,6 @@
 "use client"
 import React, { useState } from 'react'
-import { TablerIcon } from '@/components/TablerIcon'
+import { TablerIcon } from '@/components/ui/TablerIcon'
 
 export default function ExportPage() {
   const [from, setFrom] = useState<string>('')

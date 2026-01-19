@@ -48,6 +48,18 @@ function randomChoice<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
+// Sample locations for Switzerland
+const SAMPLE_LOCATIONS = [
+  { name: 'Zuhause', address: 'Bahnhofstrasse 10, 8001 Zürich', lat: 47.3769, lng: 8.5417, poiType: 'HOME' as const },
+  { name: 'Büro', address: 'Paradeplatz 1, 8001 Zürich', lat: 47.3697, lng: 8.5392, poiType: 'WORK' as const },
+  { name: 'Fitnessstudio', address: 'Europaallee 21, 8004 Zürich', lat: 47.3782, lng: 8.5310, poiType: 'SPORT' as const },
+  { name: 'Lieblings-Café', address: 'Niederdorfstrasse 15, 8001 Zürich', lat: 47.3726, lng: 8.5450, poiType: 'RESTAURANT' as const },
+  { name: 'Hausarzt Dr. Müller', address: 'Seestrasse 42, 8002 Zürich', lat: 47.3625, lng: 8.5362, poiType: 'HEALTH' as const },
+  { name: 'Migros City', address: 'Löwenstrasse 31, 8001 Zürich', lat: 47.3752, lng: 8.5365, poiType: 'SHOP' as const },
+  { name: 'Zürichsee Uferweg', address: 'Utoquai, 8008 Zürich', lat: 47.3580, lng: 8.5510, poiType: 'NATURE' as const },
+  { name: 'Hauptbahnhof Zürich', address: 'Bahnhofplatz, 8001 Zürich', lat: 47.3779, lng: 8.5403, poiType: 'TRANSPORT' as const },
+]
+
 // Sample notes for test data
 const SAMPLE_NOTES = [
   'Heute war ein guter Tag. Habe mich an alle Regeln gehalten.',
@@ -455,6 +467,26 @@ async function seedTestData(
       timeBox = await prisma.timeBox.create({
         data: { userId, localDate, kind: 'DAY', startAt: dayStart, endAt: dayEnd }
       })
+      // Create corresponding Entity for TimeBox (required for image generation)
+      await prisma.entity.create({
+        data: {
+          id: timeBox.id,
+          userId,
+          type: 'TIMEBOX',
+        }
+      })
+    } else {
+      // Ensure Entity exists for existing TimeBox
+      const entityExists = await prisma.entity.findUnique({ where: { id: timeBox.id } })
+      if (!entityExists) {
+        await prisma.entity.create({
+          data: {
+            id: timeBox.id,
+            userId,
+            type: 'TIMEBOX',
+          }
+        })
+      }
     }
 
     // Create DayEntry
@@ -609,6 +641,26 @@ async function seedTestData(
           endAt: new Date(2025, 11, 1),
         }
       })
+      // Create corresponding Entity for MONTH TimeBox
+      await prisma.entity.create({
+        data: {
+          id: monthTimeBox.id,
+          userId,
+          type: 'TIMEBOX',
+        }
+      })
+    } else {
+      // Ensure Entity exists for existing MONTH TimeBox
+      const entityExists = await prisma.entity.findUnique({ where: { id: monthTimeBox.id } })
+      if (!entityExists) {
+        await prisma.entity.create({
+          data: {
+            id: monthTimeBox.id,
+            userId,
+            type: 'TIMEBOX',
+          }
+        })
+      }
     }
     const exists = await prisma.journalEntry.findFirst({
       where: { userId, timeBoxId: monthTimeBox.id, typeId: journalTypes['reflection_month'] }
@@ -691,6 +743,87 @@ async function seedTestData(
   }
 }
 
+async function seedLocations(userId: string) {
+  console.log('Seeding locations...')
+  
+  const locationIds: string[] = []
+  
+  for (const loc of SAMPLE_LOCATIONS) {
+    let location = await prisma.location.findFirst({
+      where: { userId, name: loc.name }
+    })
+    if (!location) {
+      location = await prisma.location.create({
+        data: {
+          userId,
+          slug: loc.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-'),
+          name: loc.name,
+          address: loc.address,
+          lat: loc.lat,
+          lng: loc.lng,
+          poiType: loc.poiType,
+        }
+      })
+      // Create corresponding Entity for Location
+      await prisma.entity.create({
+        data: {
+          id: location.id,
+          userId,
+          type: 'LOCATION',
+        }
+      })
+    }
+    locationIds.push(location.id)
+  }
+  console.log(`  Created ${locationIds.length} locations`)
+  
+  // Create some location visits for the test data
+  const timeBoxes = await prisma.timeBox.findMany({
+    where: { userId, kind: 'DAY', localDate: { gte: '2025-11-01', lte: '2025-11-30' } },
+    orderBy: { localDate: 'asc' }
+  })
+  
+  let visitCount = 0
+  for (const tb of timeBoxes) {
+    // Each day, visit 2-4 random locations
+    const numVisits = randomInt(2, 4)
+    const visitedToday = new Set<string>()
+    
+    for (let i = 0; i < numVisits; i++) {
+      const locationId = randomChoice(locationIds)
+      if (visitedToday.has(locationId)) continue
+      visitedToday.add(locationId)
+      
+      const exists = await prisma.locationVisit.findFirst({
+        where: { userId, locationId, timeBoxId: tb.id }
+      })
+      if (!exists) {
+        // Random arrival time during the day
+        const tbDate = new Date(tb.startAt)
+        const arrivalHour = randomInt(7, 20)
+        const arrivalMinute = randomInt(0, 59)
+        const arrivedAt = new Date(tbDate.getFullYear(), tbDate.getMonth(), tbDate.getDate(), arrivalHour, arrivalMinute)
+        const durationMinutes = randomInt(15, 180)
+        const departedAt = new Date(arrivedAt.getTime() + durationMinutes * 60 * 1000)
+        
+        await prisma.locationVisit.create({
+          data: {
+            userId,
+            locationId,
+            timeBoxId: tb.id,
+            arrivedAt,
+            departedAt,
+          }
+        })
+        visitCount++
+      }
+    }
+  }
+  console.log(`  Created ${visitCount} location visits`)
+  
+  return locationIds
+}
+
 async function main() {
   console.log('=== Starting seed ===\n')
 
@@ -703,7 +836,7 @@ async function main() {
   // 3. Create demo user with habits
   const { user: demoUser } = await createUserWithHabits('demo', 'Demo', 'demo')
   
-  // Ensure today's TimeBox for demo user
+  // Ensure today's TimeBox for demo user (with Entity)
   const today = new Date()
   const localDate = toYmd(today)
   const startAt = new Date(today.getFullYear(), today.getMonth(), today.getDate())
@@ -713,9 +846,29 @@ async function main() {
     where: { userId: demoUser.id, localDate, kind: 'DAY' } 
   })
   if (!timeBox) {
-    await prisma.timeBox.create({
+    timeBox = await prisma.timeBox.create({
       data: { userId: demoUser.id, localDate, kind: 'DAY', startAt, endAt }
     })
+    // Create corresponding Entity for demo user's TimeBox
+    await prisma.entity.create({
+      data: {
+        id: timeBox.id,
+        userId: demoUser.id,
+        type: 'TIMEBOX',
+      }
+    })
+  } else {
+    // Ensure Entity exists
+    const entityExists = await prisma.entity.findUnique({ where: { id: timeBox.id } })
+    if (!entityExists) {
+      await prisma.entity.create({
+        data: {
+          id: timeBox.id,
+          userId: demoUser.id,
+          type: 'TIMEBOX',
+        }
+      })
+    }
   }
 
   // 4. Create test user with full test data
@@ -724,6 +877,9 @@ async function main() {
   
   // 5. Seed contacts, relations, tasks and notifications for test user
   await seedContactsAndRelations(testUser.id)
+  
+  // 6. Seed locations and visits for test user
+  await seedLocations(testUser.id)
 
   console.log('\n=== Seed completed ===')
   console.log('Users created:')

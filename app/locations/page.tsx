@@ -8,10 +8,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { IconSearch, IconFilter, IconMapPin } from '@tabler/icons-react'
 import dynamic from 'next/dynamic'
-import LocationsTable from '@/components/LocationsTable'
+import LocationsTable from '@/components/features/locations/LocationsTable'
 
 const LocationsMap = dynamic(
-  () => import('@/components/LocationsMap'),
+  () => import('@/components/features/locations/LocationsMap'),
   { ssr: false, loading: () => <div className="h-full bg-base-300 animate-pulse rounded-lg" /> }
 )
 

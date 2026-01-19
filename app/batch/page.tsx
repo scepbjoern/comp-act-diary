@@ -6,10 +6,10 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { BatchFilterForm, type BatchFilterFormData } from '@/components/BatchFilterForm'
-import { BatchPreview, type AffectedEntry } from '@/components/BatchPreview'
-import { BatchProgress } from '@/components/BatchProgress'
-import { BatchResults } from '@/components/BatchResults'
+import { BatchFilterForm, type BatchFilterFormData } from '@/components/features/batch/BatchFilterForm'
+import { BatchPreview, type AffectedEntry } from '@/components/features/batch/BatchPreview'
+import { BatchProgress } from '@/components/features/batch/BatchProgress'
+import { BatchResults } from '@/components/features/batch/BatchResults'
 import { IconStack2, IconMapPin } from '@tabler/icons-react'
 
 // =============================================================================

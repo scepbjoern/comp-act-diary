@@ -3,9 +3,9 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { getPrisma } from '@/lib/prisma'
-import { PasscodeLockProvider } from '@/components/PasscodeLockProvider'
+import { PasscodeLockProvider } from '@/components/features/security/PasscodeLockProvider'
 import { ReadModeProvider } from '@/hooks/useReadMode'
-import { HeaderClient } from '@/components/HeaderClient'
+import { HeaderClient } from '@/components/layout/HeaderClient'
 import pkg from '../package.json'
 
 export const metadata = {

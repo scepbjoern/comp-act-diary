@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { TablerIcon } from '@/components/TablerIcon'
+import { TablerIcon } from '@/components/ui/TablerIcon'
 import {
   ResponsiveContainer,
   LineChart,

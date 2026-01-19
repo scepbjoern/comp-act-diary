@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
-import ContactForm from '@/components/ContactForm'
+import ContactForm from '@/components/features/contacts/ContactForm'
 
 async function getContact(slug: string) {
   const cookieStore = await cookies()
