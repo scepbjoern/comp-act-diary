@@ -99,7 +99,7 @@ export function MicrophoneButton(props: {
         isInitialMountRef.current = false
       }
     }
-    loadModel()
+    void loadModel()
   }, [])
 
   useEffect(() => {
@@ -116,7 +116,7 @@ export function MicrophoneButton(props: {
         })
       } catch {/* ignore */}
     }
-    saveModel()
+    void saveModel()
   }, [selectedModel])
 
   function startLevelMeter(stream: MediaStream) {
@@ -201,9 +201,9 @@ export function MicrophoneButton(props: {
             // Fix WebM duration/seeking if it's a WebM file
             if (blob.type.includes('webm') && recordingStartTimeRef.current) {
               const duration = Date.now() - recordingStartTimeRef.current.getTime()
-              console.log('Fixing WebM duration/seeking...', duration, 'ms')
+              console.warn('Fixing WebM duration/seeking...', duration, 'ms')
               blob = await fixWebmDuration(blob, duration, { logger: false })
-              console.log('WebM fixed for seeking')
+              console.warn('WebM fixed for seeking')
             }
             
             await sendForTranscription(blob)
@@ -375,14 +375,14 @@ export function MicrophoneButton(props: {
           className || ''
         ].join(' ')}
         onClick={() => {
-          if (state === 'idle') startRec()
+          if (state === 'idle') void startRec()
           else if (state === 'recording') pauseRec()
           else if (state === 'paused') resumeRec()
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
-            if (state === 'idle') startRec()
+            if (state === 'idle') void startRec()
             else if (state === 'recording') pauseRec()
             else if (state === 'paused') resumeRec()
           }

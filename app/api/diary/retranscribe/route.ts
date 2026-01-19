@@ -16,13 +16,13 @@ function getUploadsDir(): string {
 // FormData: audioFileId (string), model (string)
 export async function POST(req: NextRequest) {
   try {
-    console.log('=== RETRANSCRIBE DEBUG START ===')
+    console.warn('=== RETRANSCRIBE DEBUG START ===')
 
     const form = await req.formData()
     const audioFileId = form.get('audioFileId') as string | null
     const model = (form.get('model') as string | null) || getDefaultTranscriptionModel()
 
-    console.log('Parsed form data:', { audioFileId, model })
+    console.warn('Parsed form data:', { audioFileId, model })
 
     if (!audioFileId) {
       console.error('ERROR: Missing audioFileId in form data')
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     const extension = path.extname(mediaAsset.filePath).slice(1) || 'm4a'
     const mimeType = mediaAsset.mimeType || `audio/${extension}`
 
-    console.log('Audio file found:', {
+    console.warn('Audio file found:', {
       filePath: mediaAsset.filePath,
       mimeType,
       extension,
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
       prompt: transcriptionPrompt,
       glossary,
       uploadsDir,
-      onProgress: (msg) => console.log(msg),
+      onProgress: (msg) => console.warn(msg),
     })
 
     if (transcriptionResult.error) {
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('Transcription complete, returning result')
+    console.warn('Transcription complete, returning result')
 
     const result = {
       text: transcriptionResult.text,
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       model,
     }
 
-    console.log('=== RETRANSCRIBE DEBUG END SUCCESS ===')
+    console.warn('=== RETRANSCRIBE DEBUG END SUCCESS ===')
     return NextResponse.json(result)
   } catch (err) {
     console.error('=== RETRANSCRIBE DEBUG END ERROR ===')

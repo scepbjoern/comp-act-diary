@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   let tempFilePath: string | null = null
 
   try {
-    console.log('=== AUDIO UPLOAD DEBUG START ===')
+    console.warn('=== AUDIO UPLOAD DEBUG START ===')
 
     const form = await req.formData()
 
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       capturedAt = new Date()
     }
 
-    console.log('Parsed form data:', {
+    console.warn('Parsed form data:', {
       hasFile: true,
       fileName: file.name,
       fileSize: file.size,
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    console.log('Buffer created, size:', buffer.length, 'bytes')
+    console.warn('Buffer created, size:', buffer.length, 'bytes')
 
     // Determine file extension
     let extension = 'm4a'
@@ -111,18 +111,20 @@ export async function POST(req: NextRequest) {
     if (file.name.endsWith('.m4a')) extension = 'm4a'
     if (file.type.includes('webm') || file.name.endsWith('.webm')) extension = 'webm'
 
-    console.log('Determined extension:', extension)
+    console.warn('Determined extension:', extension)
 
     // Create datetime from date and time string for filename
     let fileDateTime = date
     if (timeStr) {
-      const [hours, minutes] = timeStr.split(':').map(Number)
+      const timeParts = timeStr.split(':').map(Number)
+      const hours = timeParts[0] ?? 0
+      const minutes = timeParts[1] ?? 0
       if (!isNaN(hours) && !isNaN(minutes)) {
         fileDateTime = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, minutes)
-        console.log('Using provided time for filename:', fileDateTime.toISOString())
+        console.warn('Using provided time for filename:', fileDateTime.toISOString())
       }
     } else {
-      console.log('No time provided, using date only:', fileDateTime.toISOString())
+      console.warn('No time provided, using date only:', fileDateTime.toISOString())
     }
 
     // Create folder structure and save file
@@ -131,16 +133,16 @@ export async function POST(req: NextRequest) {
     const fullPath = path.join(folderPath, filename)
     const relativeFilePath = path.join(relativePath, filename).replace(/\\/g, '/')
 
-    console.log('File paths:', { folderPath, relativePath, filename, fullPath })
+    console.warn('File paths:', { folderPath, relativePath, filename, fullPath })
 
     // Create directories if they don't exist
     if (!existsSync(folderPath)) {
-      console.log('Creating directory:', folderPath)
+      console.warn('Creating directory:', folderPath)
       await mkdir(folderPath, { recursive: true })
     }
 
     // Save audio file
-    console.log('Saving file to:', fullPath)
+    console.warn('Saving file to:', fullPath)
     await writeFile(fullPath, buffer)
     tempFilePath = fullPath
 
@@ -148,7 +150,7 @@ export async function POST(req: NextRequest) {
     const fileStats = await stat(fullPath)
     const fileSizeBytes = fileStats.size
 
-    console.log('File saved successfully, size on disk:', fileSizeBytes, 'bytes')
+    console.warn('File saved successfully, size on disk:', fileSizeBytes, 'bytes')
 
     // Get user settings for transcription prompt
     const prisma = getPrisma()
@@ -178,7 +180,7 @@ export async function POST(req: NextRequest) {
       prompt: transcriptionPrompt,
       glossary,
       uploadsDir: getUploadsDir(),
-      onProgress: (msg) => console.log(msg),
+      onProgress: (msg) => console.warn(msg),
     })
 
     if (transcriptionResult.error) {
@@ -189,7 +191,7 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('Creating database record...')
+    console.warn('Creating database record...')
 
     if (!user) {
       return NextResponse.json({ error: 'No user found' }, { status: 401 })
@@ -206,7 +208,7 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      console.log('MediaAsset record created successfully, ID:', mediaAsset.id)
+      console.warn('MediaAsset record created successfully, ID:', mediaAsset.id)
 
       const result = {
         text: transcriptionResult.text,
@@ -217,7 +219,7 @@ export async function POST(req: NextRequest) {
         filename,
       }
 
-      console.log('=== AUDIO UPLOAD DEBUG END SUCCESS ===')
+      console.warn('=== AUDIO UPLOAD DEBUG END SUCCESS ===')
       return NextResponse.json(result)
     } catch (dbError) {
       console.error('Database operation failed:', dbError)
@@ -235,7 +237,7 @@ export async function POST(req: NextRequest) {
     if (tempFilePath && existsSync(tempFilePath)) {
       try {
         await unlink(tempFilePath)
-        console.log('Cleaned up temporary file:', tempFilePath)
+        console.warn('Cleaned up temporary file:', tempFilePath)
       } catch (cleanupError) {
         console.error('Failed to clean up temporary file:', cleanupError)
       }

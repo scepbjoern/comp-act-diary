@@ -19,7 +19,7 @@ export function HabitChips({
   const yesterdaySet = new Set(yesterdaySelectedIds || [])
   const collator = new Intl.Collator('de-DE', { sensitivity: 'base' })
   const std = habits.filter(h => !h.userId).sort((a, b) => collator.compare(a.title, b.title))
-  const own = habits.filter(h => !!h.userId).sort((a, b) => collator.compare(a.title, b.title))
+  const own = habits.filter(h => Boolean(h.userId)).sort((a, b) => collator.compare(a.title, b.title))
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2 my-1 py-0.5">

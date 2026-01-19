@@ -530,7 +530,7 @@ export function DiaryEntriesAccordion({
                     isEmpty={!n.text}
                     isLoading={noteLoading === 'content'}
                     canDelete={false}
-                    canGenerate={!!n.originalTranscript}
+                    canGenerate={Boolean(n.originalTranscript)}
                     onEdit={(newContent) => onUpdateContent?.(n.id, newContent)}
                     onGenerate={() => handleGenerateContent(n.id)}
                     onRegenerate={() => handleGenerateContent(n.id)}
@@ -546,7 +546,7 @@ export function DiaryEntriesAccordion({
                   content={n.analysis || null}
                   bgColorClass="bg-yellow-500/10 rounded-lg px-2"
                   isEmpty={!n.analysis}
-                  isOutdated={!!isOutdated}
+                  isOutdated={Boolean(isOutdated)}
                   isLoading={noteLoading === 'analysis'}
                   canDelete={true}
                   canGenerate={true}

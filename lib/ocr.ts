@@ -140,7 +140,7 @@ export async function extractTextFromImage(
   mimeType: string,
   options: OcrOptions = {}
 ): Promise<OcrResult> {
-  console.log(`[OCR] Extracting text from image (${mimeType}, ${imageBuffer.length} bytes)`)
+  console.warn(`[OCR] Extracting text from image (${mimeType}, ${imageBuffer.length} bytes)`)
 
   if (!isImageType(mimeType)) {
     throw new Error(`Unsupported image type: ${mimeType}`)
@@ -159,7 +159,7 @@ export async function extractTextFromImage(
       includeImageBase64: options.includeImages ?? false,
     })
 
-    console.log(`[OCR] Image processed successfully`)
+    console.warn(`[OCR] Image processed successfully`)
 
     // Extract pages from response
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -205,9 +205,9 @@ export async function extractTextFromPDF(
   pdfBuffer: Buffer,
   options: OcrOptions = {}
 ): Promise<OcrResult> {
-  console.log(`[OCR] Extracting text from PDF (${pdfBuffer.length} bytes)`)
+  console.warn(`[OCR] Extracting text from PDF (${pdfBuffer.length} bytes)`)
   if (options.pages) {
-    console.log(`[OCR] Page selection: ${options.pages.join(', ')}`)
+    console.warn(`[OCR] Page selection: ${options.pages.join(', ')}`)
   }
 
   const client = getMistralClient()
@@ -237,13 +237,13 @@ export async function extractTextFromPDF(
 
     const response = await client.ocr.process(requestOptions)
 
-    console.log(`[OCR] PDF processed successfully, ${response.pages?.length || 0} pages`)
+    console.warn(`[OCR] PDF processed successfully, ${response.pages?.length || 0} pages`)
 
     // Extract pages from response
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pages: OcrPage[] = (response.pages || []).map((page: any, index: number) => {
-      console.log(`[OCR PDF] Page ${index} raw markdown (first 500 chars):`, (page.markdown || '').substring(0, 500))
-      console.log(`[OCR PDF] Page ${index} has ${page.images?.length || 0} images, ${page.tables?.length || 0} tables`)
+      console.warn(`[OCR PDF] Page ${index} raw markdown (first 500 chars):`, (page.markdown || '').substring(0, 500))
+      console.warn(`[OCR PDF] Page ${index} has ${page.images?.length || 0} images, ${page.tables?.length || 0} tables`)
       const images = extractImages(page)
       const tables = extractTables(page)
       const rawMarkdown = page.markdown || ''
@@ -293,7 +293,7 @@ export async function extractTextFromFiles(
   files: OcrFileInput[],
   options: OcrOptions = {}
 ): Promise<OcrResult> {
-  console.log(`[OCR] Processing ${files.length} files`)
+  console.warn(`[OCR] Processing ${files.length} files`)
 
   if (files.length === 0) {
     throw new Error('No files provided')
@@ -308,7 +308,7 @@ export async function extractTextFromFiles(
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i]
-    console.log(`[OCR] Processing file ${i + 1}/${files.length}: ${file.filename}`)
+    console.warn(`[OCR] Processing file ${i + 1}/${files.length}: ${file.filename}`)
 
     try {
       let result: OcrResult
@@ -363,7 +363,7 @@ export async function extractTextFromFiles(
     tokensUsed: results.reduce((sum, r) => sum + r.usageInfo.tokensUsed, 0),
   }
 
-  console.log(
+  console.warn(
     `[OCR] Completed: ${results.length}/${files.length} files, ${totalUsage.pagesProcessed} pages`
   )
 
@@ -391,7 +391,7 @@ function extractImages(page: { images?: Array<{ id?: string; imageBase64?: strin
  * Mistral API returns tables with 'id' and 'content' (not 'tableMarkdown')
  */
 function extractTables(page: { tables?: Array<{ id?: string; content?: string; tableMarkdown?: string }> }): { id: string; content: string }[] {
-  console.log(`[OCR extractTables] Raw tables array:`, JSON.stringify(page.tables, null, 2))
+  console.warn(`[OCR extractTables] Raw tables array:`, JSON.stringify(page.tables, null, 2))
   if (!page.tables) return []
 
   const tables = page.tables
@@ -400,7 +400,7 @@ function extractTables(page: { tables?: Array<{ id?: string; content?: string; t
       id: t.id || `tbl-${i}.md`,
       content: t.content || t.tableMarkdown || '',
     }))
-  console.log(`[OCR extractTables] Extracted ${tables.length} tables`)
+  console.warn(`[OCR extractTables] Extracted ${tables.length} tables`)
   return tables
 }
 
@@ -417,8 +417,8 @@ function postProcessMarkdown(
   tables: OcrTable[],
   options: OcrOptions
 ): string {
-  console.log(`[OCR postProcess] Input: ${markdown.length} chars, ${images.length} images, ${tables.length} tables`)
-  console.log(`[OCR postProcess] Options: includeImages=${options.includeImages}, tableFormat=${options.tableFormat}`)
+  console.warn(`[OCR postProcess] Input: ${markdown.length} chars, ${images.length} images, ${tables.length} tables`)
+  console.warn(`[OCR postProcess] Options: includeImages=${options.includeImages}, tableFormat=${options.tableFormat}`)
   
   let result = markdown
 
@@ -441,24 +441,24 @@ function postProcessMarkdown(
     // Remove all image references (img-X.jpeg pattern)
     const imgPattern = /!\[img-\d+\.\w+\]\(img-\d+\.\w+\)/g
     const imgMatches = result.match(imgPattern)
-    console.log(`[OCR postProcess] Removing ${imgMatches?.length || 0} image refs (includeImages=${options.includeImages})`)
+    console.warn(`[OCR postProcess] Removing ${imgMatches?.length || 0} image refs (includeImages=${options.includeImages})`)
     result = result.replace(imgPattern, '')
   }
 
   // Handle tables
-  console.log(`[OCR postProcess] Tables in markdown: ${(result.match(/\[tbl-\d+\.md\]/g) || []).length} refs`)
+  console.warn(`[OCR postProcess] Tables in markdown: ${(result.match(/\[tbl-\d+\.md\]/g) || []).length} refs`)
   if (options.tableFormat === 'markdown' && tables.length > 0) {
     // Replace table links with actual table markdown content
-    console.log(`[OCR postProcess] Replacing table links with markdown tables`)
+    console.warn(`[OCR postProcess] Replacing table links with markdown tables`)
     for (const table of tables) {
       // Match the table link by its ID (e.g., [tbl-0.md](tbl-0.md))
       const tblRef = new RegExp(`\\[${escapeRegex(table.id)}\\]\\(${escapeRegex(table.id)}\\)`, 'g')
-      console.log(`[OCR postProcess] Table ${table.id}: ${table.content.substring(0, 100)}...`)
+      console.warn(`[OCR postProcess] Table ${table.id}: ${table.content.substring(0, 100)}...`)
       result = result.replace(tblRef, `\n\n${table.content}\n\n`)
     }
   } else if (!options.tableFormat) {
     // Remove table links and convert any inline tables to plain text
-    console.log(`[OCR postProcess] Removing table links and converting tables to plain text`)
+    console.warn(`[OCR postProcess] Removing table links and converting tables to plain text`)
     result = result.replace(/\[tbl-\d+\.md\]\(tbl-\d+\.md\)/g, '')
     // Convert markdown tables to plain text (extract cell contents)
     result = convertMarkdownTablesToPlainText(result)

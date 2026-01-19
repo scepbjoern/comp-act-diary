@@ -183,7 +183,7 @@ export function MarkdownRenderer({ markdown, className = '', mentionedContacts =
         setHtml('<p>Error rendering markdown</p>')
       }
     }
-    renderMarkdown()
+    void renderMarkdown()
   }, [markdown, mentionedContacts])
 
   return (

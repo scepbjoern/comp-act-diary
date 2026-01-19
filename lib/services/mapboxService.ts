@@ -383,7 +383,7 @@ export async function reverseGeocodeSingle(
   // Debug logging - show URL without token for security
   if (DEBUG_MAPBOX) {
     const debugUrl = url.replace(accessToken, 'TOKEN_HIDDEN')
-    console.log('[Mapbox] Single reverse geocode URL:', debugUrl)
+    console.warn('[Mapbox] Single reverse geocode URL:', debugUrl)
   }
 
   try {
@@ -452,7 +452,7 @@ async function reverseGeocodeWithSearchBox(
   
   if (DEBUG_MAPBOX) {
     const debugUrl = url.replace(accessToken, 'TOKEN_HIDDEN')
-    console.log('[Mapbox] Search Box reverse lookup URL:', debugUrl)
+    console.warn('[Mapbox] Search Box reverse lookup URL:', debugUrl)
   }
 
   try {
@@ -557,8 +557,8 @@ export async function reverseGeocodeBatch(
   
   // Debug logging
   if (DEBUG_MAPBOX) {
-    console.log('[Mapbox] Batch geocode URL:', url.replace(accessToken, 'TOKEN_HIDDEN'))
-    console.log('[Mapbox] Batch size:', points.length, 'points')
+    console.warn('[Mapbox] Batch geocode URL:', url.replace(accessToken, 'TOKEN_HIDDEN'))
+    console.warn('[Mapbox] Batch size:', points.length, 'points')
   }
 
   // Build batch request body

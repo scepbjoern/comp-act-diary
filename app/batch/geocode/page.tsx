@@ -99,7 +99,7 @@ export default function BatchGeocodePage() {
   // Re-estimate when points change
   useEffect(() => {
     if (selectedPointIds.length > 0) {
-      estimateCost(selectedPointIds)
+      void estimateCost(selectedPointIds)
     } else {
       setCostEstimate(null)
     }

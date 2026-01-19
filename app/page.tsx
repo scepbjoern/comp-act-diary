@@ -1,6 +1,7 @@
 "use client"
 import React, { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { useUIState } from '@/hooks/useUIState'
 import { useSymptomManagement } from '@/hooks/useSymptomManagement'
 import { useHabitManagement } from '@/hooks/useHabitManagement'
@@ -15,17 +16,34 @@ import { DateNavigation } from '@/components/DateNavigation'
 import { ReflectionDueBanner } from '@/components/ReflectionDueBanner'
 import { DiarySection } from '@/components/DiarySection'
 import { DaySummary } from '@/components/DaySummary'
-import { GeneratedImageGallery } from '@/components/GeneratedImageGallery'
-import { ImageGenerationModal } from '@/components/ImageGenerationModal'
 import { DEFAULT_IMAGE_PROMPT } from '@/lib/defaultImagePrompt'
 import { DarmkurSection } from '@/components/DarmkurSection'
 import { ResetDaySection } from '@/components/ResetDaySection'
-import { DebugDayPanel } from '@/components/DebugDayPanel'
-import DayLocationPanel from '@/components/DayLocationPanel'
 import { PhotoViewerModal } from '@/components/PhotoViewerModal'
 import { EdgeNavigationBars } from '@/components/EdgeNavigationBars'
 import { ymd, shiftDate } from '@/lib/date-utils'
 import type { Day, InlineData } from '@/types/day'
+
+// Dynamic Imports für Performance-Optimierung
+const DayLocationPanel = dynamic(() => import('@/components/DayLocationPanel'), {
+  loading: () => <div className="skeleton h-64 w-full"></div>,
+  ssr: false
+})
+
+const GeneratedImageGallery = dynamic(
+  () => import('@/components/GeneratedImageGallery').then(mod => ({ default: mod.GeneratedImageGallery })),
+  { loading: () => <div className="skeleton h-32 w-full"></div> }
+)
+
+const ImageGenerationModal = dynamic(
+  () => import('@/components/ImageGenerationModal').then(mod => ({ default: mod.ImageGenerationModal })),
+  { loading: () => <div className="loading loading-spinner loading-lg"></div> }
+)
+
+const DebugDayPanel = dynamic(
+  () => import('@/components/DebugDayPanel').then(mod => ({ default: mod.DebugDayPanel })),
+  { loading: () => <div className="skeleton h-48 w-full"></div> }
+)
 
 export default function HeutePage() {
   const searchParams = useSearchParams()
@@ -176,7 +194,7 @@ export default function HeutePage() {
   
   // Image generation modal state
   const [imageModalOpen, setImageModalOpen] = useState(false)
-  const [imagePromptTemplate, setImagePromptTemplate] = useState(DEFAULT_IMAGE_PROMPT)
+  const [imagePromptTemplate, _setImagePromptTemplate] = useState(DEFAULT_IMAGE_PROMPT)
 
   // Diary functions are now handled by useDiaryManagement hook
   
@@ -214,7 +232,7 @@ export default function HeutePage() {
       setNewDiaryCapturedDate(`${y}-${m}-${d}`)
       setNewDiaryCapturedTime(`${hh}:${mm}`)
     }
-    load()
+    void load()
   }, [date, setHabits, setNewDiaryCapturedDate, setNewDiaryCapturedTime, setNewDiaryTime, setNewDiaryTitle, setNotes, setSymptomIcons])
 
   // Update diary title when time changes
@@ -258,17 +276,18 @@ export default function HeutePage() {
       }, 300)
       return () => clearTimeout(timer)
     }
+    return undefined
   }, [highlightEntryId, notes])
 
   // Check if a reflection is due (business logic: > 6 Tage)
   useEffect(() => {
     let aborted = false
-    ;(async () => {
+    void (async () => {
       try {
         const res = await fetch('/api/reflections/due', { credentials: 'same-origin' })
         if (!res.ok) return
         const data = await res.json()
-        if (!aborted) setReflectionDue({ due: !!data.due, daysSince: data.daysSince ?? 0 })
+        if (!aborted) setReflectionDue({ due: Boolean(data.due), daysSince: data.daysSince ?? 0 })
       } catch {
         // ignore
       }
@@ -281,7 +300,7 @@ export default function HeutePage() {
     const [y, m] = date.split('-')
     const ym = `${y}-${m}`
     let aborted = false
-    ;(async () => {
+    void (async () => {
       try {
         const res = await fetch(`/api/calendar?month=${ym}`, { credentials: 'same-origin' })
         if (!res.ok) return
@@ -400,7 +419,9 @@ export default function HeutePage() {
     
     // Build occurredAt from date + time
     const timeToUse = newDiaryTime || new Date().toISOString().slice(11, 16)
-    const [hours, minutes] = timeToUse.split(':').map(Number)
+    const timeParts = timeToUse.split(':').map(Number)
+    const hours = timeParts[0] ?? 0
+    const minutes = timeParts[1] ?? 0
     const occurredAtDate = new Date(date)
     occurredAtDate.setHours(hours, minutes, 0, 0)
     const capturedAt = newDiaryCapturedDate && newDiaryCapturedTime
@@ -611,8 +632,8 @@ export default function HeutePage() {
             images={generatedImages}
             loading={imagesLoading}
             generating={imageGenerating}
-            hasSummary={!!summary}
-            onGenerate={() => generateImage(summary?.content || '')}
+            hasSummary={Boolean(summary)}
+            onGenerate={() => void generateImage(summary?.content || '')}
             onDelete={deleteImage}
             onOpenModal={() => setImageModalOpen(true)}
           />
@@ -623,7 +644,7 @@ export default function HeutePage() {
             onClose={() => setImageModalOpen(false)}
             onGenerate={(finalPrompt) => {
               setImageModalOpen(false)
-              generateImage(summary?.content || '', finalPrompt)
+              void generateImage(summary?.content || '', finalPrompt)
             }}
             summaryText={summary?.content || ''}
             defaultPromptTemplate={imagePromptTemplate}
@@ -639,13 +660,13 @@ export default function HeutePage() {
               const newSummary = await generateSummary()
               if (newSummary && withImage) {
                 // Use the returned summary content directly
-                generateImage(newSummary.content)
+                void generateImage(newSummary.content)
               }
             }}
             onRegenerate={async (withImage) => {
               const newSummary = await regenerateSummary()
               if (newSummary && withImage) {
-                generateImage(newSummary.content)
+                void generateImage(newSummary.content)
               }
             }}
             onDelete={deleteSummary}

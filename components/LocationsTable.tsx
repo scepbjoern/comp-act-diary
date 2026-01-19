@@ -159,7 +159,7 @@ export default function LocationsTable({
               <td onClick={(e) => e.stopPropagation()}>
                 <button
                   className="btn btn-ghost btn-xs"
-                  onClick={() => handleToggleFavorite(location)}
+                  onClick={() => void handleToggleFavorite(location)}
                   disabled={savingId === location.id}
                 >
                   {location.isFavorite ? (
@@ -178,14 +178,14 @@ export default function LocationsTable({
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveEdit(location.id)
-                        if (e.key === 'Escape') handleCancelEdit()
+                        if (e.key === 'Enter') void handleSaveEdit(location.id)
+                        if (e.key === 'Escape') void handleCancelEdit()
                       }}
                       autoFocus
                     />
                     <button
                       className="btn btn-xs btn-primary"
-                      onClick={() => handleSaveEdit(location.id)}
+                      onClick={() => void handleSaveEdit(location.id)}
                       disabled={savingId === location.id}
                     >
                       {savingId === location.id ? <span className="loading loading-spinner loading-xs"></span> : 'OK'}
@@ -211,8 +211,8 @@ export default function LocationsTable({
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveEdit(location.id)
-                        if (e.key === 'Escape') handleCancelEdit()
+                        if (e.key === 'Enter') void handleSaveEdit(location.id)
+                        if (e.key === 'Escape') void handleCancelEdit()
                       }}
                       autoFocus
                     />
@@ -238,8 +238,8 @@ export default function LocationsTable({
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveEdit(location.id)
-                        if (e.key === 'Escape') handleCancelEdit()
+                        if (e.key === 'Enter') void handleSaveEdit(location.id)
+                        if (e.key === 'Escape') void handleCancelEdit()
                       }}
                       autoFocus
                     />
@@ -292,7 +292,7 @@ export default function LocationsTable({
                 <div className="flex gap-1">
                   <button
                     className="btn btn-ghost btn-xs"
-                    onClick={() => handleGeocode(location.id)}
+                    onClick={() => void handleGeocode(location.id)}
                     disabled={geocodingId === location.id || !location.lat || !location.lng}
                     title="Adresse neu ermitteln"
                   >
@@ -304,7 +304,7 @@ export default function LocationsTable({
                   </button>
                   <button
                     className="btn btn-ghost btn-xs text-error"
-                    onClick={() => handleDelete(location.id)}
+                    onClick={() => void handleDelete(location.id)}
                     title="Löschen"
                   >
                     <IconTrash className="w-4 h-4" />

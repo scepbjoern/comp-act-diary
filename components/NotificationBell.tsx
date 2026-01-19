@@ -36,7 +36,7 @@ export default function NotificationBell() {
   }
 
   useEffect(() => {
-    fetchNotifications()
+    void fetchNotifications()
     // Poll for new notifications every minute
     const interval = setInterval(fetchNotifications, 60000)
     return () => clearInterval(interval)

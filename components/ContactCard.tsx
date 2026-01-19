@@ -28,7 +28,7 @@ export default function ContactCard({ contact, onToggleFavorite }: ContactCardPr
   const { readMode } = useReadMode()
   const email = contact.emailPrivate || contact.emailWork
   const phone = contact.phonePrivate || contact.phoneWork
-  const hasGoogleSync = !!contact.googleResourceName
+  const hasGoogleSync = Boolean(contact.googleResourceName)
 
   return (
     <Link

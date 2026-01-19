@@ -58,9 +58,9 @@ export function WeightSection({ day }: WeightSectionProps) {
           inputMode="decimal"
           pattern="[0-9.,]*"
           value={weight}
-          onChange={e => setWeight(e.target.value)}
-          onBlur={saveWeight}
-          onKeyDown={e => { if (e.key === 'Enter') saveWeight() }}
+          onChange={(e) => { setWeight(e.target.value); void saveWeight() }}
+          onBlur={() => void saveWeight()}
+          onKeyDown={e => { if (e.key === 'Enter') void saveWeight() }}
           className="w-24 bg-background border border-slate-700 rounded px-2 py-1 text-sm"
           placeholder="z.B. 72,5"
           disabled={saving}

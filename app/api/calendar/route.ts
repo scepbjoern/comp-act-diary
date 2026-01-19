@@ -13,9 +13,11 @@ function toYmdLocal(d: Date) {
 }
 
 function getMonthRange(ym: string) {
-  const [y, m] = ym.split('-').map((n: string) => parseInt(n, 10))
-  const start = new Date(y, (m || 1) - 1, 1)
-  const end = new Date(y, (m || 1) - 1 + 1, 1)
+  const parts = ym.split('-').map((n: string) => parseInt(n, 10))
+  const y = parts[0] ?? new Date().getFullYear()
+  const m = parts[1] ?? 1
+  const start = new Date(y, m - 1, 1)
+  const end = new Date(y, m, 1)
   return { start, end }
 }
 

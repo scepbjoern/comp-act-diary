@@ -136,7 +136,7 @@ export async function GET(
         },
       })
       
-      console.log('Range request:', { range, start, end, chunksize, fileSize })
+      console.warn('Range request:', { range, start, end, chunksize, fileSize })
       return response
     } else {
       // Return entire file for non-range requests

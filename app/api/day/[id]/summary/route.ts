@@ -151,7 +151,7 @@ export async function POST(
     const summaryPrompt = 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"'
     const summaryModel = DEFAULT_SUMMARY_MODEL
     
-    console.log('Summary model being used:', summaryModel)
+    console.warn('Summary model being used:', summaryModel)
     const contextText = buildContextText(context)
     
     const messages = [

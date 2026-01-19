@@ -20,15 +20,30 @@ export default [
 
   // Global rule adjustments
   {
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: __dirname,
+      },
+    },
     rules: {
-      // Allow gradual typing; surface as warnings for now
+      // TypeScript
       '@typescript-eslint/no-explicit-any': 'warn',
-      // Allow intentionally unused via leading underscore, warn otherwise
-      '@typescript-eslint/no-unused-vars': ['warn', {
+      '@typescript-eslint/no-unused-vars': ['error', {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
         caughtErrorsIgnorePattern: '^_',
+        destructuredArrayIgnorePattern: '^_',
       }],
+      '@typescript-eslint/no-floating-promises': 'warn',
+      '@typescript-eslint/await-thenable': 'error',
+      
+      // JavaScript Best Practices
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'prefer-const': 'error',
+      'no-var': 'error',
+      'eqeqeq': ['error', 'always', { null: 'ignore' }],
+      'no-implicit-coercion': 'warn',
     },
   },
 

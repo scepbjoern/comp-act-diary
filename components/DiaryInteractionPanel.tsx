@@ -54,7 +54,7 @@ export default function DiaryInteractionPanel({
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    fetchInteractions()
+    void fetchInteractions()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, timeBoxId])
 
@@ -87,7 +87,7 @@ export default function DiaryInteractionPanel({
   const handleOpenAddForm = () => {
     setShowAddForm(true)
     if (contacts.length === 0) {
-      fetchContacts()
+      void fetchContacts()
     }
   }
 
@@ -115,7 +115,7 @@ export default function DiaryInteractionPanel({
         setSelectedContactId('')
         setKind('MEETING')
         setNotes('')
-        fetchInteractions()
+        void fetchInteractions()
         onInteractionAdded?.()
       }
     } catch (error) {

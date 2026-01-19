@@ -193,7 +193,7 @@ export async function getSyncProviderStatus(userId: string): Promise<{
   }
 
   return {
-    isConnected: !!provider.credentialsEncrypted,
+    isConnected: Boolean(provider.credentialsEncrypted),
     lastSyncAt: provider.lastSyncAt,
     syncToken: provider.syncToken,
   }

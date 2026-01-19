@@ -43,7 +43,7 @@ export function DiaryContentWithMentions({ noteId, markdown, className }: DiaryC
     }
 
     if (noteId) {
-      fetchMentions()
+      void fetchMentions()
     } else {
       setLoading(false)
     }

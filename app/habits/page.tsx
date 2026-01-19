@@ -37,7 +37,7 @@ export default function HabitsPage() {
         setLoading(false);
       }
     }
-    loadHabits();
+    void loadHabits();
   }, []);
 
   // Scroll to highlighted item

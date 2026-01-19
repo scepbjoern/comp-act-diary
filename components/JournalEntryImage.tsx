@@ -30,7 +30,7 @@ export function JournalEntryImage({ entryId, summaryText, onToast }: JournalEntr
 
   const handleGenerate = (finalPrompt: string) => {
     setModalOpen(false)
-    generateImage(summaryText, finalPrompt)
+    void generateImage(summaryText, finalPrompt)
   }
 
   // Show generating state

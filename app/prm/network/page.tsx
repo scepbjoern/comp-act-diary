@@ -95,7 +95,7 @@ export default function NetworkPage() {
       }
     }
 
-    fetchData()
+    void fetchData()
   }, [])
 
   return (

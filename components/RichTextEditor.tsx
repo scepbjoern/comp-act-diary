@@ -471,7 +471,7 @@ const Editor = dynamic(
                       <Separator />
                       <ListsToggle />
                       <Separator />
-                      <MobileToolbarMenu isFullscreen={!!isFullscreen} />
+                      <MobileToolbarMenu isFullscreen={Boolean(isFullscreen)} />
                       {onFullscreen && (
                         <>
                           <Separator />
@@ -554,8 +554,7 @@ export const RichTextEditor = forwardRef<MDXEditorMethods, RichTextEditorProps>(
     return (
       <div 
         className={`border border-slate-700 rounded bg-background overflow-auto resize-y ${
-          isFullscreen 
-            ? 'fixed inset-0 z-[10000] m-0 rounded-none min-h-screen max-h-screen' 
+          Boolean(isFullscreen) ? 'fixed inset-0 z-50 bg-base-100 m-0 rounded-none min-h-screen max-h-screen' 
             : 'min-h-[300px] max-h-[70vh]'
         }`}
       >

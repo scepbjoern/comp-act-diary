@@ -98,7 +98,7 @@ export default function ContactList({ initialContacts = [], initialTotal = 0 }: 
     if (initialContacts.length > 0 && isDefaultFilter) {
       return
     }
-    fetchContacts(true)
+    void fetchContacts(true)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, search, sortBy, sortOrder, selectedGroupId])
 

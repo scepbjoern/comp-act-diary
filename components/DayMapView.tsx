@@ -79,7 +79,7 @@ export default function DayMapView({ date, visits = [], onPointClick }: DayMapVi
         setLoading(false)
       }
     }
-    loadPoints()
+    void loadPoints()
   }, [date])
 
   const mapRef = useRef<MapRef>(null)

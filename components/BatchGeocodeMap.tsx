@@ -103,7 +103,7 @@ export default function BatchGeocodeMap({ onSelectPoints }: BatchGeocodeMapProps
         setLoading(false)
       }
     }
-    loadPoints()
+    void loadPoints()
   }, [])
 
   // Check if point is inside polygon

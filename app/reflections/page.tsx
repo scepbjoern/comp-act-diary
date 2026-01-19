@@ -134,7 +134,7 @@ export default function ReflectionsPage() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { void load() }, [])
 
   async function addReflection() {
     const body = { kind, changed, gratitude, vows, remarks }
@@ -157,7 +157,7 @@ export default function ReflectionsPage() {
     }
   }
 
-  const creationDirty = useMemo(() => !!(changed || gratitude || vows || remarks), [changed, gratitude, vows, remarks])
+  const creationDirty = useMemo(() => Boolean(changed || gratitude || vows || remarks), [changed, gratitude, vows, remarks])
   const editingDirty = useMemo(() => {
     if (!editingId) return false
     const cur = list.find(r => r.id === editingId)
@@ -381,7 +381,7 @@ export default function ReflectionsPage() {
                         multiple
                         className="hidden"
                         onChange={e => {
-                          if (e.target.files && e.target.files.length > 0) uploadPhotos(r.id, e.target.files)
+                          if (e.target.files && e.target.files.length > 0) void uploadPhotos(r.id, e.target.files)
                           e.currentTarget.value = ''
                         }}
                       />

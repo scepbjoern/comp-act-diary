@@ -43,7 +43,7 @@ export default function ContactPhotoUpload({
   }, [contactId])
 
   useEffect(() => {
-    fetchPhotos()
+    void fetchPhotos()
   }, [fetchPhotos, contactId])
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,7 +190,7 @@ export default function ContactPhotoUpload({
                 >
                   {photo.role !== 'COVER' && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleSetAsCover(photo) }}
+                      onClick={(e) => { e.stopPropagation(); void handleSetAsCover(photo) }}
                       className="btn btn-xs btn-circle btn-ghost hover:bg-white/20"
                       title="Als Hauptbild setzen"
                     >
@@ -198,7 +198,7 @@ export default function ContactPhotoUpload({
                     </button>
                   )}
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(photo.id) }}
+                    onClick={(e) => { e.stopPropagation(); void handleDelete(photo.id) }}
                     className="btn btn-xs btn-circle btn-ghost text-white hover:bg-white/20"
                     title="Löschen"
                   >
@@ -282,7 +282,7 @@ export default function ContactPhotoUpload({
           <div className="absolute bottom-4 flex gap-2">
             {lightboxPhoto.role !== 'COVER' && (
               <button
-                onClick={(e) => { e.stopPropagation(); handleSetAsCover(lightboxPhoto); setLightboxPhoto(null) }}
+                onClick={(e) => { e.stopPropagation(); void handleSetAsCover(lightboxPhoto); setLightboxPhoto(null) }}
                 className="btn btn-sm btn-primary"
               >
                 <IconStar size={16} />
@@ -290,7 +290,7 @@ export default function ContactPhotoUpload({
               </button>
             )}
             <button
-              onClick={(e) => { e.stopPropagation(); handleDelete(lightboxPhoto.id); setLightboxPhoto(null) }}
+              onClick={(e) => { e.stopPropagation(); void handleDelete(lightboxPhoto.id); setLightboxPhoto(null) }}
               className="btn btn-sm btn-error"
             >
               <IconTrash size={16} />

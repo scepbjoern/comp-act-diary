@@ -109,7 +109,7 @@ export default function DayLocationPanel({ date }: DayLocationPanelProps) {
         setLoading(false)
       }
     }
-    loadData()
+    void loadData()
   }, [date])
 
   // Group points by coordinates (within ~10m precision)
@@ -132,8 +132,8 @@ export default function DayLocationPanel({ date }: DayLocationPanelProps) {
           lastTime: point.capturedAt,
           geocodedName: point.geocodedName,
           geocodedAddress: point.geocodedAddress,
-          isGeocoded: !!point.geocodedAt,
-          hasLocation: !!point.locationId || !!point.location,
+          isGeocoded: Boolean(point.geocodedAt),
+          hasLocation: Boolean(point.locationId) && Boolean(point.location),
         })
       }
       

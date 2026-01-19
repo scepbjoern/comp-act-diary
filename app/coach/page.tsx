@@ -99,7 +99,7 @@ export default function CoachPage() {
 
   // Load chat methods on mount
   useEffect(() => {
-    loadChatMethods()
+    void loadChatMethods()
   }, [loadChatMethods])
 
   async function saveMethod() {
@@ -192,7 +192,7 @@ export default function CoachPage() {
         }
         
         // Send the context as a message to make it available for the conversation
-        sendMessage({ text: contextMessage.content }, {
+        void sendMessage({ text: contextMessage.content }, {
           body: {
             chatMethodId: selectedMethodId,
             modelId: selectedModelId,
@@ -201,7 +201,7 @@ export default function CoachPage() {
         })
       } else {
         // Send a message indicating no diary entries found
-        sendMessage({ text: 'Keine Tagebucheinträge gefunden.' }, {
+        void sendMessage({ text: 'Keine Tagebucheinträge gefunden.' }, {
           body: {
             chatMethodId: selectedMethodId,
             modelId: selectedModelId,
@@ -211,7 +211,7 @@ export default function CoachPage() {
       }
     } catch (error) {
       console.error('Error loading diary context:', error)
-      sendMessage({ text: 'Fehler beim Laden der Tagebucheinträge.' }, {
+      void sendMessage({ text: 'Fehler beim Laden der Tagebucheinträge.' }, {
         body: {
           chatMethodId: selectedMethodId,
           modelId: selectedModelId,
@@ -467,7 +467,7 @@ export default function CoachPage() {
           <form onSubmit={e => { 
             e.preventDefault(); 
             if (input.trim() && selectedMethodId) { 
-              sendMessage({ text: input }, {
+              void sendMessage({ text: input }, {
                 body: {
                   chatMethodId: selectedMethodId,
                   modelId: selectedModelId,

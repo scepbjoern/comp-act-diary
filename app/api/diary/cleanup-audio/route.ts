@@ -12,7 +12,7 @@ function getUploadsDir(): string {
 // Body: { audioFileId: string }
 export async function DELETE(req: NextRequest) {
   try {
-    console.log('=== CLEANUP AUDIO DEBUG START ===')
+    console.warn('=== CLEANUP AUDIO DEBUG START ===')
     
     const { audioFileId } = await req.json()
     
@@ -38,7 +38,7 @@ export async function DELETE(req: NextRequest) {
     })
 
     if (referencedAttachments.length > 0) {
-      console.log('Media asset is still referenced by attachments, not deleting:', audioFileId)
+      console.warn('Media asset is still referenced by attachments, not deleting:', audioFileId)
       return NextResponse.json({ 
         error: 'Audio file is still in use',
         referencedBy: referencedAttachments.length 
@@ -48,15 +48,15 @@ export async function DELETE(req: NextRequest) {
     // Delete the physical file
     const uploadsDir = getUploadsDir()
     if (!mediaAsset.filePath) {
-      console.log('Media asset has no file path, skipping file deletion')
+      console.warn('Media asset has no file path, skipping file deletion')
     }
     const fullPath = mediaAsset.filePath ? path.join(uploadsDir, mediaAsset.filePath) : null
 
     if (fullPath && existsSync(fullPath)) {
       await unlink(fullPath)
-      console.log('Physical audio file deleted:', fullPath)
+      console.warn('Physical audio file deleted:', fullPath)
     } else {
-      console.log('Physical audio file not found, skipping deletion:', fullPath)
+      console.warn('Physical audio file not found, skipping deletion:', fullPath)
     }
 
     // Delete the database record
@@ -64,8 +64,8 @@ export async function DELETE(req: NextRequest) {
       where: { id: audioFileId }
     })
 
-    console.log('Audio file record deleted from database:', audioFileId)
-    console.log('=== CLEANUP AUDIO DEBUG END SUCCESS ===')
+    console.warn('Audio file record deleted from database:', audioFileId)
+    console.warn('=== CLEANUP AUDIO DEBUG END SUCCESS ===')
     
     return NextResponse.json({ 
       success: true,

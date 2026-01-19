@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { IconShieldLock, IconLock, IconLockOpen, IconCheck, IconX } from '@tabler/icons-react'
 import { hashPasscode } from '@/hooks/usePasscodeLock'
 
@@ -35,10 +35,10 @@ export function PasscodeSettings({ onSave }: PasscodeSettingsProps) {
           const data = await res.json()
           const settings = data.user?.settings || {}
           
-          setIsEnabled(settings.passcodeEnabled === true)
+          setIsEnabled(Boolean(settings.passcodeEnabled))
           setPasscodeLength(settings.passcodeLength || 4)
           setTimeoutMinutes(settings.passcodeTimeoutMinutes || 5)
-          setHasExistingPasscode(!!settings.passcodeHash)
+          setHasExistingPasscode(Boolean(settings.passcodeHash))
         }
       } catch (err) {
         console.error('Failed to load passcode settings:', err)
@@ -47,7 +47,7 @@ export function PasscodeSettings({ onSave }: PasscodeSettingsProps) {
       }
     }
     
-    loadSettings()
+    void loadSettings()
   }, [])
 
   // Clear messages after delay

@@ -37,7 +37,7 @@ export default function TasksPage() {
         setLoading(false);
       }
     }
-    loadTasks();
+    void loadTasks();
   }, []);
 
   // Scroll to highlighted item

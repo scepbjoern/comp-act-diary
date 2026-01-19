@@ -80,7 +80,7 @@ export function BatchFilterForm({ onPreview, isLoading }: BatchFilterFormProps) 
         setLoadingTypes(false)
       }
     }
-    loadTypes()
+    void loadTypes()
   }, [])
 
   // Handle "Gesamte Pipeline" toggle

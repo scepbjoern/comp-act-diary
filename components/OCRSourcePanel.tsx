@@ -63,7 +63,7 @@ export function OCRSourcePanel({
   // Handle expand/collapse
   const handleToggle = useCallback(() => {
     if (!isExpanded && !hasLoaded) {
-      loadSources()
+      void loadSources()
     }
     setIsExpanded((prev) => !prev)
   }, [isExpanded, hasLoaded, loadSources])

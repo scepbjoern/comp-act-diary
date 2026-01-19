@@ -41,7 +41,7 @@ export default function TaskForm({
   const [loading, setLoading] = useState(false)
   const [loadingContacts, setLoadingContacts] = useState(false)
 
-  const isEditMode = !!initialData?.id
+  const isEditing = Boolean(initialData?.id)
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -58,7 +58,7 @@ export default function TaskForm({
     }
 
     if (!contactId) {
-      fetchContacts()
+      void fetchContacts()
     }
   }, [contactId])
 
@@ -73,8 +73,8 @@ export default function TaskForm({
         ? `/api/contacts/${selectedContactId}/tasks`
         : '/api/tasks'
       
-      const method = isEditMode ? 'PUT' : 'POST'
-      const url = isEditMode ? `/api/tasks/${initialData.id}` : endpoint
+      const method = isEditing ? 'PUT' : 'POST'
+      const url = isEditing ? `/api/tasks/${initialData?.id}` : endpoint
 
       const res = await fetch(url, {
         method,
@@ -114,7 +114,7 @@ export default function TaskForm({
         </button>
 
         <h3 className="font-bold text-lg mb-4">
-          {isEditMode ? 'Task bearbeiten' : 'Neuer Task'}
+          {isEditing ? 'Task bearbeiten' : 'Neuer Task'}
         </h3>
 
         <form onSubmit={handleSubmit}>
@@ -190,7 +190,7 @@ export default function TaskForm({
             ) : (
               <>
                 <IconPlus size={20} />
-                {isEditMode ? 'Speichern' : 'Task erstellen'}
+                {isEditing ? 'Speichern' : 'Task erstellen'}
               </>
             )}
           </button>

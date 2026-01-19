@@ -67,13 +67,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     // DEBUG: Log incoming request details
-    console.log('=== POST /api/generated-images DEBUG ===')
-    console.log('Request headers:', Object.fromEntries(req.headers.entries()))
-    console.log('Request URL:', req.url)
-    console.log('Request method:', req.method)
+    console.warn('=== POST /api/generated-images DEBUG ===')
+    console.warn('Request headers:', Object.fromEntries(req.headers.entries()))
+    console.warn('Request URL:', req.url)
+    console.warn('Request method:', req.method)
     
     const userId = await getCurrentUserId(req)
-    console.log('Current userId:', userId)
+    console.warn('Current userId:', userId)
     
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -84,13 +84,13 @@ export async function POST(req: NextRequest) {
       return {}
     })
     
-    console.log('Request body:', body)
-    console.log('Body type:', typeof body)
-    console.log('Has entityId:', 'entityId' in body)
-    console.log('Has summaryText:', 'summaryText' in body)
+    console.warn('Request body:', body)
+    console.warn('Body type:', typeof body)
+    console.warn('Has entityId:', 'entityId' in body)
+    console.warn('Has summaryText:', 'summaryText' in body)
     
     const parsed = GenerateRequestSchema.safeParse(body)
-    console.log('Zod parse success:', parsed.success)
+    console.warn('Zod parse success:', parsed.success)
     
     if (!parsed.success) {
       const errors = parsed.error.flatten()

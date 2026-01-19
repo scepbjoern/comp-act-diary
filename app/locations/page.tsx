@@ -81,7 +81,7 @@ export default function LocationsPage() {
   }, [search, poiType, favoritesOnly])
 
   useEffect(() => {
-    loadLocations()
+    void loadLocations()
   }, [loadLocations])
 
   // Handle location selection from table

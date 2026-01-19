@@ -73,7 +73,7 @@ export default function AudioTest() {
       audio.pause()
       addLog('pause')
     } else {
-      audio.play()
+      void audio.play()
       addLog('play')
     }
     setIsPlaying(!isPlaying)

@@ -32,7 +32,7 @@ export default function GoogleSyncSettings() {
   }
 
   useEffect(() => {
-    fetchStatus()
+    void fetchStatus()
     
     // Check for google_connected query param
     const params = new URLSearchParams(window.location.search)

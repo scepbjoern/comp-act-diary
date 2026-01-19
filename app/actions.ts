@@ -10,7 +10,7 @@ export async function updateDayMeta(
   dayId: string,
   patch: Partial<Pick<Day, 'dayRating'>>
 ): Promise<Day> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/day/${dayId}`, {
+  const res = await fetch(`${process.env['NEXT_PUBLIC_BASE_URL'] || 'http://localhost:3000'}/api/day/${dayId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch),
@@ -20,7 +20,7 @@ export async function updateDayMeta(
 }
 
 export async function updateStool(dayId: string, bristol: number): Promise<Day> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/day/${dayId}/stool`, {
+  const res = await fetch(`${process.env['NEXT_PUBLIC_BASE_URL'] || 'http://localhost:3000'}/api/day/${dayId}/stool`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ bristol }),
@@ -34,7 +34,7 @@ export async function addMealNote(
   mealTime: string,
   mealText: string
 ): Promise<{ notes: DayNote[] }> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/day/${dayId}/notes`, {
+  const res = await fetch(`${process.env['NEXT_PUBLIC_BASE_URL'] || 'http://localhost:3000'}/api/day/${dayId}/notes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -53,17 +53,17 @@ export async function fetchDayData(date: string): Promise<{
   notes: DayNote[]
   symptomIcons: Record<string, string | null>
 }> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/day?date=${date}`)
+  const res = await fetch(`${process.env['NEXT_PUBLIC_BASE_URL'] || 'http://localhost:3000'}/api/day?date=${date}`)
   return res.json()
 }
 
 export async function fetchInlineAnalytics(date: string): Promise<InlineData> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/analytics/inline?to=${date}`)
+  const res = await fetch(`${process.env['NEXT_PUBLIC_BASE_URL'] || 'http://localhost:3000'}/api/analytics/inline?to=${date}`)
   return res.json()
 }
 
 export async function fetchReflectionsDue(): Promise<{ due: boolean; daysSince: number } | null> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/reflections/due`)
+  const res = await fetch(`${process.env['NEXT_PUBLIC_BASE_URL'] || 'http://localhost:3000'}/api/reflections/due`)
   return res.json()
 }
 
@@ -71,6 +71,6 @@ export async function fetchCalendarData(yearMonth: string): Promise<{
   days: string[]
   reflectionDays: string[]
 }> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/calendar?month=${yearMonth}`)
+  const res = await fetch(`${process.env['NEXT_PUBLIC_BASE_URL'] || 'http://localhost:3000'}/api/calendar?month=${yearMonth}`)
   return res.json()
 }

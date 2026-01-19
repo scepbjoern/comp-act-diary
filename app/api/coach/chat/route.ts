@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Stream the response using the Vercel AI SDK
-    const result = await streamText({
+    const result = streamText({
       model: providerModel,
       ...streamOptions,
     })

@@ -11,7 +11,6 @@ import { v4 as uuidv4 } from 'uuid'
 
 import {
   type ImageGenerationSettings,
-  type AspectRatio,
   getImageDimensions,
   isValidImageModel,
   DEFAULT_IMAGE_MODEL_ID,
@@ -102,7 +101,7 @@ export class ImageGenerationService {
       })
 
       // Save image to filesystem
-      const { filePath, absolutePath } = await this.saveImageToFile(imageBase64, userId)
+      const { filePath } = await this.saveImageToFile(imageBase64, userId)
 
       // Create MediaAsset
       const asset = await this.prisma.mediaAsset.create({
@@ -168,6 +167,7 @@ export class ImageGenerationService {
     const together = new Together({ apiKey })
 
     // Build request parameters - some models don't support 'steps'
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const requestParams: any = {
       model: params.model,
       prompt: params.prompt,
@@ -197,7 +197,7 @@ export class ImageGenerationService {
    */
   private async saveImageToFile(
     base64Data: string,
-    userId: string
+    _userId: string
   ): Promise<{ filePath: string; absolutePath: string }> {
     const now = new Date()
     const year = now.getFullYear()
@@ -313,7 +313,7 @@ export class ImageGenerationService {
     })
 
     const userSettings = user?.settings as Record<string, unknown> | null
-    const imageSettings = userSettings?.imageGenerationSettings as Partial<ImageGenerationSettings> | undefined
+    const imageSettings = userSettings?.['imageGenerationSettings'] as Partial<ImageGenerationSettings> | undefined
 
     return mergeWithDefaults(imageSettings)
   }

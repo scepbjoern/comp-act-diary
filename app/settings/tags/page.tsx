@@ -38,7 +38,7 @@ export default function TagsPage() {
         setLoading(false);
       }
     }
-    loadTags();
+    void loadTags();
   }, []);
 
   // Scroll to highlighted item

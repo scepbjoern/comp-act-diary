@@ -40,7 +40,7 @@ export default function GoogleSyncStatus() {
   }
 
   useEffect(() => {
-    fetchStatus()
+    void fetchStatus()
   }, [])
 
   const handleConnect = async () => {

@@ -47,7 +47,7 @@ type ImageSettings = {
 type UserLink = { id: string; name: string; url: string }
 type UserSymptom = { id: string; title: string; icon?: string | null }
 
-const STD_SYMPTOM_LABELS: Record<string, string> = {
+const _STD_SYMPTOM_LABELS: Record<string, string> = {
   BESCHWERDEFREIHEIT: 'Beschwerdefreiheit',
   ENERGIE: 'Energielevel',
   STIMMUNG: 'Stimmung',
@@ -79,10 +79,10 @@ export default function SettingsPage() {
   const [newUserSymptom, setNewUserSymptom] = useState('')
   const [newUserSymptomIcon, setNewUserSymptomIcon] = useState('')
   const [newHabitIcon, setNewHabitIcon] = useState('')
-  const [habitIconDrafts, setHabitIconDrafts] = useState<Record<string, string>>({})
-  const [userSymptomIconDrafts, setUserSymptomIconDrafts] = useState<Record<string, string>>({})
-  const [stdSymptomIcons, setStdSymptomIcons] = useState<Record<string, string | null>>({})
-  const [stdSymptomIconDrafts, setStdSymptomIconDrafts] = useState<Record<string, string>>({})
+  const [_habitIconDrafts, setHabitIconDrafts] = useState<Record<string, string>>({})
+  const [_userSymptomIconDrafts, setUserSymptomIconDrafts] = useState<Record<string, string>>({})
+  const [_stdSymptomIcons, setStdSymptomIcons] = useState<Record<string, string | null>>({})
+  const [_stdSymptomIconDrafts, setStdSymptomIconDrafts] = useState<Record<string, string>>({})
   const [summaryModel, setSummaryModel] = useState('openai/gpt-oss-120b')
   const [summaryPrompt, setSummaryPrompt] = useState('Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
   const [transcriptionModel, setTranscriptionModel] = useState('openai/whisper-large-v3')
@@ -110,6 +110,7 @@ export default function SettingsPage() {
   // Sort transcription models alphabetically
   const sortedModelsForTranscription = useMemo(() => {
     return [...TRANSCRIPTION_MODELS].sort((a, b) => a.name.localeCompare(b.name))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Avatar cropper state
@@ -184,7 +185,7 @@ export default function SettingsPage() {
     } catch {}
   }
 
-  async function saveHabitIcon(id: string, icon: string) {
+  async function _saveHabitIcon(id: string, icon: string) {
     try {
       startSaving()
       const res = await fetch(`/api/habits/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ icon }), credentials: 'same-origin' })
@@ -200,7 +201,7 @@ export default function SettingsPage() {
     }
   }
 
-  async function saveUserSymptomIcon(id: string, icon: string) {
+  async function _saveUserSymptomIcon(id: string, icon: string) {
     try {
       startSaving()
       const res = await fetch(`/api/user-symptoms/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ icon }), credentials: 'same-origin' })
@@ -214,7 +215,7 @@ export default function SettingsPage() {
     }
   }
 
-  async function saveStdSymptomIcon(type: string, icon: string) {
+  async function _saveStdSymptomIcon(type: string, icon: string) {
     try {
       startSaving()
       const res = await fetch('/api/symptom-icons', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, icon }), credentials: 'same-origin' })
@@ -367,7 +368,7 @@ export default function SettingsPage() {
     } catch {}
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { void load() }, [])
 
   async function addLink() {
     const name = newLinkName.trim()
@@ -511,14 +512,14 @@ export default function SettingsPage() {
     }
   }
   
-  function updateModelLanguage(modelId: string, language: string) {
+  function _updateModelLanguage(modelId: string, language: string) {
     setTranscriptionModelLanguages(prev => ({
       ...prev,
       [modelId]: language
     }))
   }
 
-  function addGlossaryItem() {
+  function _addGlossaryItem() {
     const item = newGlossaryItem.trim()
     if (!item) return
     if (!transcriptionGlossary.includes(item)) {
@@ -527,7 +528,7 @@ export default function SettingsPage() {
     setNewGlossaryItem('')
   }
 
-  function removeGlossaryItem(index: number) {
+  function _removeGlossaryItem(index: number) {
     setTranscriptionGlossary(transcriptionGlossary.filter((_, i) => i !== index))
   }
 
@@ -638,7 +639,7 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-4 pt-2">
                   <div className="w-20 h-20 rounded-full bg-base-300 flex items-center justify-center overflow-hidden">
                     {me?.profileImageUrl ? (
-                      <img src={me.profileImageUrl} alt="Avatar" className="w-full h-full object-cover" />
+                      <NextImage src={me.profileImageUrl} alt="Avatar" width={80} height={80} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-sm text-gray-300 font-semibold">{(displayName || username || '?').slice(0,1).toUpperCase()}</span>
                     )}

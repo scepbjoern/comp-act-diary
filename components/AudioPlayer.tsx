@@ -60,7 +60,7 @@ export default function AudioPlayer({ audioFilePath, className = '', compact = f
     if (isPlaying) {
       audio.pause()
     } else {
-      audio.play()
+      void audio.play()
     }
     setIsPlaying(!isPlaying)
   }

@@ -49,8 +49,8 @@ export function SiteNav({ user }: { user: UserLite }) {
       if (linksOpen && el && !el.contains(e.target as Node)) setLinksOpen(false)
       const uelD = userMenuRefDesktop.current
       const uelM = userMenuRefMobile.current
-      const insideDesktop = !!(uelD && uelD.contains(e.target as Node))
-      const insideMobile = !!(uelM && uelM.contains(e.target as Node))
+      const insideDesktop = Boolean(uelD && uelD.contains(e.target as Node))
+      const insideMobile = Boolean(uelM && uelM.contains(e.target as Node))
       if (userMenuOpen && !insideDesktop && !insideMobile) setUserMenuOpen(false)
     }
     function onKey(e: KeyboardEvent) {
@@ -83,7 +83,7 @@ export function SiteNav({ user }: { user: UserLite }) {
   // Load user-defined links for submenu
   useEffect(() => {
     let aborted = false
-    ;(async () => {
+    void (async () => {
       try {
         const res = await fetch('/api/links', { credentials: 'same-origin' })
         if (!res.ok) {
@@ -189,7 +189,7 @@ export function SiteNav({ user }: { user: UserLite }) {
                 <Link href="/settings" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(false)}>Einstellungen</Link>
                 <Link href="/help" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(false)}>App-Hilfe</Link>
                 {canInstall && (
-                  <button type="button" className="px-3 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 text-left" onClick={() => { setMenuOpen(false); doInstall() }}>Installieren</button>
+                  <button type="button" className="px-3 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 text-left" onClick={() => { setMenuOpen(false); void doInstall() }}>Installieren</button>
                 )}
               </div>
             </div>
@@ -378,7 +378,7 @@ export function SiteNav({ user }: { user: UserLite }) {
               <button
                 type="button"
                 className="px-3 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 text-left"
-                onClick={() => { close(); doInstall() }}
+                onClick={() => { close(); void doInstall() }}
               >
                 App installieren
               </button>

@@ -542,10 +542,12 @@ model JournalEntry {
   interactions     Interaction[]
 
   @@index([userId, typeId])
+  @@index([userId, typeId, createdAt])
   @@index([timeBoxId])
   @@index([timeBoxId, occurredAt])
   @@index([locationId])
   @@index([deletedAt])
+  @@index([userId, deletedAt])
 }
 
 // =============================================================================
@@ -1162,6 +1164,8 @@ model RawGpsPoint {
   @@index([userId, capturedAt])
   @@index([userId, geocodedAt])
   @@index([userId, locationId])
+  @@index([userId, visitCreated])
+  @@index([locationId, capturedAt])
   @@index([lat, lng])
 }
 

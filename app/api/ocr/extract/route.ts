@@ -90,7 +90,7 @@ function generateOcrFilename(date: Date, extension: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  console.log('=== OCR EXTRACT DEBUG START ===')
+  console.warn('=== OCR EXTRACT DEBUG START ===')
 
   try {
     const prisma = getPrisma()
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
           // Frontend sends includeTableFormat (boolean), API expects tableFormat ('markdown' | null)
           tableFormat: parsed.includeTableFormat ? 'markdown' : null,
         }
-        console.log('[OCR] Options:', options)
+        console.warn('[OCR] Options:', options)
       } catch {
         console.warn('[OCR] Invalid options JSON, using defaults')
       }
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
     if (pageRangesStr) {
       try {
         pageRanges = JSON.parse(pageRangesStr)
-        console.log('[OCR] Page ranges:', pageRanges)
+        console.warn('[OCR] Page ranges:', pageRanges)
       } catch {
         console.warn('[OCR] Invalid pageRanges JSON, ignoring')
       }
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log(`[OCR] Received ${files.length} files`)
+    console.warn(`[OCR] Received ${files.length} files`)
 
     if (files.length === 0) {
       return NextResponse.json({ error: 'Keine Dateien hochgeladen' }, { status: 400 })
@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
       const relativeFilePath = path.join(relativePath, filename).replace(/\\/g, '/')
 
       await writeFile(fullPath, buffer)
-      console.log(`[OCR] Saved file: ${relativeFilePath}`)
+      console.warn(`[OCR] Saved file: ${relativeFilePath}`)
 
       // Determine capturedAt: from form, or from file.lastModified, or current time
       let capturedAt: Date
@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
       mediaAssetIds.push(mediaAsset.id)
 
       // Run OCR extraction for this file
-      console.log(`[OCR] Processing file ${fileIndex + 1}/${files.length}: ${file.name}`)
+      console.warn(`[OCR] Processing file ${fileIndex + 1}/${files.length}: ${file.name}`)
       
       try {
         let result: OcrResult
@@ -307,12 +307,12 @@ export async function POST(req: NextRequest) {
                   
                   // Decode base64 and save
                   const imageBuffer = Buffer.from(base64Data, 'base64')
-                  console.log(`[OCR] Image ${img.id}: ${base64Data.length} base64 chars -> ${imageBuffer.length} bytes`)
+                  console.warn(`[OCR] Image ${img.id}: ${base64Data.length} base64 chars -> ${imageBuffer.length} bytes`)
                   await writeFile(filepath, imageBuffer)
                   
                   const imageUrl = `/uploads/images/${decade}/${year}/${month}/${day}/${filename}`
                   savedImageUrls.set(img.id, imageUrl)
-                  console.log(`[OCR] Saved image ${img.id} -> ${imageUrl}`)
+                  console.warn(`[OCR] Saved image ${img.id} -> ${imageUrl}`)
                 } catch (imgError) {
                   console.error(`[OCR] Failed to save image ${img.id}:`, imgError)
                 }
@@ -374,7 +374,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    console.log('=== OCR EXTRACT DEBUG END SUCCESS ===')
+    console.warn('=== OCR EXTRACT DEBUG END SUCCESS ===')
 
     return NextResponse.json({
       text: ocrResult.text,

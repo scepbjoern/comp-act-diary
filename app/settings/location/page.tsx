@@ -53,7 +53,7 @@ export default function LocationSettingsPage() {
 
   // Load tokens and stats
   useEffect(() => {
-    loadData()
+    void loadData()
   }, [])
 
   async function loadData() {
@@ -126,7 +126,7 @@ export default function LocationSettingsPage() {
         const data = await res.json()
         setNewToken(data.token)
         setNewTokenName('')
-        loadData()
+        void loadData()
       } else {
         const data = await res.json()
         setError(data.error || 'Fehler beim Erstellen des Tokens')
@@ -142,7 +142,7 @@ export default function LocationSettingsPage() {
     try {
       const res = await fetch(`/api/location/token/${id}`, { method: 'DELETE' })
       if (res.ok) {
-        loadData()
+        void loadData()
       }
     } catch {
       setError('Fehler beim Löschen des Tokens')
@@ -198,7 +198,7 @@ export default function LocationSettingsPage() {
   }
 
   function copyToClipboard(text: string) {
-    navigator.clipboard.writeText(text)
+    void navigator.clipboard.writeText(text)
     alert('In Zwischenablage kopiert!')
   }
 

@@ -288,9 +288,12 @@ export async function GET(req: NextRequest) {
 }
 
 function getDayRange(ymd: string) {
-  const [y, m, d] = ymd.split('-').map((n: string) => parseInt(n, 10))
-  const start = new Date(y, (m || 1) - 1, d || 1)
-  const end = new Date(y, (m || 1) - 1, (d || 1) + 1)
+  const parts = ymd.split('-').map((n: string) => parseInt(n, 10))
+  const y = parts[0] ?? new Date().getFullYear()
+  const m = parts[1] ?? 1
+  const d = parts[2] ?? 1
+  const start = new Date(y, m - 1, d)
+  const end = new Date(y, m - 1, d + 1)
   return { start, end }
 }
 

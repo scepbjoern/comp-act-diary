@@ -62,7 +62,7 @@ export default function MentionInput({
   useEffect(() => {
     const debounce = setTimeout(() => {
       if (mentionQuery) {
-        searchContacts(mentionQuery)
+        void searchContacts(mentionQuery)
       }
     }, 200)
     return () => clearTimeout(debounce)

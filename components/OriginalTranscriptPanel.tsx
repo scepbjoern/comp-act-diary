@@ -59,7 +59,7 @@ export function OriginalTranscriptPanel(props: {
   // Handle expand/collapse
   const handleToggle = useCallback(() => {
     if (!isExpanded && !hasLoaded) {
-      loadTranscript()
+      void loadTranscript()
     }
     setIsExpanded(prev => !prev)
   }, [isExpanded, hasLoaded, loadTranscript])
@@ -95,9 +95,9 @@ export function OriginalTranscriptPanel(props: {
   // Copy to clipboard
   const handleCopy = useCallback(() => {
     if (transcript) {
-      navigator.clipboard.writeText(transcript).then(() => {
+      void navigator.clipboard.writeText(transcript).then(() => {
         setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
+        void setTimeout(() => setCopied(false), 2000)
       })
     }
   }, [transcript])

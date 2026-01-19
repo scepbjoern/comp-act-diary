@@ -11,7 +11,7 @@ export function AudioSeekTest() {
   const addLog = (msg: string) => {
     const timestamp = new Date().toLocaleTimeString()
     setLogs(prev => [`[${timestamp}] ${msg}`, ...prev].slice(0, 50))
-    console.log(msg)
+    console.warn(msg)
   }
 
   useEffect(() => {

@@ -193,7 +193,7 @@ export function AIConfigSection() {
       for (const type of journalEntryTypes) {
         newLocalSettings[type.code] = getSettingsForType(type.code)
       }
-      console.log('[AIConfigSection] Initializing localSettings from server:', JSON.stringify(newLocalSettings, null, 2))
+      console.warn('[AIConfigSection] Initializing localSettings from server:', JSON.stringify(newLocalSettings, null, 2))
       setLocalSettings(newLocalSettings)
       setHasChanges(false)
     }
@@ -229,7 +229,7 @@ export function AIConfigSection() {
     setIsSaving(true)
     setSaveError(null)
 
-    console.log('[AIConfigSection] Saving all settings in single call, localSettings:', JSON.stringify(localSettings, null, 2))
+    console.warn('[AIConfigSection] Saving all settings in single call, localSettings:', JSON.stringify(localSettings, null, 2))
 
     try {
       const success = await updateAllSettings(localSettings)
@@ -239,7 +239,7 @@ export function AIConfigSection() {
         return
       }
       setHasChanges(false)
-      console.log('[AIConfigSection] All settings saved successfully')
+      console.warn('[AIConfigSection] All settings saved successfully')
     } catch (err) {
       console.error('[AIConfigSection] Save error:', err)
       setSaveError('Fehler beim Speichern')

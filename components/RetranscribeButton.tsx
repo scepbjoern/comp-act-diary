@@ -41,7 +41,7 @@ export function RetranscribeButton({ audioFileId, onRetranscribed, disabled = fa
       }
       
       const data = await response.json()
-      console.log('Retranscription successful:', data)
+      console.warn('Retranscription successful:', data)
       onRetranscribed(data.text)
       
     } catch (error) {

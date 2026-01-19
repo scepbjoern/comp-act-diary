@@ -77,8 +77,8 @@ export async function GET(req: NextRequest) {
       keys.push(toYmd(d))
     }
 
-    const _rangeStart = new Date(days[0])
-    const rangeEndExclusive = new Date(days[6])
+    const _rangeStart = new Date(days[0] ?? new Date())
+    const rangeEndExclusive = new Date(days[6] ?? new Date())
     rangeEndExclusive.setDate(rangeEndExclusive.getDate() + 1)
 
     // Load TimeBoxes in range (new schema)
@@ -227,7 +227,7 @@ export async function GET(req: NextRequest) {
     }
 
     const payload = {
-      weekStart: toYmd(days[0]),
+      weekStart: toYmd(days[0] ?? new Date()),
       days: keys,
       symptoms,
       wellBeingIndex,

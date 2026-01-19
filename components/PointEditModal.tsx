@@ -83,7 +83,7 @@ export default function PointEditModal({
 
   useEffect(() => {
     if (activeTab === 'nearby') {
-      loadNearbyPois()
+      void loadNearbyPois()
     }
   }, [activeTab, loadNearbyPois])
 

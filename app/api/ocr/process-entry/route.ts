@@ -12,7 +12,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
-  console.log('=== OCR PROCESS-ENTRY DEBUG START ===')
+  console.warn('=== OCR PROCESS-ENTRY DEBUG START ===')
 
   try {
     const prisma = getPrisma()
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
           timezone: 'Europe/Zurich',
         },
       })
-      console.log(`[OCR] Created TimeBox for ${localDate}`)
+      console.warn(`[OCR] Created TimeBox for ${localDate}`)
     }
 
     // Get JournalEntryType
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    console.log(`[OCR] Created JournalEntry: ${journalEntry.id}`)
+    console.warn(`[OCR] Created JournalEntry: ${journalEntry.id}`)
 
     // Create MediaAttachments to link sources
     for (const assetId of mediaAssetIds) {
@@ -148,12 +148,12 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    console.log(`[OCR] Linked ${mediaAssetIds.length} MediaAssets as sources`)
+    console.warn(`[OCR] Linked ${mediaAssetIds.length} MediaAssets as sources`)
 
     // Optionally run AI pipeline
     let pipelineResult = null
     if (runPipeline && pipelineSteps && pipelineSteps.length > 0) {
-      console.log(`[OCR] Running AI pipeline: ${pipelineSteps.join(', ')}`)
+      console.warn(`[OCR] Running AI pipeline: ${pipelineSteps.join(', ')}`)
       try {
         const aiService = getJournalAIService(prisma)
         pipelineResult = await aiService.runPipeline({
@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
           userId: user.id,
           steps: pipelineSteps,
         })
-        console.log(`[OCR] AI pipeline completed`)
+        console.warn(`[OCR] AI pipeline completed`)
       } catch (pipelineError) {
         console.error('[OCR] AI pipeline failed:', pipelineError)
         // Don't fail the whole request if pipeline fails
@@ -183,7 +183,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    console.log('=== OCR PROCESS-ENTRY DEBUG END SUCCESS ===')
+    console.warn('=== OCR PROCESS-ENTRY DEBUG END SUCCESS ===')
 
     return NextResponse.json({
       journalEntryId: journalEntry.id,

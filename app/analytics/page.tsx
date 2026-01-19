@@ -86,7 +86,10 @@ type OverallData = {
 // ------- Utilities -------
 
 function parseYmd(s: string): Date {
-  const [y, m, d] = s.split('-').map(Number)
+  const parts = s.split('-').map(Number)
+  const y = parts[0] ?? 0
+  const m = parts[1] ?? 1
+  const d = parts[2] ?? 1
   return new Date(y, m - 1, d)
 }
 

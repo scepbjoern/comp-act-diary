@@ -36,7 +36,7 @@ export default function BookmarksPage() {
         setLoading(false);
       }
     }
-    loadBookmarks();
+    void loadBookmarks();
   }, []);
 
   // Scroll to highlighted item
@@ -52,6 +52,7 @@ export default function BookmarksPage() {
       }, 300);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [highlightId, bookmarks]);
 
   return (

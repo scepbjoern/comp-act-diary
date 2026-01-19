@@ -46,7 +46,7 @@ export default function TaskList({ initialTasks = [], contactId }: TaskListProps
         setLoading(false)
       }
     }
-    fetchTasks()
+    void fetchTasks()
   }, [showCompleted, contactId])
 
   const handleComplete = async (taskId: string) => {

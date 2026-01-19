@@ -25,9 +25,10 @@ export function CameraPicker({
         // Some browsers only reveal devices reliably after a permission grant once.
         // We avoid prompting here; instead we do a best-effort probe using enumerateDevices.
         if (navigator.mediaDevices.enumerateDevices) {
-          const devices = await navigator.mediaDevices.enumerateDevices()
-          const hasVideo = devices.some(d => d.kind === 'videoinput')
-          if (mounted) setSupported(hasVideo)
+          void navigator.mediaDevices.enumerateDevices().then(devices => {
+            const hasVideo = devices.some(d => d.kind === 'videoinput')
+            if (mounted) setSupported(hasVideo)
+          })
         } else {
           // Fallback: if getUserMedia exists, consider supported (will prompt on click)
           if (mounted) setSupported(typeof navigator.mediaDevices.getUserMedia === 'function')
@@ -36,7 +37,7 @@ export function CameraPicker({
         if (mounted) setSupported(false)
       }
     }
-    check()
+    void check()
     return () => { mounted = false; stop() }
   }, [])
 

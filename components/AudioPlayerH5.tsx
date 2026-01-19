@@ -64,7 +64,7 @@ export function AudioPlayerH5({ audioFilePath, className = '', compact = false }
     if (isPlaying) {
       audio.pause()
     } else {
-      audio.play()
+      void audio.play()
     }
   }
 

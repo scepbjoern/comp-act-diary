@@ -17,14 +17,14 @@ export function OriginalTranscriptSection(props: {
   const [copied, setCopied] = useState(false)
 
   function handleCopy() {
-    navigator.clipboard.writeText(originalText).then(() => {
+    void navigator.clipboard.writeText(originalText).then(() => {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     })
   }
 
   function handleRestore() {
-    onRestore(originalText)
+    void onRestore(originalText)
   }
 
   const modalContent = (

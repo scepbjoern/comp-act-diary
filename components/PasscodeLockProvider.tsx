@@ -31,7 +31,7 @@ export function PasscodeLockProvider({ children }: PasscodeLockProviderProps) {
       } catch {}
     }
     if (isLocked && settings?.enabled) {
-      fetchPasscodeLength()
+      void fetchPasscodeLength()
     }
   }, [isLocked, settings?.enabled])
 

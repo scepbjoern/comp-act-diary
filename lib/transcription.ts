@@ -237,7 +237,7 @@ export async function transcribeAudioFile(
   options: TranscribeFileOptions
 ): Promise<TranscribeFileResult> {
   const { filePath, mimeType, model, language, prompt, glossary, uploadsDir, onProgress } = options
-  const log = onProgress || console.log
+  const log = onProgress || console.warn
 
   log(`Starting transcription with model: ${model}`)
   log(`Is Whisper model: ${isWhisperModel(model)}, Is Deepgram model: ${isDeepgramModel(model)}`)

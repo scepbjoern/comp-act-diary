@@ -167,14 +167,14 @@ async function extractAudioSegment(
       // Copy audio codec to avoid re-encoding (faster and preserves quality)
       .audioCodec('copy')
       .on('start', (cmd) => {
-        console.log(`[audio-chunker] Extracting segment: ${cmd}`)
+        console.warn(`[audio-chunker] Extracting segment: ${cmd}`)
       })
       .on('error', (err) => {
         console.error(`[audio-chunker] FFmpeg error:`, err)
         reject(new Error(`Failed to extract audio segment: ${err.message}`))
       })
       .on('end', () => {
-        console.log(`[audio-chunker] Segment extracted: ${outputPath}`)
+        console.warn(`[audio-chunker] Segment extracted: ${outputPath}`)
         resolve()
       })
       .run()
@@ -190,7 +190,7 @@ export async function cleanupChunks(chunks: AudioChunkInfo[], originalPath: stri
     if (chunk.filePath !== originalPath) {
       try {
         await fs.unlink(chunk.filePath)
-        console.log(`[audio-chunker] Cleaned up chunk: ${chunk.filePath}`)
+        console.warn(`[audio-chunker] Cleaned up chunk: ${chunk.filePath}`)
       } catch (err) {
         console.warn(`[audio-chunker] Failed to clean up chunk ${chunk.filePath}:`, err)
       }

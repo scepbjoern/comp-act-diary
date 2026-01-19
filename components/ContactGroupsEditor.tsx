@@ -54,8 +54,8 @@ export default function ContactGroupsEditor({ contactId }: ContactGroupsEditorPr
   }, [])
 
   useEffect(() => {
-    fetchGroups()
-    fetchAvailableGroups()
+    void fetchGroups()
+    void fetchAvailableGroups()
   }, [contactId, fetchGroups, fetchAvailableGroups])
 
   const handleAddGroup = async (groupId: string) => {
@@ -138,7 +138,7 @@ export default function ContactGroupsEditor({ contactId }: ContactGroupsEditorPr
             <select
               className="select select-bordered select-xs"
               onChange={(e) => {
-                if (e.target.value) handleAddGroup(e.target.value)
+                if (e.target.value) void handleAddGroup(e.target.value)
               }}
               disabled={adding}
               defaultValue=""
