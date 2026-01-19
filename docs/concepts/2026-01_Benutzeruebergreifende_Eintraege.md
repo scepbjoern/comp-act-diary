@@ -35,7 +35,7 @@ Annahmen (koennen spaeter angepasst werden):
 - Owner bleibt technisch `JournalEntry.userId`; die Freigaben liegen in einer separaten Access-Tabelle.
 - Geteilte Eintraege werden im Tages-View der Empfaenger angezeigt, falls `occurredAt` in die aktuelle Tages-Range faellt.
 - User Settings enthalten einen Default-Share-Partner plus Auto-Share-Regeln pro JournalEntryType.
-- Beim Freigeben eines Entries mit benutzerspezifischem JournalEntryType wird beim Empfaenger ein Typ angelegt, falls keiner mit gleicher `code` existiert.
+- Beim Freigeben eines Entries mit benutzerspezifischem JournalEntryType wird beim Empfaenger ein Typ angelegt, falls keiner mit gleicher `code` existiert. Dieser umfasst dieselben Attribute wie der Original-Typ (name, description, icon, color).
 - AI-Aktionen (z.B. Pipeline) nutzen die Settings des aktuell angemeldeten Users, der die Aktion ausloest.
 
 ---

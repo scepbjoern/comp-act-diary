@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/core/prisma'
+import { getJournalEntryAccessService } from '@/lib/services/journalEntryAccessService'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
       localDate: { gte: toYmdLocal(start), lt: toYmdLocal(end) },
       kind: 'DAY',
       OR: [
-        { journalEntries: { some: {} } },
+        { journalEntries: { some: { userId: user.id } } },
         { habitCheckIns: { some: {} } },
         { measurements: { some: {} } },
       ],
@@ -55,10 +56,21 @@ export async function GET(req: NextRequest) {
     orderBy: { localDate: 'asc' },
   })
 
-  const days = timeBoxes.filter(tb => tb.localDate).map((tb) => tb.localDate as string)
+  const ownedDays = timeBoxes.filter(tb => tb.localDate).map((tb) => tb.localDate as string)
+
+  // Also get days with shared entries
+  const accessService = getJournalEntryAccessService()
+  const sharedEntryDates = await accessService.getSharedEntryDatesForMonth(
+    user.id,
+    new Date(start),
+    new Date(end)
+  )
+
+  // Combine owned and shared days, remove duplicates
+  const allDays = [...new Set([...ownedDays, ...sharedEntryDates])].sort()
 
   // Reflections not migrated - return empty for now
   const reflectionDays: string[] = []
 
-  return NextResponse.json({ days, reflectionDays })
+  return NextResponse.json({ days: allDays, reflectionDays, sharedDays: sharedEntryDates })
 }

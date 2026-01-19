@@ -45,9 +45,11 @@ async function gatherSummaryContext(dayId: string): Promise<SummaryContext> {
     where: { code: 'diary', userId: null }
   })
   
+  // Only load entries owned by the day's owner (userId filter for security)
   const entries = diaryType ? await prisma.journalEntry.findMany({
     where: { 
       timeBoxId: day.timeBoxId, 
+      userId: day.userId,
       typeId: diaryType.id,
       deletedAt: null 
     },

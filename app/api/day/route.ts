@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/core/prisma'
 import { DEFAULT_HABIT_ICONS, DEFAULT_SYMPTOM_ICONS } from '@/lib/utils/default-icons'
+import { getJournalEntryAccessService } from '@/lib/services/journalEntryAccessService'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -85,9 +86,9 @@ export async function GET(req: NextRequest) {
     return { habitId: h.id, checked: ci?.status === 'DONE' }
   })
 
-  // Load JournalEntries (replaces DayNote)
+  // Load JournalEntries (replaces DayNote) - ONLY entries owned by current user
   const journalRows = await prisma.journalEntry.findMany({
-    where: { timeBoxId: timeBox.id, deletedAt: null },
+    where: { timeBoxId: timeBox.id, userId: user.id, deletedAt: null },
     orderBy: { occurredAt: 'asc' },
     include: { type: true },
   })
@@ -107,8 +108,18 @@ export async function GET(req: NextRequest) {
     attachmentsByEntry.set(att.entityId, list)
   }
 
+  // Count access grants per entry (for owned entries to show sharing badge)
+  const accessCounts = journalIds.length > 0
+    ? await prisma.journalEntryAccess.groupBy({
+        by: ['journalEntryId'],
+        where: { journalEntryId: { in: journalIds } },
+        _count: { id: true },
+      })
+    : []
+  const accessCountByEntry = new Map(accessCounts.map(ac => [ac.journalEntryId, ac._count.id]))
+
   // Map JournalEntry to old DayNote format for API compatibility
-  const notes = journalRows.map((j) => {
+  const ownedNotes = journalRows.map((j) => {
     const entryAttachments = attachmentsByEntry.get(j.id) || []
     const audioAtt = entryAttachments.find(a => a.asset.mimeType?.startsWith('audio/'))
     // Only include images that are ATTACHMENT or GALLERY, not SOURCE (OCR sources)
@@ -123,6 +134,7 @@ export async function GET(req: NextRequest) {
     
     // Use occurredAt for display time, fallback to createdAt
     const displayTime = j.occurredAt ?? j.createdAt
+    const sharedWithCount = accessCountByEntry.get(j.id) || 0
     
     return {
       id: j.id,
@@ -148,7 +160,52 @@ export async function GET(req: NextRequest) {
         id: p.asset.id, 
         url: p.asset.filePath ? `/uploads/${p.asset.filePath}` : '' 
       })),
+      // Sharing info for owned entries
+      sharedStatus: 'owned' as const,
+      ownerUserId: user.id,
+      accessRole: null,
+      sharedWithCount,
     }
+  })
+  
+  // Load shared entries for this day
+  const accessService = getJournalEntryAccessService()
+  const sharedEntries = await accessService.getSharedEntriesForDay(user.id, dateStr)
+  
+  // Map shared entries to note format
+  const sharedNotes = sharedEntries.map((se) => ({
+    id: se.id,
+    dayId: day.id,
+    type: CodeToNoteType[se.typeCode] || 'DIARY',
+    title: se.title ?? null,
+    time: se.occurredAt?.toISOString().slice(11, 16) ?? '',
+    techTime: se.occurredAt?.toISOString().slice(11, 16) ?? '',
+    occurredAtIso: se.occurredAt?.toISOString() ?? null,
+    capturedAtIso: null,
+    createdAtIso: null,
+    audioCapturedAtIso: null,
+    audioUploadedAtIso: null,
+    text: se.content ?? '',
+    originalTranscript: null,
+    aiSummary: null,
+    analysis: null,
+    contentUpdatedAt: null,
+    audioFilePath: null,
+    audioFileId: null,
+    keepAudio: true,
+    photos: [] as { id: string; url: string }[],
+    // Sharing info
+    sharedStatus: (se.accessRole === 'EDITOR' ? 'shared-edit' : 'shared-view') as 'shared-edit' | 'shared-view',
+    ownerUserId: se.ownerUserId,
+    ownerName: se.ownerName,
+    accessRole: se.accessRole,
+  }))
+  
+  // Combine owned and shared notes, sort by occurredAt
+  const notes = [...ownedNotes, ...sharedNotes].sort((a, b) => {
+    const aTime = a.occurredAtIso ? new Date(a.occurredAtIso).getTime() : 0
+    const bTime = b.occurredAtIso ? new Date(b.occurredAtIso).getTime() : 0
+    return aTime - bTime
   })
 
   // Load symptoms from Measurement

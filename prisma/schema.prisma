@@ -156,6 +156,12 @@ enum SyncStatus {
   FAILED    /// Fehlgeschlagen
 }
 
+/// Rolle bei benutzeruebergreifender Freigabe eines JournalEntry
+enum JournalEntryAccessRole {
+  VIEWER /// Nur lesen (read-only)
+  EDITOR /// Lesen, bearbeiten, loeschen
+}
+
 /// Typ eines Sync-Providers
 enum SyncProviderType {
   PHOTOPRISM       /// Photoprism Fotoverwaltung
@@ -285,9 +291,11 @@ model User {
   llmModels             LlmModel[]
   tasks                 Task[]
   notifications         Notification[]
-  rawGpsPoints          RawGpsPoint[]
-  locationWebhookTokens LocationWebhookToken[]
-  generatedImages       GeneratedImage[]
+  rawGpsPoints           RawGpsPoint[]
+  locationWebhookTokens  LocationWebhookToken[]
+  generatedImages        GeneratedImage[]
+  journalEntryAccess     JournalEntryAccess[]     @relation("AccessGrantee")
+  grantedAccess          JournalEntryAccess[]     @relation("AccessGranter")
 }
 
 /// Entity-Registry: Zentrale Tabelle für FK-basierte Polymorphie.
@@ -540,6 +548,7 @@ model JournalEntry {
   exerciseSessions ExerciseSession[]
   locationVisits   LocationVisit[]
   interactions     Interaction[]
+  accessGrants     JournalEntryAccess[]
 
   @@index([userId, typeId])
   @@index([userId, typeId, createdAt])
@@ -548,6 +557,36 @@ model JournalEntry {
   @@index([locationId])
   @@index([deletedAt])
   @@index([userId, deletedAt])
+}
+
+/// Freigabe eines JournalEntry fuer einen anderen Benutzer.
+/// Ermoeglicht benutzeruebergreifendes Lesen/Bearbeiten von Eintraegen.
+model JournalEntryAccess {
+  /// Eindeutige ID
+  id              String                  @id @default(uuid())
+  /// Referenz auf den freigegebenen JournalEntry
+  journalEntryId  String
+  /// Benutzer, der Zugriff erhaelt (Empfaenger)
+  userId          String
+  /// Rolle: VIEWER (read-only) oder EDITOR (read/write/delete)
+  role            JournalEntryAccessRole
+  /// Benutzer, der die Freigabe erteilt hat (Owner oder Editor)
+  grantedByUserId String?
+  /// Erstellungszeitpunkt
+  createdAt       DateTime                @default(now())
+  /// Letztes Update
+  updatedAt       DateTime                @updatedAt
+
+  journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  user         User         @relation("AccessGrantee", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy    User?        @relation("AccessGranter", fields: [grantedByUserId], references: [id], onDelete: SetNull)
+
+  /// Pro Entry und User nur eine Freigabe
+  @@unique([journalEntryId, userId])
+  /// Index fuer "Shared with me" Liste
+  @@index([userId])
+  /// Index fuer Freigaben eines Eintrags nach Rolle
+  @@index([journalEntryId, role])
 }
 
 // =============================================================================

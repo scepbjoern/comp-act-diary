@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/core/prisma'
+import { getJournalEntryAccessService } from '@/lib/services/journalEntryAccessService'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -28,6 +29,7 @@ async function getCurrentUser(req: NextRequest) {
 export async function GET(req: NextRequest, context: { params: Promise<{ noteId: string }> }) {
   const { noteId } = await context.params
   const prisma = getPrisma()
+  const accessService = getJournalEntryAccessService()
 
   const user = await getCurrentUser(req)
   if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
@@ -38,7 +40,10 @@ export async function GET(req: NextRequest, context: { params: Promise<{ noteId:
   })
   
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (entry.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  
+  // Access check: owner or shared user can read
+  const access = await accessService.checkAccess(noteId, user.id)
+  if (!access.canRead) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   return NextResponse.json({ 
     noteId: entry.id,
@@ -54,6 +59,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ noteId:
 export async function PUT(req: NextRequest, context: { params: Promise<{ noteId: string }> }) {
   const { noteId } = await context.params
   const prisma = getPrisma()
+  const accessService = getJournalEntryAccessService()
   const body = await req.json().catch(() => ({} as Record<string, unknown>))
 
   const user = await getCurrentUser(req)
@@ -65,7 +71,10 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ noteId:
   })
   
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (entry.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  
+  // Access check: owner or editor can update
+  const access = await accessService.checkAccess(noteId, user.id)
+  if (!access.canEdit) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const analysis = typeof body.analysis === 'string' ? body.analysis : null
 
@@ -88,6 +97,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ noteId:
 export async function DELETE(req: NextRequest, context: { params: Promise<{ noteId: string }> }) {
   const { noteId } = await context.params
   const prisma = getPrisma()
+  const accessService = getJournalEntryAccessService()
 
   const user = await getCurrentUser(req)
   if (!user) return NextResponse.json({ error: 'No user' }, { status: 401 })
@@ -98,7 +108,10 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ note
   })
   
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (entry.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  
+  // Access check: owner or editor can delete analysis
+  const access = await accessService.checkAccess(noteId, user.id)
+  if (!access.canEdit) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   await prisma.journalEntry.update({
     where: { id: noteId },

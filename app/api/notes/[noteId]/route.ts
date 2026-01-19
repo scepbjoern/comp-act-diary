@@ -3,6 +3,7 @@ import { getPrisma } from '@/lib/core/prisma'
 import path from 'path'
 import fs from 'fs/promises'
 import { findMentionsInText, createMentionInteractions } from '@/lib/utils/mentions'
+import { getJournalEntryAccessService } from '@/lib/services/journalEntryAccessService'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -41,6 +42,7 @@ function resolveFilePath(filePath: string | null | undefined): string | null {
 export async function PATCH(req: NextRequest, context: { params: Promise<{ noteId: string }> }) {
   const { noteId } = await context.params
   const prisma = getPrisma()
+  const accessService = getJournalEntryAccessService()
   const body = await req.json().catch(() => ({} as any))
 
   const cookieUserId = req.cookies.get('userId')?.value
@@ -54,7 +56,10 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
     include: { timeBox: true }
   })
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (entry.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  
+  // Access check: owner or editor can edit
+  const access = await accessService.checkAccess(noteId, user.id)
+  if (!access.canEdit) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const data: { title?: string | null; content?: string; contentUpdatedAt?: Date; aiSummary?: string | null; occurredAt?: Date; capturedAt?: Date; timeBoxId?: string } = {}
   if (typeof body.title === 'string') data.title = String(body.title).trim() || null
@@ -154,13 +159,14 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
     }
   }
 
-  const notes = await loadNotesForTimeBox(previousTimeBoxId, entry.userId)
+  const notes = await loadNotesForTimeBox(previousTimeBoxId, user.id, entry.userId)
   return NextResponse.json({ ok: true, note: { id: noteId }, notes })
 }
 
 export async function DELETE(req: NextRequest, context: { params: Promise<{ noteId: string }> }) {
   const { noteId } = await context.params
   const prisma = getPrisma()
+  const accessService = getJournalEntryAccessService()
 
   const cookieUserId = req.cookies.get('userId')?.value
   let user = cookieUserId ? await prisma.user.findUnique({ where: { id: cookieUserId } }) : null
@@ -169,7 +175,10 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ note
 
   const entry = await prisma.journalEntry.findUnique({ where: { id: noteId } })
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (entry.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  
+  // Access check: owner or editor can delete
+  const access = await accessService.checkAccess(noteId, user.id)
+  if (!access.canDelete) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   // Delete associated media attachments and their files
   const attachments = await prisma.mediaAttachment.findMany({
@@ -193,18 +202,46 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ note
   // Delete JournalEntry
   await prisma.journalEntry.delete({ where: { id: noteId } })
 
-  const notes = await loadNotesForTimeBox(entry.timeBoxId, entry.userId)
+  const notes = await loadNotesForTimeBox(entry.timeBoxId, user.id, entry.userId)
   return NextResponse.json({ ok: true, deleted: noteId, notes })
 }
 
-async function loadNotesForTimeBox(timeBoxId: string, dayId: string) {
+async function loadNotesForTimeBox(timeBoxId: string, userId: string, dayId: string) {
   const prisma = getPrisma()
   
-  const journalRows = await prisma.journalEntry.findMany({
-    where: { timeBoxId, deletedAt: null },
+  // Load entries owned by the requesting user
+  const ownedRows = await prisma.journalEntry.findMany({
+    where: { timeBoxId, userId, deletedAt: null },
     orderBy: { occurredAt: 'asc' },
-    include: { type: true },
+    include: { type: true, user: { select: { id: true, displayName: true, username: true } } },
   })
+  
+  // Load shared entries for this timeBox
+  const sharedGrants = await prisma.journalEntryAccess.findMany({
+    where: {
+      userId,
+      journalEntry: { timeBoxId, deletedAt: null },
+    },
+    include: {
+      journalEntry: {
+        include: { type: true, user: { select: { id: true, displayName: true, username: true } } },
+      },
+    },
+  })
+  
+  // Combine owned and shared entries
+  const sharedRows = sharedGrants.map(g => ({
+    ...g.journalEntry,
+    sharedStatus: g.role === 'EDITOR' ? 'shared-edit' as const : 'shared-view' as const,
+    accessRole: g.role,
+  }))
+  
+  // Merge and deduplicate (owned entries take precedence)
+  const ownedIds = new Set(ownedRows.map(r => r.id))
+  const journalRows = [
+    ...ownedRows.map(r => ({ ...r, sharedStatus: 'owned' as const, accessRole: null as null })),
+    ...sharedRows.filter(r => !ownedIds.has(r.id)),
+  ].sort((a, b) => (a.occurredAt?.getTime() ?? 0) - (b.occurredAt?.getTime() ?? 0))
   
   const journalIds = journalRows.map(j => j.id)
   const attachments = journalIds.length > 0 
@@ -219,6 +256,17 @@ async function loadNotesForTimeBox(timeBoxId: string, dayId: string) {
     list.push(att)
     attachmentsByEntry.set(att.entityId, list)
   }
+
+  // Count access grants for owned entries (for sharedWithCount badge)
+  const ownedEntryIds = ownedRows.map(r => r.id)
+  const accessCounts = ownedEntryIds.length > 0
+    ? await prisma.journalEntryAccess.groupBy({
+        by: ['journalEntryId'],
+        where: { journalEntryId: { in: ownedEntryIds } },
+        _count: { id: true },
+      })
+    : []
+  const accessCountByEntry = new Map(accessCounts.map(ac => [ac.journalEntryId, ac._count.id]))
 
   return journalRows.map((j) => {
     const entryAttachments = attachmentsByEntry.get(j.id) || []
@@ -249,6 +297,12 @@ async function loadNotesForTimeBox(timeBoxId: string, dayId: string) {
       audioFileId: audioAtt?.asset.id ?? null,
       keepAudio: true,
       photos: photoAtts.map((p) => ({ id: p.asset.id, url: p.asset.filePath || '' })),
+      // Sharing information
+      sharedStatus: j.sharedStatus,
+      ownerUserId: j.userId,
+      ownerName: j.sharedStatus !== 'owned' ? (j.user?.displayName || j.user?.username || null) : null,
+      accessRole: j.accessRole,
+      sharedWithCount: j.sharedStatus === 'owned' ? (accessCountByEntry.get(j.id) || 0) : 0,
     }
   })
 }

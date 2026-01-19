@@ -9,6 +9,7 @@ import { LlmModelManager } from '@/components/features/ai/LlmModelManager'
 import { AIConfigSection } from '@/components/features/ai/AIConfigSection'
 import { ImageGenerationSettings } from '@/components/features/ai/ImageGenerationSettings'
 import { PasscodeSettings } from '@/components/features/security/PasscodeSettings'
+import { SharingDefaultsSection } from '@/components/features/settings/SharingDefaultsSection'
 import { useLlmModels } from '@/hooks/useLlmModels'
 import { type ImageGenerationSettings as ImageGenSettings } from '@/lib/config/imageModels'
 import { DEFAULT_IMAGE_GENERATION_SETTINGS } from '@/lib/config/defaultImagePrompt'
@@ -649,6 +650,19 @@ export default function SettingsPage() {
                     {me?.profileImageUrl && <button className="pill" onClick={deleteAvatar}>Entfernen</button>}
                   </div>
                 </div>
+              </div>
+            </details>
+
+            {/* Accordion: Sharing Defaults */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="share" size={18} />
+                  Einträge teilen
+                </span>
+              </summary>
+              <div className="collapse-content pt-2">
+                <SharingDefaultsSection />
               </div>
             </details>
           </div>

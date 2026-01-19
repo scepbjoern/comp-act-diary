@@ -25,6 +25,12 @@ export type Habit = {
   icon?: string | null
 }
 
+/** Sharing status for a DayNote */
+export type SharedStatus = 'owned' | 'shared-view' | 'shared-edit'
+
+/** Access role for shared entries */
+export type AccessRole = 'VIEWER' | 'EDITOR'
+
 export type DayNote = {
   id: string
   dayId: string
@@ -46,6 +52,13 @@ export type DayNote = {
   createdAtIso?: string
   audioCapturedAtIso?: string | null
   audioUploadedAtIso?: string | null
+  // Cross-user sharing fields
+  sharedStatus?: SharedStatus
+  ownerUserId?: string
+  ownerName?: string | null
+  accessRole?: AccessRole | null
+  /** Number of users this entry is shared with (for owned entries) */
+  sharedWithCount?: number
 }
 
 export type InlineData = {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/core/prisma'
 import { findMentionsInText, createMentionInteractions } from '@/lib/utils/mentions'
+import { getJournalEntryAccessService } from '@/lib/services/journalEntryAccessService'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -124,19 +125,66 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     console.error('Error processing mentions:', mentionError)
   }
 
-  // Load all journal entries for this day
-  const notes = await loadNotesForTimeBox(day.timeBoxId, day.id)
+  // Apply default sharing rules (auto-share with configured partners)
+  try {
+    const accessService = getJournalEntryAccessService()
+    await accessService.applyDefaultSharingOnCreate(entry.id, day.userId, entryType.id)
+  } catch (shareError) {
+    console.error('Error applying default sharing:', shareError)
+  }
+
+  // Load all journal entries for this day (only owned by this user)
+  const notes = await loadNotesForTimeBox(day.timeBoxId, day.userId, day.id)
   return NextResponse.json({ ok: true, note: { id: entry.id }, notes })
 }
 
-async function loadNotesForTimeBox(timeBoxId: string, dayId: string) {
+async function loadNotesForTimeBox(timeBoxId: string, userId: string, dayId: string) {
   const prisma = getPrisma()
   
-  const journalRows = await prisma.journalEntry.findMany({
-    where: { timeBoxId, deletedAt: null },
+  // Load entries owned by the requesting user
+  const ownedRows = await prisma.journalEntry.findMany({
+    where: { timeBoxId, userId, deletedAt: null },
     orderBy: { occurredAt: 'asc' },
-    include: { type: true },
+    include: { type: true, user: { select: { id: true, displayName: true, username: true } } },
   })
+  
+  // Load shared entries for this timeBox
+  const sharedGrants = await prisma.journalEntryAccess.findMany({
+    where: {
+      userId,
+      journalEntry: { timeBoxId, deletedAt: null },
+    },
+    include: {
+      journalEntry: {
+        include: { type: true, user: { select: { id: true, displayName: true, username: true } } },
+      },
+    },
+  })
+  
+  // Combine owned and shared entries
+  const sharedRows = sharedGrants.map(g => ({
+    ...g.journalEntry,
+    sharedStatus: g.role === 'EDITOR' ? 'shared-edit' as const : 'shared-view' as const,
+    accessRole: g.role,
+  }))
+  
+  // Merge and deduplicate (owned entries take precedence)
+  const ownedIds = new Set(ownedRows.map(r => r.id))
+  const journalRows = [
+    ...ownedRows.map(r => ({ ...r, sharedStatus: 'owned' as const, accessRole: null as null })),
+    ...sharedRows.filter(r => !ownedIds.has(r.id)),
+  ].sort((a, b) => (a.occurredAt?.getTime() ?? 0) - (b.occurredAt?.getTime() ?? 0))
+  
+  // Count access grants for owned entries (for sharedWithCount badge)
+  const ownedEntryIds = ownedRows.map(r => r.id)
+  const accessCounts = ownedEntryIds.length > 0
+    ? await prisma.journalEntryAccess.groupBy({
+        by: ['journalEntryId'],
+        where: { journalEntryId: { in: ownedEntryIds } },
+        _count: { id: true },
+      })
+    : []
+  const accessCountByEntry = new Map(accessCounts.map(ac => [ac.journalEntryId, ac._count.id]))
   
   // Load MediaAttachments
   const journalIds = journalRows.map(j => j.id)
@@ -191,6 +239,12 @@ async function loadNotesForTimeBox(timeBoxId: string, dayId: string) {
         id: p.asset.id, 
         url: p.asset.filePath ? `/uploads/${p.asset.filePath}` : '' 
       })),
+      // Sharing information
+      sharedStatus: j.sharedStatus,
+      ownerUserId: j.userId,
+      ownerName: j.sharedStatus !== 'owned' ? (j.user?.displayName || j.user?.username || null) : null,
+      accessRole: j.accessRole,
+      sharedWithCount: j.sharedStatus === 'owned' ? (accessCountByEntry.get(j.id) || 0) : 0,
     }
   })
 }

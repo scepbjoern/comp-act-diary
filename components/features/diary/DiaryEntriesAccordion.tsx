@@ -13,6 +13,8 @@ import { JournalEntrySection } from '@/components/features/diary/JournalEntrySec
 import { AISettingsPopup } from '@/components/features/ai/AISettingsPopup'
 import { TimestampModal } from '@/components/features/day/TimestampModal'
 import { JournalEntryImage } from '@/components/features/diary/JournalEntryImage'
+import { SharedBadge, ShareButton } from '@/components/features/diary/SharedBadge'
+import { ShareEntryModal } from '@/components/features/diary/ShareEntryModal'
 import { useJournalAI } from '@/hooks/useJournalAI'
 import { useReadMode } from '@/hooks/useReadMode'
 import {
@@ -45,6 +47,12 @@ type DayNote = {
   createdAtIso?: string
   audioCapturedAtIso?: string | null
   audioUploadedAtIso?: string | null
+  // Cross-user sharing fields
+  sharedStatus?: 'owned' | 'shared-view' | 'shared-edit'
+  ownerUserId?: string
+  ownerName?: string | null
+  accessRole?: 'VIEWER' | 'EDITOR' | null
+  sharedWithCount?: number
 }
 
 interface DiaryEntriesAccordionProps {
@@ -103,6 +111,7 @@ export function DiaryEntriesAccordion({
   const { readMode } = useReadMode()
   const [settingsPopupNoteId, setSettingsPopupNoteId] = useState<string | null>(null)
   const [timestampModalNoteId, setTimestampModalNoteId] = useState<string | null>(null)
+  const [shareModalNoteId, setShareModalNoteId] = useState<string | null>(null)
   const [loadingStates, setLoadingStates] = useState<Record<string, 'content' | 'analysis' | 'summary' | 'pipeline' | null>>({})
   
   const { generateContent, generateAnalysis, generateSummary, runPipeline } = useJournalAI()
@@ -312,6 +321,14 @@ export function DiaryEntriesAccordion({
                   <span className="text-gray-300 truncate">
                     {n.title || n.text.substring(0, 100) || 'Tagebucheintrag'}
                   </span>
+                  {/* Show shared badge for entries shared with current user */}
+                  <SharedBadge
+                    sharedStatus={n.sharedStatus}
+                    accessRole={n.accessRole}
+                    ownerName={n.ownerName}
+                    sharedWithCount={n.sharedWithCount}
+                    compact
+                  />
                 </div>
                 <div className="text-xs text-gray-500">
                   <span className="font-medium">Erfasst:</span>
@@ -351,8 +368,8 @@ export function DiaryEntriesAccordion({
                         </button>
                       </>
                     ) : (
-                      /* Hide edit/delete buttons in read mode */
-                      !readMode && (
+                      /* Hide edit/delete buttons in read mode or if user has no edit rights */
+                      !readMode && (n.sharedStatus === 'owned' || n.sharedStatus === undefined || n.accessRole === 'EDITOR') && (
                         <>
                           <button 
                             className="btn btn-ghost btn-xs" 
@@ -370,6 +387,10 @@ export function DiaryEntriesAccordion({
                             <TablerIcon name="trash" size={16} />
                             <span className="md:inline hidden ml-1">Löschen</span>
                           </button>
+                          {/* Share button for owned entries */}
+                          {(n.sharedStatus === 'owned' || n.sharedStatus === undefined) && (
+                            <ShareButton onClick={() => setShareModalNoteId(n.id)} />
+                          )}
                         </>
                       )
                     )}
@@ -731,6 +752,16 @@ export function DiaryEntriesAccordion({
           />
         )
       })()}
+      
+      {/* Share Entry Modal */}
+      {shareModalNoteId && (
+        <ShareEntryModal
+          entryId={shareModalNoteId}
+          isOpen={true}
+          onClose={() => setShareModalNoteId(null)}
+          onAccessChange={() => onRefreshNotes?.()}
+        />
+      )}
     </div>
   )
 }
