@@ -120,14 +120,31 @@ lib/
 - Pages sind bereits korrekt Server Components
 - Interaktive Komponenten benötigen korrekterweise 'use client'
 
-### 4. Input Sanitization ⏳
-**Status:** Ausstehend
+### 4. Input Sanitization ✅
+**Status:** Abgeschlossen (2026-01-19)
 
-### 5. Rate Limiting ⏳
-**Status:** Ausstehend
+**Implementiert:**
+- `lib/utils/sanitize.ts` mit grosszügigen Einstellungen für vertrauenswürdige Nutzer
+- `sanitizeHtml()` für Rich-Text-Inhalte (erlaubt gängige Formatierungen)
+- `sanitizeText()` für reine Textfelder
+- `sanitizeMarkdown()` für Markdown-Inhalte
+- DOMPurify (isomorphic-dompurify) als Basis
 
-### 6. Prisma Query Optimization ⏳
-**Status:** Ausstehend
+### 5. Rate Limiting ⏭️
+**Status:** Bewusst nicht implementiert
+
+**Begründung:**
+- Für vertrauenswürdige Nutzer nicht erforderlich
+- Würde unnötigen Overhead in jeder API-Route bedeuten
+- Bei Bedarf später über Middleware oder Reverse Proxy implementierbar
+
+### 6. Prisma Query Optimization ✅
+**Status:** Abgeschlossen (2026-01-19)
+
+**Optimierungen:**
+- N+1 Query in `/api/day` für User-Symptome behoben (include statt Schleife)
+- N+1 Query in `/api/day` für Stool-Messung behoben
+- Weitere Routen analysiert - bereits gut optimiert
 
 ---
 

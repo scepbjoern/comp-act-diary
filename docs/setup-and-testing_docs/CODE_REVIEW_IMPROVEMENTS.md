@@ -284,13 +284,11 @@ export function sanitizeHtml(dirty: string): string {
 
 ---
 
-### 4.3 Rate Limiting ⭐ PRIORITÄT HOCH
+### 4.3 Rate Limiting ⏭️ BEWUSST NICHT IMPLEMENTIERT
 
-**Problem:** Keine Rate Limiting für API-Endpunkte.
+**Begründung:** Für eine App mit vertrauenswürdigen Nutzern nicht erforderlich. Würde unnötigen Overhead in jeder API-Route bedeuten (separater Import pro Route). Bei Bedarf später über Middleware oder Reverse Proxy implementierbar.
 
-**Lösung:** Middleware für Rate Limiting implementieren (IP-basiert, 10 Requests/Minute)
-
-**Aufwand:** 2-3 Stunden | **Risiko:** Niedrig
+~~**Aufwand:** 2-3 Stunden | **Risiko:** Niedrig~~
 
 ---
 
@@ -460,7 +458,7 @@ logger.error('API error', { error, endpoint, userId })
 2. Lib-Ordner Strukturierung
 3. Client/Server Component Trennung
 4. Input Sanitization
-5. Rate Limiting
+5. ~~Rate Limiting~~ (bewusst nicht implementiert)
 6. Prisma Query Optimization
 
 ### Phase 3: Performance & Security (2-3 Wochen)

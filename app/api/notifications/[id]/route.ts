@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getNotification, markAsRead, archiveNotification, deleteNotification } from '@/lib/legacy/notification'
+import { getNotification, markAsRead, archiveNotification, deleteNotification } from '@/lib/services/notificationService'
 import { cookies } from 'next/headers'
 
 async function getUserId(): Promise<string | null> {

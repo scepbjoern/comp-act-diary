@@ -177,34 +177,37 @@ export async function GET(req: NextRequest) {
     }
   }
   
-  // Load stool from Measurement
+  // Load stool from Measurement (optimized: single query with include)
   let stool: number | undefined
   const stoolMetric = await prisma.metricDefinition.findFirst({
-    where: { code: 'bristol_stool', userId: null }
+    where: { code: 'bristol_stool', userId: null },
+    include: {
+      measurements: {
+        where: { timeBoxId: timeBox.id, userId: user.id },
+        take: 1
+      }
+    }
   })
   if (stoolMetric) {
-    const stoolM = await prisma.measurement.findFirst({
-      where: { metricId: stoolMetric.id, timeBoxId: timeBox.id, userId: user.id }
-    })
-    stool = stoolM?.valueNum ?? undefined
+    stool = stoolMetric.measurements[0]?.valueNum ?? undefined
   }
   
-  // Load user symptoms from Measurement
-  const userSymptoms: { id: string; title: string; icon: string | null; score?: number }[] = []
+  // Load user symptoms from Measurement (optimized: single query with include)
   const userMetrics = await prisma.metricDefinition.findMany({
-    where: { userId: user.id, category: 'user_symptom' }
+    where: { userId: user.id, category: 'user_symptom' },
+    include: {
+      measurements: {
+        where: { timeBoxId: timeBox.id, userId: user.id },
+        take: 1
+      }
+    }
   })
-  for (const metric of userMetrics) {
-    const m = await prisma.measurement.findFirst({
-      where: { metricId: metric.id, timeBoxId: timeBox.id, userId: user.id }
-    })
-    userSymptoms.push({
-      id: metric.id,
-      title: metric.name,
-      icon: metric.icon ?? null,
-      score: m?.valueNum ?? undefined
-    })
-  }
+  const userSymptoms = userMetrics.map(metric => ({
+    id: metric.id,
+    title: metric.name,
+    icon: metric.icon ?? null,
+    score: metric.measurements[0]?.valueNum ?? undefined
+  }))
   
   const symptomIcons: Record<string, string | null> = { ...DEFAULT_SYMPTOM_ICONS }
 
