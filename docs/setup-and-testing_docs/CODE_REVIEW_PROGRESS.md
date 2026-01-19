@@ -150,7 +150,33 @@ lib/
 
 ## PHASE 3: Performance & Security
 
-Noch nicht begonnen.
+### 1. React.memo für teure Komponenten ✅
+**Status:** Abgeschlossen (2026-01-19)
+
+**Optimiert:**
+- `Sparkline` - Reine SVG-Render-Komponente
+- `NumberPills` - Wird mehrfach pro Seite gerendert
+- `MarkdownRenderer` - Teure Markdown-Parsing-Operation
+
+### 2. Image Optimization ✅
+**Status:** Bereits korrekt implementiert
+
+- `next/image` wird an 8 Stellen verwendet
+- Verbleibende `<img>` Tags haben bewusst `eslint-disable` (Blob URLs, Lightbox)
+
+### 3. CSP Headers ⏭️
+**Status:** Bewusst nicht implementiert
+
+**Begründung:** Für vertrauenswürdige Nutzer geringes Risiko. Mapbox GL und MDX Editor könnten Probleme machen.
+
+### 4. Bundle Size Analyse ⏳
+**Status:** Optional - bei Bedarf verfügbar
+
+### 5. Loading States & Suspense ⏳
+**Status:** Optional - "nice to have" für schnelle API-Responses
+
+### 6. Connection Pooling ⏳
+**Status:** Nicht nötig - Prisma handhabt dies automatisch
 
 ---
 

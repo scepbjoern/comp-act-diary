@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, memo } from 'react'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
@@ -159,7 +159,7 @@ function processMentions(html: string, contacts: MentionContact[]): string {
   return processedHtml
 }
 
-export function MarkdownRenderer({ markdown, className = '', mentionedContacts = [] }: MarkdownRendererProps) {
+export const MarkdownRenderer = memo(function MarkdownRenderer({ markdown, className = '', mentionedContacts = [] }: MarkdownRendererProps) {
   const [html, setHtml] = useState('')
 
   useEffect(() => {
@@ -197,4 +197,4 @@ export function MarkdownRenderer({ markdown, className = '', mentionedContacts =
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )
-}
+})

@@ -1,7 +1,7 @@
 "use client"
-import React from 'react'
+import React, { memo } from 'react'
 
-export function Sparkline({
+export const Sparkline = memo(function Sparkline({
   data,
   width = 72,
   height = 24,
@@ -273,4 +273,4 @@ export function Sparkline({
       <path d={d} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
-}
+})

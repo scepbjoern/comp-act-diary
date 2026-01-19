@@ -1,7 +1,7 @@
 "use client"
-import React from 'react'
+import React, { memo } from 'react'
 
-export function NumberPills({
+export const NumberPills = memo(function NumberPills({
   min,
   max,
   value,
@@ -74,4 +74,4 @@ export function NumberPills({
       ))}
     </div>
   )
-}
+})
