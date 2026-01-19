@@ -20,7 +20,7 @@ Gehe hierzu schrittweise vor:
 3. Begründe warum du diese Variante vorgeschlagen hast und die anderen nicht.
 
 ## Konzept erstellen
-1. Erstelle ein Konzept, das auf den oben vorgeschlagenen Variante basiert.
+1. Erstelle ein duetschsprachiges Konzept in Schweizer Rechtschreibung, das auf den oben vorgeschlagenen Variante basiert.
 2. Dieses Konzept lege bitte im docs-Verzeichnis ab und vergib einen passenden Titel, der besteht aus "JJJJ-MM_Featurename.md".
 3. Erstelle mindestens die folgenden Kapitel:
 - Inhaltsverzeichnis

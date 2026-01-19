@@ -34,8 +34,6 @@ Im Datenmodell sind ja viele Teile wie zum Beispiel die ACT-Unterstützung schon
 - Zukünftig aber einen Share so haben, dass er nicht automatisch entschlüsselt, wenn NAS hochfährt, sondern dass ich via VPN auf Synology Admin zugreife und den Key von Hand eingebe
 - Sinngemäss dasselbe gilt für Proxmox, aber dort ist mir noch nicht ganz klar, wie ich die Verschlüsselung eines Laufwerks mache
 
-**Benutzerübergreifende Einträge**: Es muss möglich sein, dass mehrere Benutzer auf dieselben Einträge zugreifen können, z.B. wenn man mit der Familie unterwegs ist. Dabei muss es sowohl möglich sein, dass man einen Beitrag mit einem anderen Benutzer teilt, dieser aber nur den Eintrag anschauen, nicht jedoch editieren kann. In diesem Fall gehört der Beitrag also klar einem Benutzer und ist nur im Lesemodus freigegeben. Daneben muss es aber auch möglich sein, dass man Einträge gemeinsam bearbeitet, z.B. wenn man mit Partner unterwegs ist und jeder seinen Teil beitragen kann und die vollen RUD-Rechte an diesem Eintrag hat.
-
 ## Kategorien, Tags, Moods, usw.
 **Tag-System**: Aus https://journiv.com/docs inspirieren lassen für "Tag System — Tag entries with many-to-many relationships for flexible organization"
 
