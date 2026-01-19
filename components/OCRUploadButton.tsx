@@ -11,7 +11,7 @@ import OCRUploadModal from './OCRUploadModal'
 
 interface OCRUploadButtonProps {
   /** Callback when OCR extraction completes */
-  onOcrComplete: (result: { text: string; mediaAssetIds: string[] }) => void
+  onOcrComplete: (result: { text: string; mediaAssetIds: string[]; capturedAt?: string }) => void
   /** Date for the entry (YYYY-MM-DD) */
   date: string
   /** Time for the entry (HH:MM) */
@@ -44,7 +44,7 @@ export default function OCRUploadButton({
     setIsModalOpen(false)
   }
 
-  const handleComplete = (result: { text: string; mediaAssetIds: string[] }) => {
+  const handleComplete = (result: { text: string; mediaAssetIds: string[]; capturedAt?: string }) => {
     setIsModalOpen(false)
     onOcrComplete(result)
   }

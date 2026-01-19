@@ -105,9 +105,13 @@ export default function HeutePage() {
     setNotes,
     editingNoteId,
     editingTime,
+    editingCapturedDate,
+    editingCapturedTime,
     editingText,
     editingTitle,
     setEditingTime,
+    setEditingCapturedDate,
+    setEditingCapturedTime,
     setEditingText,
     setEditingTitle,
     newDiaryText,
@@ -125,6 +129,10 @@ export default function HeutePage() {
     setNewDiaryOriginalTranscript: _setNewDiaryOriginalTranscript,
     setNewDiaryOcrAssetIds,
     setNewDiaryTime,
+    newDiaryCapturedDate,
+    newDiaryCapturedTime,
+    setNewDiaryCapturedDate,
+    setNewDiaryCapturedTime,
     setEditorKey,
     setKeepAudio,
     setShowRetranscribeOptions,
@@ -200,9 +208,14 @@ export default function HeutePage() {
       setNewDiaryTime(`${hh}:${mm}`)
       // Set default title based on date and time
       setNewDiaryTitle(`${date} ${hh}:${mm}`)
+      const y = now.getFullYear()
+      const m = String(now.getMonth() + 1).padStart(2, '0')
+      const d = String(now.getDate()).padStart(2, '0')
+      setNewDiaryCapturedDate(`${y}-${m}-${d}`)
+      setNewDiaryCapturedTime(`${hh}:${mm}`)
     }
     load()
-  }, [date, setHabits, setNewDiaryTime, setNewDiaryTitle, setNotes, setSymptomIcons])
+  }, [date, setHabits, setNewDiaryCapturedDate, setNewDiaryCapturedTime, setNewDiaryTime, setNewDiaryTitle, setNotes, setSymptomIcons])
 
   // Update diary title when time changes
   useEffect(() => {
@@ -385,6 +398,15 @@ export default function HeutePage() {
   async function saveDiaryEntryAndRunPipeline(): Promise<void> {
     if (!day || !newDiaryText.trim()) return
     
+    // Build occurredAt from date + time
+    const timeToUse = newDiaryTime || new Date().toISOString().slice(11, 16)
+    const [hours, minutes] = timeToUse.split(':').map(Number)
+    const occurredAtDate = new Date(date)
+    occurredAtDate.setHours(hours, minutes, 0, 0)
+    const capturedAt = newDiaryCapturedDate && newDiaryCapturedTime
+      ? new Date(`${newDiaryCapturedDate}T${newDiaryCapturedTime}:00`).toISOString()
+      : new Date().toISOString()
+    
     // Step 1: Save entry WITHOUT closing form (don't use saveDiaryEntry which resets form)
     const saveRes = await fetch(`/api/day/${day.id}/notes`, {
       method: 'POST',
@@ -396,7 +418,8 @@ export default function HeutePage() {
         audioFileId: newDiaryAudioFileId,
         keepAudio,
         originalTranscript: newDiaryOriginalTranscript,
-        time: newDiaryTime || new Date().toISOString().slice(11, 16),
+        occurredAt: occurredAtDate.toISOString(),
+        capturedAt,
         tzOffsetMinutes: new Date().getTimezoneOffset(),
       }),
       credentials: 'same-origin',
@@ -635,6 +658,8 @@ export default function HeutePage() {
             newDiaryTitle={newDiaryTitle}
             newDiaryText={newDiaryText}
             newDiaryTime={newDiaryTime}
+            newDiaryCapturedDate={newDiaryCapturedDate}
+            newDiaryCapturedTime={newDiaryCapturedTime}
             newDiaryAudioFileId={newDiaryAudioFileId}
             editorKey={editorKey}
             keepAudio={keepAudio}
@@ -643,6 +668,8 @@ export default function HeutePage() {
             editingNoteId={editingNoteId}
             editingText={editingText}
             editingTime={editingTime}
+            editingCapturedDate={editingCapturedDate}
+            editingCapturedTime={editingCapturedTime}
             editingTitle={editingTitle}
             saving={saving}
             savedAt={savedAt}
@@ -650,6 +677,8 @@ export default function HeutePage() {
             onNewDiaryTitleChange={setNewDiaryTitle}
             onNewDiaryTextChange={setNewDiaryText}
             onNewDiaryTimeChange={setNewDiaryTime}
+            onNewDiaryCapturedDateChange={setNewDiaryCapturedDate}
+            onNewDiaryCapturedTimeChange={setNewDiaryCapturedTime}
             onNewDiaryAudioFileIdChange={setNewDiaryAudioFileId}
             onNewDiaryOcrAssetIdsChange={setNewDiaryOcrAssetIds}
             onEditorKeyIncrement={() => setEditorKey(prev => prev + 1)}
@@ -664,6 +693,8 @@ export default function HeutePage() {
             onDeleteNote={deleteNote}
             onEditingTextChange={setEditingText}
             onEditingTimeChange={setEditingTime}
+            onEditingCapturedDateChange={setEditingCapturedDate}
+            onEditingCapturedTimeChange={setEditingCapturedTime}
             onEditingTitleChange={setEditingTitle}
             onUploadPhotos={uploadPhotos}
             onDeletePhoto={deletePhoto}

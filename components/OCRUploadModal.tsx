@@ -14,7 +14,7 @@ interface OCRUploadModalProps {
   /** Close modal callback */
   onClose: () => void
   /** Success callback with extracted text */
-  onComplete: (result: { text: string; mediaAssetIds: string[] }) => void
+  onComplete: (result: { text: string; mediaAssetIds: string[]; capturedAt?: string }) => void
   /** Date for the entry */
   date: string
   /** Time for the entry */
@@ -199,6 +199,12 @@ export default function OCRUploadModal({
       if (Object.keys(pageRanges).length > 0) {
         formData.append('pageRanges', JSON.stringify(pageRanges))
       }
+      
+      // Send file.lastModified as capturedAt (use first file's lastModified)
+      const firstFile = selectedFiles[0]?.file
+      if (firstFile?.lastModified) {
+        formData.append('capturedAt', new Date(firstFile.lastModified).toISOString())
+      }
 
       setStage('extracting')
 
@@ -214,6 +220,9 @@ export default function OCRUploadModal({
       }
 
       const result = await response.json()
+      const capturedAt = firstFile?.lastModified
+        ? new Date(firstFile.lastModified).toISOString()
+        : undefined
       setStage('complete')
 
       // Brief delay to show completion state
@@ -221,6 +230,7 @@ export default function OCRUploadModal({
         onComplete({
           text: result.text,
           mediaAssetIds: result.mediaAssetIds,
+          capturedAt,
         })
       }, 500)
     } catch (err) {

@@ -38,26 +38,21 @@ Saubere Einfuehrung von **JournalEntry.occurredAt** (Bezugzeit) und **JournalEnt
    - Optional: Index z. B. `@@index([timeBoxId, occurredAt])`.
 2. Prisma Client Typen neu generieren (lokal).
 
-### Phase 3: Schema sync (User, lokal)
+### Phase 3: Schema sync (LLM)
 
 1. `npx prisma db push`
 2. `npx prisma generate`
 3. App lokal testen.
 
-### Phase 4: Backfill (User)
+### Phase 4: Backfill (LLM)
 
 SQL Skript (Beispiel):
 
 ```sql
--- Bezugzeit auf Null-Jahr setzen (Default + Backfill)
-UPDATE "JournalEntry"
-SET "occurredAt" = TIMESTAMP '1970-01-01 00:00:00'
-WHERE "occurredAt" IS NULL;
-
--- Optional: Bezugzeit auf createdAt setzen, wenn sinnvoll
+-- Bezugzeit direkt auf createdAt setzen (sinnvoller Default)
 UPDATE "JournalEntry"
 SET "occurredAt" = "createdAt"
-WHERE "occurredAt" = TIMESTAMP '1970-01-01 00:00:00';
+WHERE "occurredAt" IS NULL;
 
 -- Optional: Erfassungszeit fuer bestehende Assets setzen
 UPDATE "MediaAsset"
@@ -103,9 +98,9 @@ WHERE "capturedAt" IS NULL;
 ## Test-Checkliste (User)
 
 - [ ] Tagebucheintrag (Text): Bezugzeit editierbar, Sortierung korrekt.
-- [ ] MicrophoneButton: Aufnahmezeit = Recording-Start, danach editierbar.
+- [ ] MicrophoneButton: Erfassungszeit = Recording-Start, danach editierbar.
 - [ ] AudioUpload: Default aus Datei (lastModified), danach editierbar.
-- [ ] OCR Upload: Default aus Datei (lastModified/EXIF), danach editierbar.
+- [ ] OCR Upload: Default aus Datei (lastModified), danach editierbar.
 - [ ] Uploadzeit erscheint bei Audio und OCR.
 
 ## Aufgabenaufteilung
@@ -120,6 +115,5 @@ WHERE "capturedAt" IS NULL;
 ### User macht manuell
 
 - Backup vor Prod-Deploy
-- `db push` lokal + prod
-- Backfill SQL ausfuehren
 - Prod-Deploy mit `SYNC_SCHEMA=true` gem. Workflow
+- Backfill SQL in Prod-DB ausfuehren

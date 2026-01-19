@@ -25,6 +25,8 @@ interface DiarySectionProps {
   newDiaryTitle: string
   newDiaryText: string
   newDiaryTime: string
+  newDiaryCapturedDate: string
+  newDiaryCapturedTime: string
   newDiaryAudioFileId: string | null
   editorKey: number
   keepAudio: boolean
@@ -33,6 +35,8 @@ interface DiarySectionProps {
   editingNoteId: string | null
   editingText: string
   editingTime: string
+  editingCapturedDate: string
+  editingCapturedTime: string
   editingTitle: string
   saving: boolean
   savedAt: number | null
@@ -40,6 +44,8 @@ interface DiarySectionProps {
   onNewDiaryTitleChange: (title: string) => void
   onNewDiaryTextChange: (text: string) => void
   onNewDiaryTimeChange: (time: string) => void
+  onNewDiaryCapturedDateChange: (date: string) => void
+  onNewDiaryCapturedTimeChange: (time: string) => void
   onNewDiaryAudioFileIdChange: (id: string | null) => void
   onNewDiaryOcrAssetIdsChange?: (ids: string[]) => void
   onEditorKeyIncrement: () => void
@@ -54,6 +60,8 @@ interface DiarySectionProps {
   onDeleteNote: (noteId: string) => void
   onEditingTextChange: (text: string) => void
   onEditingTimeChange: (time: string) => void
+  onEditingCapturedDateChange: (date: string) => void
+  onEditingCapturedTimeChange: (time: string) => void
   onEditingTitleChange: (title: string) => void
   onUploadPhotos: (noteId: string, files: FileList | File[]) => void
   onDeletePhoto: (photoId: string) => void
@@ -74,6 +82,8 @@ export function DiarySection({
   newDiaryTitle,
   newDiaryText,
   newDiaryTime,
+  newDiaryCapturedDate,
+  newDiaryCapturedTime,
   newDiaryAudioFileId,
   editorKey,
   keepAudio,
@@ -82,6 +92,8 @@ export function DiarySection({
   editingNoteId,
   editingText,
   editingTime,
+  editingCapturedDate,
+  editingCapturedTime,
   editingTitle,
   saving,
   savedAt,
@@ -89,6 +101,8 @@ export function DiarySection({
   onNewDiaryTitleChange,
   onNewDiaryTextChange,
   onNewDiaryTimeChange,
+  onNewDiaryCapturedDateChange,
+  onNewDiaryCapturedTimeChange,
   onNewDiaryAudioFileIdChange,
   onNewDiaryOcrAssetIdsChange,
   onEditorKeyIncrement,
@@ -103,6 +117,8 @@ export function DiarySection({
   onDeleteNote,
   onEditingTextChange,
   onEditingTimeChange,
+  onEditingCapturedDateChange,
+  onEditingCapturedTimeChange,
   onEditingTitleChange,
   onUploadPhotos,
   onDeletePhoto,
@@ -118,6 +134,22 @@ export function DiarySection({
   const { readMode } = useReadMode()
   const [isImproving, setIsImproving] = useState(false)
   const [isSavingWithPipeline, setIsSavingWithPipeline] = useState(false)
+
+  const resolveCapturedDateTime = (dateValue: string, timeValue: string) => {
+    if (!dateValue || !timeValue) return ''
+    return `${dateValue}T${timeValue}`
+  }
+
+  const handleCapturedDateTimeChange = (value: string) => {
+    if (!value) {
+      onNewDiaryCapturedDateChange('')
+      onNewDiaryCapturedTimeChange('')
+      return
+    }
+    const [datePart, timePart] = value.split('T')
+    onNewDiaryCapturedDateChange(datePart)
+    onNewDiaryCapturedTimeChange(timePart || '')
+  }
 
   const handleSaveAndRunPipeline = async () => {
     if (!newDiaryText.trim()) return
@@ -195,12 +227,19 @@ export function DiarySection({
           </button>
         </div>
         
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs text-gray-400">Uhrzeit</span>
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <span className="text-xs text-gray-400">Bezugzeit</span>
           <input 
             type="time" 
             value={newDiaryTime}
             onChange={e => onNewDiaryTimeChange(e.target.value)}
+            className="bg-background border border-slate-700 rounded px-2 py-1 text-sm"
+          />
+          <span className="text-xs text-gray-400">Erfasst am</span>
+          <input
+            type="datetime-local"
+            value={resolveCapturedDateTime(newDiaryCapturedDate, newDiaryCapturedTime)}
+            onChange={e => handleCapturedDateTimeChange(e.target.value)}
             className="bg-background border border-slate-700 rounded px-2 py-1 text-sm"
           />
         </div>
@@ -284,10 +323,20 @@ export function DiarySection({
             date={date}
             time={newDiaryTime}
             keepAudio={keepAudio}
-            onAudioData={({ text, audioFileId }: { text: string; audioFileId?: string | null }) => {
+            onAudioData={({ text, audioFileId, capturedAt }: { text: string; audioFileId?: string | null; capturedAt?: string }) => {
               onNewDiaryTextChange(newDiaryText ? (newDiaryText + '\n\n' + text) : text)
               if (audioFileId) {
                 onNewDiaryAudioFileIdChange(audioFileId)
+              }
+              if (capturedAt) {
+                const d = new Date(capturedAt)
+                const y = d.getFullYear()
+                const m = String(d.getMonth() + 1).padStart(2, '0')
+                const day = String(d.getDate()).padStart(2, '0')
+                const hh = String(d.getHours()).padStart(2, '0')
+                const mm = String(d.getMinutes()).padStart(2, '0')
+                onNewDiaryCapturedDateChange(`${y}-${m}-${day}`)
+                onNewDiaryCapturedTimeChange(`${hh}:${mm}`)
               }
               // Set original transcript when first transcribing
               onOriginalPreserved(text)
@@ -301,10 +350,20 @@ export function DiarySection({
             date={date}
             time={newDiaryTime}
             keepAudio={keepAudio}
-            onAudioUploaded={({ text, audioFileId }: { text: string; audioFileId?: string | null }) => {
+            onAudioUploaded={({ text, audioFileId, capturedAt }: { text: string; audioFileId?: string | null; capturedAt?: string }) => {
               onNewDiaryTextChange(newDiaryText ? (newDiaryText + '\n\n' + text) : text)
               if (audioFileId) {
                 onNewDiaryAudioFileIdChange(audioFileId)
+              }
+              if (capturedAt) {
+                const d = new Date(capturedAt)
+                const y = d.getFullYear()
+                const m = String(d.getMonth() + 1).padStart(2, '0')
+                const day = String(d.getDate()).padStart(2, '0')
+                const hh = String(d.getHours()).padStart(2, '0')
+                const mm = String(d.getMinutes()).padStart(2, '0')
+                onNewDiaryCapturedDateChange(`${y}-${m}-${day}`)
+                onNewDiaryCapturedTimeChange(`${hh}:${mm}`)
               }
               // Set original transcript when first transcribing
               onOriginalPreserved(text)
@@ -316,10 +375,20 @@ export function DiarySection({
           <OCRUploadButton
             date={date}
             time={newDiaryTime}
-            onOcrComplete={({ text, mediaAssetIds }: { text: string; mediaAssetIds: string[] }) => {
+            onOcrComplete={({ text, mediaAssetIds, capturedAt }: { text: string; mediaAssetIds: string[]; capturedAt?: string }) => {
               onNewDiaryTextChange(newDiaryText ? (newDiaryText + '\n\n' + text) : text)
               // Set original transcript for OCR text
               onOriginalPreserved(text)
+              if (capturedAt) {
+                const d = new Date(capturedAt)
+                const y = d.getFullYear()
+                const m = String(d.getMonth() + 1).padStart(2, '0')
+                const day = String(d.getDate()).padStart(2, '0')
+                const hh = String(d.getHours()).padStart(2, '0')
+                const mm = String(d.getMinutes()).padStart(2, '0')
+                onNewDiaryCapturedDateChange(`${y}-${m}-${day}`)
+                onNewDiaryCapturedTimeChange(`${hh}:${mm}`)
+              }
               // Store OCR asset IDs for linking when saving
               if (mediaAssetIds.length > 0) {
                 onNewDiaryOcrAssetIdsChange?.(mediaAssetIds)
@@ -418,9 +487,12 @@ export function DiarySection({
       {/* Existing diary entries */}
       <DiaryEntriesAccordion
         notes={notes}
+        currentDate={date}
         editingNoteId={editingNoteId}
         editingText={editingText}
         editingTime={editingTime}
+        editingCapturedDate={editingCapturedDate}
+        editingCapturedTime={editingCapturedTime}
         editingTitle={editingTitle}
         onEdit={onStartEditNote}
         onSave={onSaveEditNote}
@@ -428,6 +500,8 @@ export function DiarySection({
         onDelete={onDeleteNote}
         onTextChange={onEditingTextChange}
         onTimeChange={onEditingTimeChange}
+        onCapturedDateChange={onEditingCapturedDateChange}
+        onCapturedTimeChange={onEditingCapturedTimeChange}
         onTitleChange={onEditingTitleChange}
         onUploadPhotos={onUploadPhotos}
         onDeletePhoto={onDeletePhoto}

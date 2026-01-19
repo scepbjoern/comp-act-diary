@@ -38,6 +38,8 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   const audioFileId = body?.audioFileId ?? null
   const originalTranscript = body?.originalTranscript ? String(body.originalTranscript).trim() : null
   const ocrAssetIds: string[] = Array.isArray(body?.ocrAssetIds) ? body.ocrAssetIds : []
+  const occurredAt = body?.occurredAt ? new Date(body.occurredAt) : new Date()
+  const capturedAt = body?.capturedAt ? new Date(body.capturedAt) : new Date()
   
   if (!NoteTypes.includes(type)) return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
   if (!text) return NextResponse.json({ error: 'Text required' }, { status: 400 })
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     })
   }
 
-  // Create JournalEntry
+  // Create JournalEntry with timestamp fields
   const entry = await prisma.journalEntry.create({
     data: {
       userId: day.userId,
@@ -63,6 +65,8 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       title,
       content: text,
       originalTranscript,
+      occurredAt,
+      capturedAt,
     },
   })
 
@@ -130,7 +134,7 @@ async function loadNotesForTimeBox(timeBoxId: string, dayId: string) {
   
   const journalRows = await prisma.journalEntry.findMany({
     where: { timeBoxId, deletedAt: null },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { occurredAt: 'asc' },
     include: { type: true },
   })
   
@@ -163,15 +167,21 @@ async function loadNotesForTimeBox(timeBoxId: string, dayId: string) {
       return true
     })
     
+    // Use occurredAt for display time, fallback to createdAt
+    const displayTime = j.occurredAt ?? j.createdAt
+    
     return {
       id: j.id,
       dayId,
       type: CodeToNoteType[j.type.code] || 'DIARY',
       title: j.title ?? null,
-      time: j.createdAt?.toISOString().slice(11, 16),
-      techTime: j.createdAt?.toISOString().slice(11, 16),
-      occurredAtIso: j.createdAt?.toISOString(),
+      time: displayTime?.toISOString().slice(11, 16),
+      techTime: displayTime?.toISOString().slice(11, 16),
+      occurredAtIso: (j.occurredAt ?? j.createdAt)?.toISOString(),
+      capturedAtIso: (j.capturedAt ?? j.createdAt)?.toISOString(),
       createdAtIso: j.createdAt?.toISOString(),
+      audioCapturedAtIso: audioAtt?.asset.capturedAt?.toISOString() ?? null,
+      audioUploadedAtIso: audioAtt?.asset.createdAt?.toISOString() ?? null,
       text: j.content ?? '',
       originalTranscript: j.originalTranscript ?? null,
       audioFilePath: audioAtt?.asset.filePath ?? null,

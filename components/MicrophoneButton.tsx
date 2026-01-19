@@ -14,7 +14,7 @@ type RecordingState = 'idle' | 'recording' | 'paused' | 'uploading'
  * - Calls onAudioData with transcribed text and optional audio file ID
  */
 export function MicrophoneButton(props: {
-  onAudioData?: (result: { text: string; audioFileId?: string | null; audioFilePath?: string | null }) => void
+  onAudioData?: (result: { text: string; audioFileId?: string | null; audioFilePath?: string | null; capturedAt?: string }) => void
   onText?: (text: string) => void
   title?: string
   className?: string
@@ -312,6 +312,8 @@ export function MicrophoneButton(props: {
         fd.append('date', date)
         fd.append('time', time || '')
         fd.append('keepAudio', String(keepAudio))
+        // Send recording start time as capturedAt
+        fd.append('capturedAt', startTime.toISOString())
         
         setStatusMessage('Wird transkribiert...')
         const res = await fetch('/api/diary/upload-audio', { method: 'POST', body: fd, credentials: 'same-origin' })
@@ -327,7 +329,8 @@ export function MicrophoneButton(props: {
           onAudioData({ 
             text: data.text, 
             audioFileId: data.audioFileId,
-            audioFilePath: data.audioFilePath 
+            audioFilePath: data.audioFilePath,
+            capturedAt: startTime.toISOString(),
           })
         } else if (onText) {
           onText(data.text)
@@ -341,7 +344,7 @@ export function MicrophoneButton(props: {
         }
         const data = await res.json()
         if (onAudioData) {
-          onAudioData({ text: data.text, audioFileId: null, audioFilePath: null })
+          onAudioData({ text: data.text, audioFileId: null, audioFilePath: null, capturedAt: startTime.toISOString() })
         } else if (onText) {
           onText(data.text)
         }

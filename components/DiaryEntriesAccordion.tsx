@@ -11,6 +11,7 @@ import { OriginalTranscriptPanel } from './OriginalTranscriptPanel'
 import { OCRSourcePanel } from './OCRSourcePanel'
 import { JournalEntrySection } from './JournalEntrySection'
 import { AISettingsPopup } from './AISettingsPopup'
+import { TimestampModal } from './TimestampModal'
 import { JournalEntryImage } from './JournalEntryImage'
 import { useJournalAI } from '@/hooks/useJournalAI'
 import { useReadMode } from '@/hooks/useReadMode'
@@ -20,6 +21,7 @@ import {
   IconClipboard,
   IconFileText,
   IconSearch,
+  IconClock,
 } from '@tabler/icons-react'
 
 type DayNote = {
@@ -39,14 +41,20 @@ type DayNote = {
   keepAudio?: boolean
   photos?: { id: string; url: string }[]
   occurredAtIso?: string
+  capturedAtIso?: string
   createdAtIso?: string
+  audioCapturedAtIso?: string | null
+  audioUploadedAtIso?: string | null
 }
 
 interface DiaryEntriesAccordionProps {
   notes: DayNote[]
+  currentDate: string
   editingNoteId: string | null
   editingText: string
   editingTime: string
+  editingCapturedDate: string
+  editingCapturedTime: string
   editingTitle: string
   onEdit: (note: DayNote) => void
   onSave: (id: string) => void
@@ -54,6 +62,8 @@ interface DiaryEntriesAccordionProps {
   onDelete: (id: string) => void
   onTextChange: (text: string) => void
   onTimeChange: (time: string) => void
+  onCapturedDateChange: (date: string) => void
+  onCapturedTimeChange: (time: string) => void
   onTitleChange: (title: string) => void
   onUploadPhotos: (id: string, files: FileList | File[]) => void
   onDeletePhoto: (id: string) => void
@@ -66,9 +76,12 @@ interface DiaryEntriesAccordionProps {
 
 export function DiaryEntriesAccordion({
   notes,
+  currentDate,
   editingNoteId,
   editingText,
   editingTime,
+  editingCapturedDate,
+  editingCapturedTime,
   editingTitle,
   onEdit,
   onSave,
@@ -76,6 +89,8 @@ export function DiaryEntriesAccordion({
   onDelete,
   onTextChange,
   onTimeChange,
+  onCapturedDateChange,
+  onCapturedTimeChange,
   onTitleChange,
   onUploadPhotos,
   onDeletePhoto,
@@ -87,6 +102,7 @@ export function DiaryEntriesAccordion({
 }: DiaryEntriesAccordionProps) {
   const { readMode } = useReadMode()
   const [settingsPopupNoteId, setSettingsPopupNoteId] = useState<string | null>(null)
+  const [timestampModalNoteId, setTimestampModalNoteId] = useState<string | null>(null)
   const [loadingStates, setLoadingStates] = useState<Record<string, 'content' | 'analysis' | 'summary' | 'pipeline' | null>>({})
   
   const { generateContent, generateAnalysis, generateSummary, runPipeline } = useJournalAI()
@@ -95,6 +111,45 @@ export function DiaryEntriesAccordion({
     if (!iso) return ''
     const d = new Date(iso)
     return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  const toYmdLocal = (iso?: string | null) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
+  const fmtDateOrTime = (iso?: string | null) => {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    const isoDate = toYmdLocal(iso)
+    const isSameDay = isoDate === currentDate
+    return d.toLocaleString('de-CH', {
+      day: isSameDay ? undefined : '2-digit',
+      month: isSameDay ? undefined : '2-digit',
+      year: isSameDay ? undefined : '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).trim()
+  }
+
+  const resolveCapturedDateTime = (dateValue: string, timeValue: string) => {
+    if (!dateValue || !timeValue) return ''
+    return `${dateValue}T${timeValue}`
+  }
+
+  const handleCapturedDateTimeChange = (value: string) => {
+    if (!value) {
+      onCapturedDateChange('')
+      onCapturedTimeChange('')
+      return
+    }
+    const [datePart, timePart] = value.split('T')
+    onCapturedDateChange(datePart)
+    onCapturedTimeChange(timePart || '')
   }
 
   const extractImageUrls = (text: string): string[] => {
@@ -206,6 +261,28 @@ export function DiaryEntriesAccordion({
     }
   }
 
+  const handleSaveTimestamps = async (noteId: string, occurredAt: string, capturedAt: string, audioFileId?: string | null) => {
+    try {
+      // Update JournalEntry timestamps
+      await fetch(`/api/notes/${noteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ occurredAt, capturedAt })
+      })
+      // If audio attached, also update MediaAsset.capturedAt
+      if (audioFileId) {
+        await fetch(`/api/media-assets/${audioFileId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ capturedAt })
+        })
+      }
+      onRefreshNotes?.()
+    } catch (err) {
+      console.error('Failed to update timestamps', err)
+    }
+  }
+
   const diaryNotes = notes.filter(n => n.type === 'DIARY').sort((a, b) => 
     (b.occurredAtIso || '').localeCompare(a.occurredAtIso || '')
   )
@@ -229,11 +306,24 @@ export function DiaryEntriesAccordion({
           >
             <input type="checkbox" defaultChecked />
             <div className="collapse-title text-sm font-medium py-2">
-              <div className="flex items-center gap-2">
-                <span className="text-gray-400">{fmtHMLocal(n.occurredAtIso)}</span>
-                <span className="text-gray-300 truncate">
-                  {n.title || n.text.substring(0, 100) || 'Tagebucheintrag'}
-                </span>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400">{fmtHMLocal(n.occurredAtIso)}</span>
+                  <span className="text-gray-300 truncate">
+                    {n.title || n.text.substring(0, 100) || 'Tagebucheintrag'}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  <span className="font-medium">Erfasst:</span>
+                  <span className="font-normal"> {fmtDateOrTime(n.audioCapturedAtIso || n.capturedAtIso)}</span>
+                  {n.audioUploadedAtIso && (
+                    <>
+                      <span className="font-normal"> · </span>
+                      <span className="font-medium">Hochgeladen:</span>
+                      <span className="font-normal"> {fmtDateOrTime(n.audioUploadedAtIso)}</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
             <div className="collapse-content">
@@ -288,6 +378,13 @@ export function DiaryEntriesAccordion({
                   {/* AI action buttons - hidden in read mode */}
                   {!readMode && (
                   <div className="flex items-center gap-1">
+                    <button
+                      className="btn btn-ghost btn-xs"
+                      onClick={() => setTimestampModalNoteId(n.id)}
+                      title="Zeitpunkte bearbeiten"
+                    >
+                      <IconClock size={16} />
+                    </button>
                     <button
                       className="btn btn-ghost btn-xs"
                       onClick={() => setSettingsPopupNoteId(n.id)}
@@ -379,13 +476,20 @@ export function DiaryEntriesAccordion({
                         className="flex-1 bg-background border border-slate-700 rounded px-2 py-1 text-xs" 
                       />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400">Zeit</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-gray-400">Bezugzeit</span>
                       <input 
                         type="time" 
                         value={editingTime} 
                         onChange={e => onTimeChange(e.target.value)} 
                         className="bg-background border border-slate-700 rounded px-2 py-1 text-xs" 
+                      />
+                      <span className="text-xs text-gray-400">Erfasst am</span>
+                      <input
+                        type="datetime-local"
+                        value={resolveCapturedDateTime(editingCapturedDate, editingCapturedTime)}
+                        onChange={e => handleCapturedDateTimeChange(e.target.value)}
+                        className="bg-background border border-slate-700 rounded px-2 py-1 text-xs"
                       />
                     </div>
                     <div className="space-y-1">
@@ -609,6 +713,24 @@ export function DiaryEntriesAccordion({
           typeName="Tagebucheintrag"
         />
       )}
+      
+      {/* Timestamp Modal */}
+      {timestampModalNoteId && (() => {
+        const note = diaryNotes.find(n => n.id === timestampModalNoteId)
+        if (!note) return null
+        return (
+          <TimestampModal
+            isOpen={true}
+            onClose={() => setTimestampModalNoteId(null)}
+            onSave={(occurredAt, capturedAt, audioFileId) => handleSaveTimestamps(timestampModalNoteId, occurredAt, capturedAt, audioFileId)}
+            occurredAtIso={note.occurredAtIso}
+            capturedAtIso={note.capturedAtIso}
+            audioCapturedAtIso={note.audioCapturedAtIso}
+            audioUploadedAtIso={note.audioUploadedAtIso}
+            audioFileId={note.audioFileId}
+          />
+        )
+      })()}
     </div>
   )
 }

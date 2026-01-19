@@ -140,6 +140,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Get capturedAt from form data (optional)
+    const capturedAtStr = formData.get('capturedAt') as string | null
+
     // Collect all files from form data
     const files: File[] = []
     for (const [key, value] of formData.entries()) {
@@ -206,6 +209,16 @@ export async function POST(req: NextRequest) {
       await writeFile(fullPath, buffer)
       console.log(`[OCR] Saved file: ${relativeFilePath}`)
 
+      // Determine capturedAt: from form, or from file.lastModified, or current time
+      let capturedAt: Date
+      if (capturedAtStr) {
+        capturedAt = new Date(capturedAtStr)
+      } else if (file.lastModified) {
+        capturedAt = new Date(file.lastModified)
+      } else {
+        capturedAt = new Date()
+      }
+
       // Create MediaAsset record
       const mediaAsset = await prisma.mediaAsset.create({
         data: {
@@ -213,6 +226,7 @@ export async function POST(req: NextRequest) {
           filePath: relativeFilePath,
           mimeType: file.type,
           ocrStatus: 'PROCESSING',
+          capturedAt,
         },
       })
 

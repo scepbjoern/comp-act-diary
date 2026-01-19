@@ -13,6 +13,21 @@ const CodeToNoteType: Record<string, string> = {
   'diary': 'DIARY'
 }
 
+function getDayRange(ymd: string) {
+  const [y, m, d] = ymd.split('-').map((n: string) => parseInt(n, 10))
+  const start = new Date(y, (m || 1) - 1, d || 1)
+  const end = new Date(y, (m || 1) - 1, (d || 1) + 1)
+  return { start, end }
+}
+
+function toYmdLocal(d: Date) {
+  const dt = new Date(d)
+  const y = dt.getFullYear()
+  const m = String(dt.getMonth() + 1).padStart(2, '0')
+  const day = String(dt.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads')
 
 function resolveFilePath(filePath: string | null | undefined): string | null {
@@ -41,7 +56,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (entry.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const data: { title?: string | null; content?: string; contentUpdatedAt?: Date; aiSummary?: string | null } = {}
+  const data: { title?: string | null; content?: string; contentUpdatedAt?: Date; aiSummary?: string | null; occurredAt?: Date; capturedAt?: Date; timeBoxId?: string } = {}
   if (typeof body.title === 'string') data.title = String(body.title).trim() || null
   if (typeof body.text === 'string') {
     data.content = String(body.text).trim()
@@ -49,6 +64,12 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
   }
   if (body.aiSummary !== undefined) {
     data.aiSummary = body.aiSummary === null ? null : String(body.aiSummary).trim()
+  }
+  if (body.occurredAt !== undefined) {
+    data.occurredAt = new Date(body.occurredAt)
+  }
+  if (body.capturedAt !== undefined) {
+    data.capturedAt = new Date(body.capturedAt)
   }
 
   // Handle audio deletion via MediaAttachment
@@ -69,8 +90,50 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
     }
   }
 
+  let resolvedTimeBoxId = entry.timeBoxId
+  let resolvedTimeBoxStartAt = entry.timeBox?.startAt ?? new Date()
+  const previousTimeBoxId = entry.timeBoxId
+  const occurredAtValue = data.occurredAt ?? entry.occurredAt ?? entry.createdAt ?? new Date()
+
+  if (data.occurredAt) {
+    const newDateStr = toYmdLocal(data.occurredAt)
+    if (entry.timeBox?.localDate !== newDateStr) {
+      const { start, end } = getDayRange(newDateStr)
+      let timeBox = await prisma.timeBox.findFirst({
+        where: { userId: user.id, kind: 'DAY', localDate: newDateStr },
+      })
+      if (!timeBox) {
+        timeBox = await prisma.timeBox.create({
+          data: {
+            userId: user.id,
+            kind: 'DAY',
+            localDate: newDateStr,
+            startAt: start,
+            endAt: end,
+            timezone: 'Europe/Zurich',
+          },
+        })
+      }
+      resolvedTimeBoxId = timeBox.id
+      resolvedTimeBoxStartAt = timeBox.startAt
+      data.timeBoxId = timeBox.id
+    }
+  }
+
   if (Object.keys(data).length > 0) {
     await prisma.journalEntry.update({ where: { id: noteId }, data })
+
+    if (resolvedTimeBoxId !== previousTimeBoxId) {
+      await prisma.mediaAttachment.updateMany({
+        where: { entityId: noteId },
+        data: { timeBoxId: resolvedTimeBoxId },
+      })
+    }
+
+    await prisma.interaction.updateMany({
+      where: { journalEntryId: noteId },
+      data: { occurredAt: occurredAtValue, timeBoxId: resolvedTimeBoxId },
+    })
     
     // Automatically detect and create mentions when content is updated
     if (data.content) {
@@ -81,8 +144,8 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
             user.id,
             noteId,
             mentions.map(m => m.contactId),
-            entry.timeBox.startAt,
-            entry.timeBoxId
+            resolvedTimeBoxStartAt,
+            resolvedTimeBoxId
           )
         }
       } catch (mentionError) {
@@ -91,7 +154,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
     }
   }
 
-  const notes = await loadNotesForTimeBox(entry.timeBoxId, entry.userId)
+  const notes = await loadNotesForTimeBox(previousTimeBoxId, entry.userId)
   return NextResponse.json({ ok: true, note: { id: noteId }, notes })
 }
 
@@ -139,7 +202,7 @@ async function loadNotesForTimeBox(timeBoxId: string, dayId: string) {
   
   const journalRows = await prisma.journalEntry.findMany({
     where: { timeBoxId, deletedAt: null },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { occurredAt: 'asc' },
     include: { type: true },
   })
   
@@ -162,15 +225,21 @@ async function loadNotesForTimeBox(timeBoxId: string, dayId: string) {
     const audioAtt = entryAttachments.find(a => a.asset.mimeType?.startsWith('audio/'))
     const photoAtts = entryAttachments.filter(a => a.asset.mimeType?.startsWith('image/'))
     
+    // Use occurredAt for display time, fallback to createdAt
+    const displayTime = j.occurredAt ?? j.createdAt
+    
     return {
       id: j.id,
       dayId,
       type: CodeToNoteType[j.type.code] || 'DIARY',
       title: j.title ?? null,
-      time: j.createdAt?.toISOString().slice(11, 16),
-      techTime: j.createdAt?.toISOString().slice(11, 16),
-      occurredAtIso: j.createdAt?.toISOString(),
+      time: displayTime?.toISOString().slice(11, 16),
+      techTime: displayTime?.toISOString().slice(11, 16),
+      occurredAtIso: (j.occurredAt ?? j.createdAt)?.toISOString(),
+      capturedAtIso: (j.capturedAt ?? j.createdAt)?.toISOString(),
       createdAtIso: j.createdAt?.toISOString(),
+      audioCapturedAtIso: audioAtt?.asset.capturedAt?.toISOString() ?? null,
+      audioUploadedAtIso: audioAtt?.asset.createdAt?.toISOString() ?? null,
       text: j.content ?? '',
       originalTranscript: j.originalTranscript ?? null,
       aiSummary: j.aiSummary ?? null,

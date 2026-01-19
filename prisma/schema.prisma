@@ -522,6 +522,10 @@ model JournalEntry {
   isSensitive Boolean   @default(false)
   /// Soft-Delete Zeitpunkt (NULL = nicht gelöscht)
   deletedAt   DateTime?
+  /// Bezugzeit: Der Zeitpunkt, auf den sich der Eintrag inhaltlich bezieht (für Sortierung/Anzeige)
+  occurredAt  DateTime?
+  /// Erfassungszeit: Zeitpunkt, an dem der Inhalt tatsächlich erstellt wurde (Text verfasst, Audio aufgenommen)
+  capturedAt  DateTime?
   /// Erstellungszeitpunkt
   createdAt   DateTime  @default(now())
   /// Letztes Update
@@ -539,6 +543,7 @@ model JournalEntry {
 
   @@index([userId, typeId])
   @@index([timeBoxId])
+  @@index([timeBoxId, occurredAt])
   @@index([locationId])
   @@index([deletedAt])
 }

@@ -107,7 +107,7 @@ Zusatz:
 
 ## Zeit-Modal fuer bestehende Eintraege
 
-- **Icon:** Uhr-Symbol pro Eintrag (z. B. neben Actions).
+- **Icon:** Uhr-Symbol pro Eintrag, **links neben dem AI-Einstellungen-Button**.
 - **Modal-Inhalt:**
   - Bezugzeit (Datum + Zeit, editierbar)
   - Erfassungszeit (Datum + Zeit, editierbar)
@@ -125,6 +125,6 @@ Zusatz:
 - **Override Endpoint:** `PATCH /api/media-assets/[id]` fuer Audio/Bild, `PATCH /api/notes/[noteId]` fuer Text.
 - **Backfill:** `MediaAsset.capturedAt` wird bei bestehenden Assets auf `createdAt` gesetzt.
 
-## Offene Fragen (Entscheide noetig)
+## Entschiedene Fragen
 
-1. Reicht `File.lastModified` als Default, oder soll Metadaten-Parsing serverseitig (z. B. ID3/EXIF) implementiert werden?
+1. **EXIF/ID3 Parsing:** Nicht implementiert (wuerde zusaetzliche Dependency erfordern). `File.lastModified` reicht als Best-Effort-Default.

@@ -42,7 +42,10 @@ export type DayNote = {
   keepAudio?: boolean
   photos?: { id: string; url: string }[]
   occurredAtIso?: string
+  capturedAtIso?: string
   createdAtIso?: string
+  audioCapturedAtIso?: string | null
+  audioUploadedAtIso?: string | null
 }
 
 export type InlineData = {

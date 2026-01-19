@@ -56,22 +56,34 @@ export async function POST(req: NextRequest) {
     const timeStr = form.get('time') as string | null
     const model = (form.get('model') as string | null) || getDefaultTranscriptionModel()
     const keepAudio = form.get('keepAudio') === 'true'
-
-    console.log('Parsed form data:', {
-      hasFile: !!file,
-      fileName: file?.name,
-      fileSize: file?.size,
-      fileType: file?.type,
-      dateStr,
-      timeStr,
-      model,
-      keepAudio,
-    })
+    const capturedAtStr = form.get('capturedAt') as string | null
 
     if (!file) {
       console.error('ERROR: Missing file in form data')
       return NextResponse.json({ error: 'Missing file' }, { status: 400 })
     }
+
+    // Determine capturedAt: from form, or from file.lastModified, or current time
+    let capturedAt: Date
+    if (capturedAtStr) {
+      capturedAt = new Date(capturedAtStr)
+    } else if (file.lastModified) {
+      capturedAt = new Date(file.lastModified)
+    } else {
+      capturedAt = new Date()
+    }
+
+    console.log('Parsed form data:', {
+      hasFile: true,
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      dateStr,
+      timeStr,
+      model,
+      keepAudio,
+      capturedAt: capturedAt.toISOString(),
+    })
     if (!dateStr) {
       console.error('ERROR: Missing date in form data')
       return NextResponse.json({ error: 'Missing date' }, { status: 400 })
@@ -190,6 +202,7 @@ export async function POST(req: NextRequest) {
           filePath: relativeFilePath,
           mimeType,
           duration: transcriptionResult.duration > 0 ? transcriptionResult.duration : null,
+          capturedAt,
         },
       })
 

@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from 'react'
 import { TablerIcon } from './TablerIcon'
 
 interface AudioUploadButtonProps {
-  onAudioUploaded: (result: { text: string; audioFileId: string; audioFilePath: string; keepAudio: boolean }) => void
+  onAudioUploaded: (result: { text: string; audioFileId: string; audioFilePath: string; keepAudio: boolean; capturedAt?: string }) => void
   date: string // ISO date string YYYY-MM-DD
   time: string // HH:MM time string
   keepAudio?: boolean
@@ -141,11 +141,16 @@ export default function AudioUploadButton({
       }
 
       const formData = new FormData()
+      const capturedAt = file.lastModified ? new Date(file.lastModified).toISOString() : undefined
       formData.append('file', file)
       formData.append('date', date)
       formData.append('time', time)
       formData.append('model', selectedModel)
       formData.append('keepAudio', String(keepAudio))
+      // Send file.lastModified as capturedAt (default for uploaded files)
+      if (capturedAt) {
+        formData.append('capturedAt', capturedAt)
+      }
 
       setStage('uploading')
       const response = await fetch('/api/diary/upload-audio', {
@@ -168,6 +173,7 @@ export default function AudioUploadButton({
         audioFileId: result.audioFileId,
         audioFilePath: result.audioFilePath,
         keepAudio: result.keepAudio,
+        capturedAt,
       })
 
       // Reset file input

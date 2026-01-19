@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
   // Load JournalEntries (replaces DayNote)
   const journalRows = await prisma.journalEntry.findMany({
     where: { timeBoxId: timeBox.id, deletedAt: null },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { occurredAt: 'asc' },
     include: { type: true },
   })
   
@@ -121,15 +121,21 @@ export async function GET(req: NextRequest) {
       return true
     })
     
+    // Use occurredAt for display time, fallback to createdAt
+    const displayTime = j.occurredAt ?? j.createdAt
+    
     return {
       id: j.id,
       dayId: day.id,
       type: CodeToNoteType[j.type.code] || 'DIARY',
       title: j.title ?? null,
-      time: j.createdAt?.toISOString().slice(11, 16),
-      techTime: j.createdAt?.toISOString().slice(11, 16),
-      occurredAtIso: j.createdAt?.toISOString(),
+      time: displayTime?.toISOString().slice(11, 16),
+      techTime: displayTime?.toISOString().slice(11, 16),
+      occurredAtIso: (j.occurredAt ?? j.createdAt)?.toISOString(),
+      capturedAtIso: (j.capturedAt ?? j.createdAt)?.toISOString(),
       createdAtIso: j.createdAt?.toISOString(),
+      audioCapturedAtIso: audioAtt?.asset.capturedAt?.toISOString() ?? null,
+      audioUploadedAtIso: audioAtt?.asset.createdAt?.toISOString() ?? null,
       text: j.content ?? '',
       originalTranscript: j.originalTranscript ?? null,
       aiSummary: j.aiSummary ?? null,

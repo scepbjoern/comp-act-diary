@@ -14,7 +14,10 @@ type DayNote = {
   keepAudio?: boolean
   photos?: { id: string; url: string }[]
   occurredAtIso?: string
+  capturedAtIso?: string
   createdAtIso?: string
+  audioCapturedAtIso?: string | null
+  audioUploadedAtIso?: string | null
 }
 
 export function useDiaryManagement(
@@ -28,6 +31,8 @@ export function useDiaryManagement(
   // Editing state
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [editingTime, setEditingTime] = useState<string>('')
+  const [editingCapturedDate, setEditingCapturedDate] = useState<string>('')
+  const [editingCapturedTime, setEditingCapturedTime] = useState<string>('')
   const [editingText, setEditingText] = useState<string>('')
   const [editingTitle, setEditingTitle] = useState<string>('')
   
@@ -38,6 +43,8 @@ export function useDiaryManagement(
   const [newDiaryOriginalTranscript, setNewDiaryOriginalTranscript] = useState<string | null>(null)
   const [newDiaryOcrAssetIds, setNewDiaryOcrAssetIds] = useState<string[]>([])
   const [newDiaryTime, setNewDiaryTime] = useState('')
+  const [newDiaryCapturedDate, setNewDiaryCapturedDate] = useState('')
+  const [newDiaryCapturedTime, setNewDiaryCapturedTime] = useState('')
   const [editorKey, setEditorKey] = useState(0)
   const [keepAudio, setKeepAudio] = useState(true)
   const [showRetranscribeOptions, setShowRetranscribeOptions] = useState(false)
@@ -59,18 +66,47 @@ export function useDiaryManagement(
     return `${hh}:${mm}`
   }, [])
 
+  const fmtDateInput = useCallback((iso?: string) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }, [])
+
+  const fmtTimeInput = useCallback((iso?: string) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    const hh = String(d.getHours()).padStart(2, '0')
+    const mm = String(d.getMinutes()).padStart(2, '0')
+    return `${hh}:${mm}`
+  }, [])
+
+  const buildIsoFromDateTime = useCallback((dateStr: string, timeStr: string) => {
+    const [year, month, day] = dateStr.split('-').map(Number)
+    const [hours, minutes] = timeStr.split(':').map(Number)
+    const dt = new Date(year, (month || 1) - 1, day || 1, hours || 0, minutes || 0, 0, 0)
+    return dt.toISOString()
+  }, [])
+
   // Start editing a note
   const startEditNote = useCallback((n: DayNote) => {
+    const capturedSource = n.audioCapturedAtIso || n.capturedAtIso || n.createdAtIso
     setEditingNoteId(n.id)
     setEditingTime(fmtHMLocal(n.occurredAtIso))
+    setEditingCapturedDate(fmtDateInput(capturedSource))
+    setEditingCapturedTime(fmtTimeInput(capturedSource))
     setEditingText(n.text || '')
     setEditingTitle(n.title || '')
-  }, [fmtHMLocal])
+  }, [fmtDateInput, fmtHMLocal, fmtTimeInput])
 
   // Cancel editing
   const cancelEditNote = useCallback(() => {
     setEditingNoteId(null)
     setEditingTime('')
+    setEditingCapturedDate('')
+    setEditingCapturedTime('')
     setEditingText('')
     setEditingTitle('')
   }, [])
@@ -78,25 +114,40 @@ export function useDiaryManagement(
   // Save edited note
   const saveEditNote = useCallback(async (noteId: string) => {
     try {
+      const occurredAtIso = buildIsoFromDateTime(date, editingTime)
+      const capturedAtIso = editingCapturedDate && editingCapturedTime
+        ? buildIsoFromDateTime(editingCapturedDate, editingCapturedTime)
+        : new Date().toISOString()
+
       const res = await fetch(`/api/notes/${noteId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           title: editingTitle.trim() || null, 
           text: editingText, 
-          time: editingTime 
+          occurredAt: occurredAtIso,
+          capturedAt: capturedAtIso
         }),
         credentials: 'same-origin',
       })
       const data = await res.json()
       if (data?.notes) setNotes(data.notes)
+
+      const note = notes.find(n => n.id === noteId)
+      if (note?.audioFileId) {
+        await fetch(`/api/media-assets/${note.audioFileId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ capturedAt: capturedAtIso }),
+        })
+      }
       cancelEditNote()
       return true
     } catch (e) {
       console.error('Edit note failed', e)
       return false
     }
-  }, [editingTitle, editingText, editingTime, cancelEditNote])
+  }, [buildIsoFromDateTime, cancelEditNote, date, editingCapturedDate, editingCapturedTime, editingText, editingTime, editingTitle, notes])
 
   // Update note content directly (for restoring original transcript)
   const updateNoteContent = useCallback(async (noteId: string, newContent: string) => {
@@ -309,6 +360,8 @@ export function useDiaryManagement(
     setNewDiaryOriginalTranscript(null)
     setNewDiaryOcrAssetIds([])
     setNewDiaryTime('')
+    setNewDiaryCapturedDate('')
+    setNewDiaryCapturedTime('')
     setShowRetranscribeOptions(false)
     setIsRetranscribing(false)
   }, [newDiaryAudioFileId, notes, cleanupAudioFile])
@@ -320,6 +373,17 @@ export function useDiaryManagement(
     onSavingChange(true)
     
     try {
+      // Build occurredAt from date + time
+      const timeToUse = newDiaryTime || new Date().toISOString().slice(11, 16)
+      const [hours, minutes] = timeToUse.split(':').map(Number)
+      const occurredAtDate = new Date(date)
+      occurredAtDate.setHours(hours, minutes, 0, 0)
+      
+      // capturedAt uses UI inputs; fallback to current time
+      const capturedAt = newDiaryCapturedDate && newDiaryCapturedTime
+        ? buildIsoFromDateTime(newDiaryCapturedDate, newDiaryCapturedTime)
+        : new Date().toISOString()
+      
       const res = await fetch(`/api/day/${dayId}/notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -331,7 +395,8 @@ export function useDiaryManagement(
           keepAudio,
           originalTranscript: newDiaryOriginalTranscript,
           ocrAssetIds: newDiaryOcrAssetIds,
-          time: newDiaryTime || new Date().toISOString().slice(11, 16),
+          occurredAt: occurredAtDate.toISOString(),
+          capturedAt,
           tzOffsetMinutes: new Date().getTimezoneOffset(),
         }),
         credentials: 'same-origin',
@@ -352,6 +417,11 @@ export function useDiaryManagement(
       const mm = String(now.getMinutes()).padStart(2, '0')
       setNewDiaryTime(`${hh}:${mm}`)
       setNewDiaryTitle(`${date} ${hh}:${mm}`)
+      const y = now.getFullYear()
+      const m = String(now.getMonth() + 1).padStart(2, '0')
+      const d = String(now.getDate()).padStart(2, '0')
+      setNewDiaryCapturedDate(`${y}-${m}-${d}`)
+      setNewDiaryCapturedTime(`${hh}:${mm}`)
       setShowRetranscribeOptions(false)
       setIsRetranscribing(false)
       setEditorKey(prev => prev + 1)
@@ -365,13 +435,15 @@ export function useDiaryManagement(
     } finally {
       onSavingChange(false)
     }
-  }, [dayId, newDiaryText, newDiaryTitle, newDiaryAudioFileId, keepAudio, newDiaryOriginalTranscript, newDiaryOcrAssetIds, newDiaryTime, date, onSavingChange, onToast])
+  }, [buildIsoFromDateTime, date, dayId, keepAudio, newDiaryAudioFileId, newDiaryCapturedDate, newDiaryCapturedTime, newDiaryOcrAssetIds, newDiaryOriginalTranscript, newDiaryText, newDiaryTime, newDiaryTitle, onSavingChange, onToast])
 
   return {
     // State
     notes,
     editingNoteId,
     editingTime,
+    editingCapturedDate,
+    editingCapturedTime,
     editingText,
     editingTitle,
     newDiaryText,
@@ -380,6 +452,8 @@ export function useDiaryManagement(
     newDiaryOriginalTranscript,
     newDiaryOcrAssetIds,
     newDiaryTime,
+    newDiaryCapturedDate,
+    newDiaryCapturedTime,
     editorKey,
     keepAudio,
     showRetranscribeOptions,
@@ -388,6 +462,8 @@ export function useDiaryManagement(
     // Setters
     setNotes,
     setEditingTime,
+    setEditingCapturedDate,
+    setEditingCapturedTime,
     setEditingText,
     setEditingTitle,
     setNewDiaryText,
@@ -396,6 +472,8 @@ export function useDiaryManagement(
     setNewDiaryOriginalTranscript,
     setNewDiaryOcrAssetIds,
     setNewDiaryTime,
+    setNewDiaryCapturedDate,
+    setNewDiaryCapturedTime,
     setEditorKey,
     setKeepAudio,
     setShowRetranscribeOptions,
