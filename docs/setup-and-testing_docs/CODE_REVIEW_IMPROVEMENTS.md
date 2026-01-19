@@ -256,16 +256,11 @@ ANALYZE=true npm run build
 
 ## 4. SICHERHEIT
 
-### 4.1 Content Security Policy (CSP) ⭐ PRIORITÄT HOCH
+### 4.1 Content Security Policy (CSP) ⏭️ BEWUSST NICHT IMPLEMENTIERT
 
-**Aktuell:** Nur Basic Security Headers
+**Begründung:** Für vertrauenswürdige Nutzer geringes Risiko. Mapbox GL benötigt `unsafe-eval`, MDX Editor könnte Probleme machen. Bei Bedarf später über `Content-Security-Policy-Report-Only` testbar.
 
-**Empfehlung:** CSP Header in `next.config.mjs` hinzufügen:
-```
-Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval'; ...
-```
-
-**Aufwand:** 2-3 Stunden | **Risiko:** Mittel
+~~**Aufwand:** 2-3 Stunden | **Risiko:** Mittel~~
 
 ---
 
@@ -375,14 +370,11 @@ model RawGpsPoint {
 
 ---
 
-### 6.3 Connection Pooling ⭐ PRIORITÄT MITTEL
+### 6.3 Connection Pooling ⏭️ BEWUSST NICHT IMPLEMENTIERT
 
-**Empfehlung:** Explizite Pool-Konfiguration in `DATABASE_URL`:
-```
-postgresql://...?connection_limit=10&pool_timeout=20
-```
+**Begründung:** Prisma handhabt Connection Pooling automatisch (Default Pool Size 10). Erst relevant bei "connection limit exceeded" Fehlern oder Multi-Instance Deployments.
 
-**Aufwand:** 1 Stunde | **Risiko:** Niedrig
+~~**Aufwand:** 1 Stunde | **Risiko:** Niedrig~~
 
 ---
 
@@ -419,11 +411,11 @@ logger.error('API error', { error, endpoint, userId })
 
 ## 8. DOCUMENTATION
 
-### 8.1 API Documentation ⭐ PRIORITÄT MITTEL
+### 8.1 API Documentation ⏭️ BEWUSST NICHT IMPLEMENTIERT
 
-**Empfehlung:** OpenAPI/Swagger für API Routes
+**Begründung:** Für eine Single-User App mit vertrauenswürdigen Nutzern nicht erforderlich. API-Struktur ist durch Code selbsterklärend.
 
-**Aufwand:** 6-8 Stunden | **Risiko:** Niedrig
+~~**Aufwand:** 6-8 Stunden | **Risiko:** Niedrig~~
 
 ---
 
@@ -464,16 +456,16 @@ logger.error('API error', { error, endpoint, userId })
 ### Phase 3: Performance & Security (2-3 Wochen)
 1. React.memo für teure Komponenten
 2. Image Optimization
-3. CSP Headers
+3. ~~CSP Headers~~ (bewusst nicht implementiert)
 4. Bundle Size Analyse
 5. Loading States & Suspense
-6. Connection Pooling
+6. ~~Connection Pooling~~ (bewusst nicht implementiert)
 
 ### Phase 4: Testing & Monitoring (3-4 Wochen)
 1. Test Coverage erhöhen
 2. Structured Logging
 3. Error Tracking
-4. API Documentation
+4. ~~API Documentation~~ (bewusst nicht implementiert)
 5. E2E Tests (Playwright)
 6. Performance Monitoring
 

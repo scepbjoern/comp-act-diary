@@ -169,20 +169,41 @@ lib/
 
 **Begründung:** Für vertrauenswürdige Nutzer geringes Risiko. Mapbox GL und MDX Editor könnten Probleme machen.
 
-### 4. Bundle Size Analyse ⏳
-**Status:** Optional - bei Bedarf verfügbar
+### 4. Bundle Size Analyse ✅
+**Status:** Abgeschlossen (2026-01-19)
 
-### 5. Loading States & Suspense ⏳
-**Status:** Optional - "nice to have" für schnelle API-Responses
+**Ergebnisse:**
+- `@next/bundle-analyzer` eingerichtet
+- First Load JS: 104 kB (✅ gut)
+- Grösste Seiten: /settings (147 kB), /prm/new (139 kB)
+- Keine kritischen Probleme gefunden
 
-### 6. Connection Pooling ⏳
-**Status:** Nicht nötig - Prisma handhabt dies automatisch
+### 5. Loading States & Suspense ✅
+**Status:** Abgeschlossen (2026-01-19)
+
+**Implementiert:**
+- `app/loading.tsx` - Globale Hauptseite
+- `app/prm/loading.tsx` - Kontakte
+- `app/settings/loading.tsx` - Einstellungen
+- `app/reflections/loading.tsx` - Reflexionen
+
+### 6. Connection Pooling ⏭️
+**Status:** Bewusst nicht implementiert
+
+**Begründung:** Prisma handhabt dies automatisch (Default Pool Size 10).
 
 ---
 
 ## PHASE 4: Testing & Monitoring
 
-Noch nicht begonnen.
+### 1. Structured Logging ⏳
+**Status:** Vorschlag erstellt - Pino empfohlen
+
+### 2. Error Tracking ⏳
+**Status:** Vorschlag erstellt - Sentry empfohlen
+
+### 3. Performance Monitoring ⏳
+**Status:** Vorschlag erstellt - Pino-basierte Metriken empfohlen
 
 ---
 
