@@ -127,8 +127,11 @@ cd /opt/stacks/comp-act-diary
 git pull origin main
 
 cd deploy
-docker compose build --no-cache app
-docker compose up -d --force-recreate app
+# Ohne Prisma-Änderungen:
+docker compose build --no-cache app && docker compose up -d --force-recreate app
+
+# Mit Prisma-Änderungen:
+docker compose build --no-cache app && SYNC_SCHEMA=true docker compose up -d --force-recreate app
 
 # Optional: Nach Rebuild gründlich aufräumen
 docker builder prune -f
@@ -222,9 +225,9 @@ docker compose up -d
 │   └─► 2.1 Schnelles Update (--build)
 │
 ├─► package.json / package-lock.json
-│   └─► 2.2 Vollständiges Rebuild (--no-cache)
+│   └─► 2.2 Vollständiges Rebuild (--no-cache) (falls zusätzlich Prisma geändert, dann noch SYNC_SCHEMA=true setzen)
 │
-├─► prisma/schema.prisma
+├─► prisma/schema.prisma (und kleinere Änderungen gemäss Kapitel 2.1)
 │   └─► 2.3 Schema-Migration (SYNC_SCHEMA=true)
 │
 ├─► .env Datei
