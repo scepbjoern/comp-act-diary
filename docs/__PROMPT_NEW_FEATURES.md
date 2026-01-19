@@ -1,14 +1,30 @@
-@data-model-architecture.md
-@web
-Als nächstes geht es darum die...
+Erstelle den Plan für das unten grob beschriebene Feature. Lass Dir für alles so viel Zeit, wie Du brauchst - sei also gründlich und wäge Alternativen ab, bevor Du Dich für eine als Vorschlag entscheidest.
 
-...
+Gehe hierzu schrittweise vor:
+1. Recherche
+2. Varianten vorschlagen und eine davon empfehlen
+3. Konzept erstellen
+4. Fragen überlegen an Auftraggeber
+5. Zusammenfassung
 
-Deine Aufgabe nun ist, einerseits die Recherche zu machen, in meiner Datenmodellarchitektur, in der Google People API, in Tutorials etc., um herauszufinden, was alles schon da ist, wie man es typischerweise macht und als nächstes dann zu prüfen, welche Anpassungen am Datenmodell sind vermutlich sinnvoll, dann einen Vorschlag zu machen für die API-Routen im Hintergrund, einen Vorschlag zu machen für Frontend-Erweiterungen und Anpassungen und natürlich auch für die Synchronisation.
+# Schritte
+## Recherche
+1. Lese zunächst die Feature-Beschreibung und versuche diese zu füllen. Wo Unsicherheiten bestehen, triff zunächst Annahmen und merke dir die unklaren Punkte für den Schritt "Fragen überlegen an Auftraggeber".
+2. Überlege Dir, welche Recherche in der bestehenden Dokumentation erforderlich ist, die Du primär in den Ordnern [coding-guidelines](coding-guidelines) und [concepts](concepts) vorhanden sind sowie in der Datei [Datenmodell-Architektur](data-model-architecture.md) und [local-rules](../.windsurf/rules/local-rules.md).
+3. Überlege Dir, welche Recherche im Internet erforderlich ist, um dann den nächsten Schritt "Varianten vorschlagen und eine davon empfehlen" zu erreichen.
+4. Führe die Recherche durch und sammle die Ergebnisse.
 
-Überlege dir dabei auch ständig, welche Fragen du an mich noch hast, die ich beantworten muss, damit du deine Überlegungen vervollständigen kannst und zu einem guten Konzept kommst. Dieses Konzept lege bitte im docs-Verzeichnis ab. Im Minimum soll das Konzept folgende Komponenten enthalten:
+## Varianten vorschlagen und eine davon empfehlen
+1. Überlege Dir aufgrund der Recherche, welche Varianten es gibt und welche davon am besten geeignet ist.
+2. Schlage eine Variante vor. Gehe dabei auf Punkte ein wie z.B. erforderliche Anpassungen an Datenmodell, APIs, UX, etc.
+3. Begründe warum du diese Variante vorgeschlagen hast und die anderen nicht.
+
+## Konzept erstellen
+1. Erstelle ein Konzept, das auf den oben vorgeschlagenen Variante basiert.
+2. Dieses Konzept lege bitte im docs-Verzeichnis ab und vergib einen passenden Titel, der besteht aus "JJJJ-MM_Featurename.md".
+3. Erstelle mindestens die folgenden Kapitel:
 - Inhaltsverzeichnis
-- Geplante Features
+- Beschreibung des geplanten Features
 - Architekturübersicht als ASCII-Art
 - Erläuterung der in der Architekturübersicht eingeführten Komponenten inkl. externer Anbieter, Datenbank, Backend und Frontend
 - Datenmodell inkl. Aufführen, welche Entitäten betroffen sind, wo noch Anpassungen vorzunehmen sind, usw.)
@@ -16,10 +32,17 @@ Deine Aufgabe nun ist, einerseits die Recherche zu machen, in meiner Datenmodell
 - UX (Komponenten und Screens)
 - Allenfalls neue Dependencies in package.json
 - Dateistruktur (also alle neuen oder zu verändernden Dateien inkl. kurzer Erläuterung ihrer Funktion)
-- Implementierungsplan mit einer Abfolge von Schritten, deren Titel jeweils mit "Schritt X (LLM/Mensch): Y" aufgeführt ist, wobei X die Nummer des Schritts ist, LLM/Mensch zum Ausdruck bringt, wer zuständig ist (soviel wie möglich durch das LLM implementieren lassen) und Y die Bezeichnung des Schritts ist
+- Implementierungsplan mit einer Abfolge von Schritten, deren Titel jeweils mit "Schritt X (LLM/Mensch): Y" aufgeführt ist, wobei X die Nummer des Schritts ist, LLM/Mensch zum Ausdruck bringt, wer zuständig ist (soviel wie möglich durch das LLM implementieren lassen) und Y die Bezeichnung des Schritts ist. Schreibe hier noch keinen Code, sondern schreibe konkrete Anforderungen/Ziele/Tipps pro Funktionalität, die dann bei der Implementation gebaut werden soll.
 - Automatisiertes Testing (was kann das LLM selbstständig testen)
 - Manuelles Testing (was muss der Mensch wie testen)
 
-Schreibe im Implementierungsplan noch keinen Code, sondern schreibe konkrete Anforderungen/Ziele/Tipps pro Funktionalität, die dann bei der Implementation gebaut werden soll.
+## Fragen an den Auftraggeber
+1. Überlege Dir, welche Fragen an den Auftraggeber gestellt werden müssen, um das Konzept zu verfeinern oder bei Unklarheit, welche Variante zu empfehlen ist respektive Annahmen zu validieren
+2. Nummeriere und strukturiere die Fragen.
+3. Stelle die Fragen an den Auftraggeber, indem Du diese am Ende des Konzepts als Kapitel "Fragen an den Auftraggeber" aufschreibst.
 
-Bevor Du anfängst, lies Dir nochmals die @local-rules.md durch. Lass Dir für alles so viel Zeit, wie Du brauchst - sei also gründlich und wäge Alternativen ab, bevor Du Dich für eine als Vorschlag entscheidest.
+## Zusammenfassung
+Gib im Chat eine Zusammenfassung aus zum erstellten Konzept
+
+# Featurebeschreibung
+<Featurebeschreibung>
