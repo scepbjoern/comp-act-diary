@@ -45,8 +45,6 @@ export function useAISettings(): UseAISettingsReturn {
       const response = await fetch('/api/me')
       const data = await response.json()
 
-      console.log('[useAISettings] fetchSettings response:', JSON.stringify(data.user?.settings?.journalAISettings, null, 2))
-
       if (!response.ok) {
         throw new Error(data.error || 'Failed to load settings')
       }
@@ -100,8 +98,6 @@ export function useAISettings(): UseAISettingsReturn {
     try {
       setError(null)
 
-      console.log('[useAISettings] updateSettingsForType called with:', { typeCode, newSettings })
-
       // Get defaults for fallback
       const defaults = getDefaultAISettings(FALLBACK_MODEL_ID)
       
@@ -125,16 +121,12 @@ export function useAISettings(): UseAISettingsReturn {
         },
       }
 
-      console.log('[useAISettings] mergedSettings:', mergedSettings)
-
       // Update local state optimistically
       const updatedSettings = {
         ...settings,
         [typeCode]: mergedSettings,
       }
       setSettings(updatedSettings)
-
-      console.log('[useAISettings] Sending to API:', JSON.stringify({ journalAISettings: updatedSettings }, null, 2))
 
       // Persist to server
       const response = await fetch('/api/me', {
@@ -148,7 +140,6 @@ export function useAISettings(): UseAISettingsReturn {
       })
 
       const data = await response.json()
-      console.log('[useAISettings] API response:', response.ok, data)
 
       if (!response.ok) {
         // Revert on error
@@ -171,8 +162,6 @@ export function useAISettings(): UseAISettingsReturn {
     try {
       setError(null)
 
-      console.log('[useAISettings] updateAllSettings called with:', JSON.stringify(allSettings, null, 2))
-
       // Update local state optimistically
       setSettings(allSettings)
 
@@ -188,7 +177,6 @@ export function useAISettings(): UseAISettingsReturn {
       })
 
       const data = await response.json()
-      console.log('[useAISettings] updateAllSettings API response:', response.ok, data)
 
       if (!response.ok) {
         await fetchSettings()

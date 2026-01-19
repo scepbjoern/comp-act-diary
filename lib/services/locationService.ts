@@ -5,6 +5,7 @@
  */
 
 import { prisma } from '@/lib/core/prisma'
+import { logger } from '@/lib/core/logger'
 import { GpsSource, PoiType, Prisma } from '@prisma/client'
 import type { GeoJsonPolygon } from '@/lib/validators/location'
 import type { MapboxGeocodeResult } from './mapboxService'
@@ -457,7 +458,7 @@ export async function updatePointWithGeocodeResult(
 
       return { locationId, visitId }
     } catch (error) {
-      console.error('Error creating Location/Visit:', error)
+      logger.error({ error }, 'Error creating Location/Visit')
       // Don't fail the whole operation if Location/Visit creation fails
     }
   }

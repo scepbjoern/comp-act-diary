@@ -177,6 +177,7 @@ lib/
 - First Load JS: 104 kB (✅ gut)
 - Grösste Seiten: /settings (147 kB), /prm/new (139 kB)
 - Keine kritischen Probleme gefunden
+- Bundle Analyzer wieder deaktiviert (läuft nicht mehr bei jedem Build)
 
 ### 5. Loading States & Suspense ✅
 **Status:** Abgeschlossen (2026-01-19)
@@ -196,14 +197,32 @@ lib/
 
 ## PHASE 4: Testing & Monitoring
 
-### 1. Structured Logging ⏳
-**Status:** Vorschlag erstellt - Pino empfohlen
+### 1. Structured Logging ✅
+**Status:** Abgeschlossen (2026-01-19)
 
-### 2. Error Tracking ⏳
-**Status:** Vorschlag erstellt - Sentry empfohlen
+**Implementiert:**
+- `lib/core/logger.ts` mit Pino
+- JSON-Logs in Production, Pretty-Logs in Development
+- Debug-console.logs gelöscht (`useGeneratedImages.ts`, `useAISettings.ts`)
+- Server-seitige Logs ersetzt in:
+  - `lib/media/ocr.ts`
+  - `lib/services/imageGenerationService.ts`
+  - `lib/services/journalAIService.ts`
+  - `lib/services/locationService.ts`
+  - `lib/services/searchService.ts`
+  - `lib/services/mapboxService.ts`
 
-### 3. Performance Monitoring ⏳
-**Status:** Vorschlag erstellt - Pino-basierte Metriken empfohlen
+**Hinweis:** Client-seitige `console.error` in Hooks bleiben, da Pino im Browser nicht optimal funktioniert.
+
+### 2. Error Tracking ⏭️
+**Status:** Bewusst nicht implementiert
+
+**Begründung:** Für Single-User App nicht erforderlich.
+
+### 3. Performance Monitoring ⏭️
+**Status:** Bewusst nicht implementiert
+
+**Begründung:** Für Single-User App nicht erforderlich.
 
 ---
 

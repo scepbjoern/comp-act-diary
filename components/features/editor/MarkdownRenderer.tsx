@@ -24,9 +24,7 @@ interface MarkdownRendererProps {
 }
 
 // Plugin to handle custom directives
-// Using eslint-disable for remark/unist library types which are complex and not fully exported
 function remarkCustomDirectives() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (tree: unknown) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     visit(tree as any, (node: any) => {

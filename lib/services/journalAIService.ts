@@ -4,6 +4,7 @@
  */
 
 import { PrismaClient } from '@prisma/client'
+import { logger } from '@/lib/core/logger'
 import Together from 'together-ai'
 import OpenAI from 'openai'
 import {
@@ -658,7 +659,7 @@ export class JournalAIService {
             }
           } catch (stepError) {
             // Continue with other steps even if one fails
-            console.error(`Step ${step} failed for entry ${entry.id}:`, stepError)
+            logger.error({ step, entryId: entry.id, error: stepError }, 'Pipeline step failed')
           }
         }
 

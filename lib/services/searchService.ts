@@ -3,7 +3,8 @@
  * Uses PostgreSQL FTS with pg_trgm for typo tolerance.
  */
 import { Prisma } from '@prisma/client';
-import { getPrisma } from '@/lib/core/prisma';
+import { getPrisma } from '@/lib/core/prisma'
+import { logger } from '@/lib/core/logger';
 import {
   sanitizeSearchTerm,
   buildTsQuery,
@@ -223,7 +224,7 @@ export class SearchService {
         items,
       };
     } catch (error) {
-      console.error(`Search error for ${type}:`, error);
+      logger.error({ type, error }, 'Search error');
       return null;
     }
   }

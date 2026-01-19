@@ -116,14 +116,8 @@ export function useGeneratedImages(
           credentials: 'same-origin',
           body: JSON.stringify(requestBody),
         })
-        
-        // DEBUG: Log response details
-        console.log('Fetch response status:', res.status)
-        console.log('Fetch response ok:', res.ok)
-        console.log('Fetch response headers:', Object.fromEntries(res.headers.entries()))
 
         const data = await res.json()
-        console.log('Response data:', data)
 
         if (!res.ok) {
           const errorMsg = typeof data.details === 'object' ? JSON.stringify(data.details) : (data.details || data.error || 'Bildgenerierung fehlgeschlagen')

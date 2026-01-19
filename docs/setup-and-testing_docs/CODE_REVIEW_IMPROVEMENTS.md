@@ -393,19 +393,19 @@ logger.error('API error', { error, endpoint, userId })
 
 ---
 
-### 7.2 Error Tracking ⭐ PRIORITÄT MITTEL
+### 7.2 Error Tracking ⏭️ BEWUSST NICHT IMPLEMENTIERT
 
-**Empfehlung:** Sentry Integration für Production Errors
+**Begründung:** Für Single-User App mit Docker-Deployment nicht erforderlich. Bei Bedarf später mit Sentry nachrüstbar.
 
-**Aufwand:** 2-3 Stunden | **Risiko:** Niedrig
+~~**Aufwand:** 2-3 Stunden | **Risiko:** Niedrig~~
 
 ---
 
-### 7.3 Performance Monitoring ⭐ PRIORITÄT NIEDRIG
+### 7.3 Performance Monitoring ⏭️ BEWUSST NICHT IMPLEMENTIERT
 
-**Empfehlung:** Vercel Analytics oder Custom Metrics für Core Web Vitals
+**Begründung:** Für Single-User App nicht erforderlich. Pino-basierte Request-Metriken bei Bedarf erweiterbar.
 
-**Aufwand:** 2-3 Stunden | **Risiko:** Niedrig
+~~**Aufwand:** 2-3 Stunden | **Risiko:** Niedrig~~
 
 ---
 

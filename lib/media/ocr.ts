@@ -4,6 +4,7 @@
  */
 
 import { Mistral } from '@mistralai/mistralai'
+import { logger } from '@/lib/core/logger'
 
 // OCR model to use
 export const OCR_MODEL = 'mistral-ocr-latest'
@@ -140,7 +141,7 @@ export async function extractTextFromImage(
   mimeType: string,
   options: OcrOptions = {}
 ): Promise<OcrResult> {
-  console.warn(`[OCR] Extracting text from image (${mimeType}, ${imageBuffer.length} bytes)`)
+  logger.info({ mimeType, size: imageBuffer.length }, '[OCR] Extracting text from image')
 
   if (!isImageType(mimeType)) {
     throw new Error(`Unsupported image type: ${mimeType}`)
@@ -159,7 +160,7 @@ export async function extractTextFromImage(
       includeImageBase64: options.includeImages ?? false,
     })
 
-    console.warn(`[OCR] Image processed successfully`)
+    logger.info('[OCR] Image processed successfully')
 
     // Extract pages from response
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -191,7 +192,7 @@ export async function extractTextFromImage(
       },
     }
   } catch (error) {
-    console.error('[OCR] Image extraction failed:', error)
+    logger.error({ error }, '[OCR] Image extraction failed')
     throw new Error(
       `OCR extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`
     )
@@ -205,9 +206,9 @@ export async function extractTextFromPDF(
   pdfBuffer: Buffer,
   options: OcrOptions = {}
 ): Promise<OcrResult> {
-  console.warn(`[OCR] Extracting text from PDF (${pdfBuffer.length} bytes)`)
+  logger.info({ size: pdfBuffer.length }, '[OCR] Extracting text from PDF')
   if (options.pages) {
-    console.warn(`[OCR] Page selection: ${options.pages.join(', ')}`)
+    logger.info({ pages: options.pages }, '[OCR] Page selection')
   }
 
   const client = getMistralClient()
@@ -237,13 +238,13 @@ export async function extractTextFromPDF(
 
     const response = await client.ocr.process(requestOptions)
 
-    console.warn(`[OCR] PDF processed successfully, ${response.pages?.length || 0} pages`)
+    logger.info({ pageCount: response.pages?.length || 0 }, '[OCR] PDF processed successfully')
 
     // Extract pages from response
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pages: OcrPage[] = (response.pages || []).map((page: any, index: number) => {
-      console.warn(`[OCR PDF] Page ${index} raw markdown (first 500 chars):`, (page.markdown || '').substring(0, 500))
-      console.warn(`[OCR PDF] Page ${index} has ${page.images?.length || 0} images, ${page.tables?.length || 0} tables`)
+      logger.debug({ pageIndex: index, markdownPreview: (page.markdown || '').substring(0, 200) }, '[OCR PDF] Page raw markdown')
+      logger.debug({ pageIndex: index, imageCount: page.images?.length || 0, tableCount: page.tables?.length || 0 }, '[OCR PDF] Page content')
       const images = extractImages(page)
       const tables = extractTables(page)
       const rawMarkdown = page.markdown || ''
@@ -278,7 +279,7 @@ export async function extractTextFromPDF(
       },
     }
   } catch (error) {
-    console.error('[OCR] PDF extraction failed:', error)
+    logger.error({ error }, '[OCR] PDF extraction failed')
     throw new Error(
       `OCR extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`
     )
@@ -293,7 +294,7 @@ export async function extractTextFromFiles(
   files: OcrFileInput[],
   options: OcrOptions = {}
 ): Promise<OcrResult> {
-  console.warn(`[OCR] Processing ${files.length} files`)
+  logger.info({ fileCount: files.length }, '[OCR] Processing files')
 
   if (files.length === 0) {
     throw new Error('No files provided')
@@ -308,7 +309,7 @@ export async function extractTextFromFiles(
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i]
-    console.warn(`[OCR] Processing file ${i + 1}/${files.length}: ${file.filename}`)
+    logger.info({ fileIndex: i + 1, totalFiles: files.length, filename: file.filename }, '[OCR] Processing file')
 
     try {
       let result: OcrResult
@@ -324,7 +325,7 @@ export async function extractTextFromFiles(
       results.push(result)
     } catch (error) {
       const errorMsg = `Error processing ${file.filename}: ${error instanceof Error ? error.message : 'Unknown error'}`
-      console.error(`[OCR] ${errorMsg}`)
+      logger.error({ error: errorMsg }, '[OCR] File processing failed')
       errors.push(errorMsg)
     }
   }
@@ -363,9 +364,7 @@ export async function extractTextFromFiles(
     tokensUsed: results.reduce((sum, r) => sum + r.usageInfo.tokensUsed, 0),
   }
 
-  console.warn(
-    `[OCR] Completed: ${results.length}/${files.length} files, ${totalUsage.pagesProcessed} pages`
-  )
+  logger.info({ completedFiles: results.length, totalFiles: files.length, pagesProcessed: totalUsage.pagesProcessed }, '[OCR] Completed')
 
   return {
     text: combinedText,

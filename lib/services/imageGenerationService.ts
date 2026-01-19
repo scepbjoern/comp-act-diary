@@ -4,6 +4,7 @@
  */
 
 import { PrismaClient } from '@prisma/client'
+import { logger } from '@/lib/core/logger'
 import Together from 'together-ai'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
@@ -141,7 +142,7 @@ export class ImageGenerationService {
         assetId: asset.id,
       }
     } catch (error) {
-      console.error('[ImageGenerationService] generateImage failed:', error)
+      logger.error({ error }, '[ImageGenerationService] generateImage failed')
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -298,7 +299,7 @@ export class ImageGenerationService {
 
       return true
     } catch (error) {
-      console.error('[ImageGenerationService] deleteImage failed:', error)
+      logger.error({ error }, '[ImageGenerationService] deleteImage failed')
       return false
     }
   }

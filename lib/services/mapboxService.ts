@@ -5,6 +5,7 @@
  */
 
 import { PoiType } from '@prisma/client'
+import { logger } from '@/lib/core/logger'
 
 // =============================================================================
 // TYPES
@@ -383,7 +384,7 @@ export async function reverseGeocodeSingle(
   // Debug logging - show URL without token for security
   if (DEBUG_MAPBOX) {
     const debugUrl = url.replace(accessToken, 'TOKEN_HIDDEN')
-    console.warn('[Mapbox] Single reverse geocode URL:', debugUrl)
+    logger.debug({ url: debugUrl }, '[Mapbox] Single reverse geocode URL')
   }
 
   try {
@@ -396,8 +397,7 @@ export async function reverseGeocodeSingle(
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Mapbox API error:', response.status, errorText)
-      console.error('[Mapbox] Failed URL (without token):', url.replace(accessToken, 'TOKEN_HIDDEN'))
+      logger.error({ status: response.status, error: errorText }, '[Mapbox] API error')
       return {
         success: false,
         confidence: 'low',
@@ -421,7 +421,7 @@ export async function reverseGeocodeSingle(
     return parseFeature(data.features[0])
 
   } catch (error) {
-    console.error('Mapbox geocoding error:', error)
+    logger.error({ error }, '[Mapbox] Geocoding error')
     return {
       success: false,
       confidence: 'low',
@@ -452,7 +452,7 @@ async function reverseGeocodeWithSearchBox(
   
   if (DEBUG_MAPBOX) {
     const debugUrl = url.replace(accessToken, 'TOKEN_HIDDEN')
-    console.warn('[Mapbox] Search Box reverse lookup URL:', debugUrl)
+    logger.debug({ url: debugUrl }, '[Mapbox] Search Box reverse lookup URL')
   }
 
   try {
@@ -465,8 +465,7 @@ async function reverseGeocodeWithSearchBox(
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Mapbox Search Box API error:', response.status, errorText)
-      console.error('[Mapbox] Failed URL (without token):', url.replace(accessToken, 'TOKEN_HIDDEN'))
+      logger.error({ status: response.status, error: errorText }, '[Mapbox] Search Box API error')
       return {
         success: false,
         confidence: 'low',
@@ -490,7 +489,7 @@ async function reverseGeocodeWithSearchBox(
     return parseSearchBoxFeature(data.features[0])
 
   } catch (error) {
-    console.error('Mapbox Search Box error:', error)
+    logger.error({ error }, '[Mapbox] Search Box error')
     return {
       success: false,
       confidence: 'low',
@@ -557,8 +556,7 @@ export async function reverseGeocodeBatch(
   
   // Debug logging
   if (DEBUG_MAPBOX) {
-    console.warn('[Mapbox] Batch geocode URL:', url.replace(accessToken, 'TOKEN_HIDDEN'))
-    console.warn('[Mapbox] Batch size:', points.length, 'points')
+    logger.debug({ batchSize: points.length }, '[Mapbox] Batch geocode request')
   }
 
   // Build batch request body
@@ -581,8 +579,7 @@ export async function reverseGeocodeBatch(
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Mapbox Batch API error:', response.status, errorText)
-      console.error('[Mapbox] Failed batch URL (without token):', url.replace(accessToken, 'TOKEN_HIDDEN'))
+      logger.error({ status: response.status, error: errorText }, '[Mapbox] Batch API error')
       
       // Return error for all points
       return {
@@ -635,7 +632,7 @@ export async function reverseGeocodeBatch(
     }
 
   } catch (error) {
-    console.error('Mapbox batch geocoding error:', error)
+    logger.error({ error }, '[Mapbox] Batch geocoding error')
     
     // Return error for all points
     return {
