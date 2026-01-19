@@ -3,6 +3,7 @@
 Dieses Dokument beschreibt die finale Architektur des Datenmodells für die Comp-ACT-Diary Applikation. Es dient als Referenz für zukünftige Entwicklung und dokumentiert die getroffenen Architektur-Entscheidungen.
 
 *Erstellt: Dezember 2024*
+*Aktualisiert: Januar 2025*
 
 ---
 
@@ -83,14 +84,29 @@ Dieses Dokument beschreibt die finale Architektur des Datenmodells für die Comp
           ┌───────────────────┐   ┌───────────────────┐   ┌───────────────────┐
           │    EXERCISES      │   │    SONSTIGES      │   │   QUERSCHNITT     │
           │  ───────────────  │   │  ───────────────  │   │  ───────────────  │
-          │                   │   │                   │   │                   │
-          │  ExerciseDefin.   │   │  InventoryItem    │   │  EntityLink       │
-          │      │            │   │  Bookmark         │   │  Embedding        │
-          │      ▼            │   │  TimeTrackingEntry│   │  Trash            │
-          │  ExerciseSession  │   │  CalendarEvent    │   │                   │
+          │  ExerciseDefin.   │   │                   │   │                   │
+          │      │            │   │  InventoryItem    │   │  EntityLink       │
+          │      ▼            │   │  Bookmark         │   │  Embedding        │
+          │  ExerciseSession  │   │  TimeTrackingEntry│   │  Trash            │
+          │                   │   │  CalendarEvent    │   │  GeneratedImage   │
           │                   │   │  Consumption      │   │                   │
-          └───────────────────┘   │  ChatMethod       │   │                   │
-                                  └───────────────────┘   └───────────────────┘
+          │                   │   │  ChatMethod       │   │                   │
+          │                   │   │  ImprovementPrompt│   │                   │
+          │                   │   │  LlmModel         │   │                   │
+          │                   │   │  Task             │   │                   │
+          │                   │   │  Notification     │   │                   │
+          └───────────────────┘   └───────────────────┘   └───────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                               LOCATION TRACKING                                          │
+├─────────────────────────────────────────────────────────────────────────────────────────┤
+│  RawGpsPoint (lat, lng, source, geocodedAt?, locationId?)                               │
+│  LocationWebhookToken (tokenHash, deviceName, isActive)                                 │
+├─────────────────────────────────────────────────────────────────────────────────────────┤
+│                         BENUTZERUEBERGREIFENDE FREIGABE                                 │
+├─────────────────────────────────────────────────────────────────────────────────────────┤
+│  JournalEntryAccess (journalEntryId, userId, role: VIEWER/EDITOR)                       │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -118,7 +134,8 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 │     ├── Consumption.id = Entity.id (1:1)                                               │
 │     ├── InventoryItem.id = Entity.id (1:1)                                             │
 │     ├── TimeTrackingEntry.id = Entity.id (1:1)                                         │
-│     └── Bookmark.id = Entity.id (1:1)                                                  │
+│     ├── Bookmark.id = Entity.id (1:1)                                                  │
+│     └── TimeBox.id = Entity.id (1:1) [NEU: TIMEBOX EntityType]                         │
 │                                                                                         │
 │  Polymorphe Tabellen referenzieren Entity.id (echter FK):                              │
 │     ├── Tagging.entityId → Entity.id                                                   │
@@ -126,7 +143,8 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 │     ├── EntityLink.sourceId/targetId → Entity.id                                       │
 │     ├── ExternalSync.entityId → Entity.id                                              │
 │     ├── Embedding.entityId → Entity.id                                                 │
-│     └── EntryTimeBox.entityId → Entity.id                                              │
+│     ├── EntryTimeBox.entityId → Entity.id                                              │
+│     └── GeneratedImage.entityId → Entity.id                                            │
 │                                                                                         │
 └─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -156,7 +174,8 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 |---------|---------------------|-------------|
 | **JournalEntryType** | id, userId?, code, name, icon, defaultTemplateId, sortOrder | 1:N zu JournalEntry, N:1 zu JournalTemplate |
 | **JournalTemplate** | id, userId?, name, prompts (Json), origin | 1:N zu JournalEntry, 1:N zu JournalEntryType |
-| **JournalEntry** | id (=Entity.id), userId, typeId, templateId?, timeBoxId, title?, content, aiSummary?, isSensitive | N:1 zu TimeBox, Type, Template |
+| **JournalEntry** | id (=Entity.id), userId, typeId, templateId?, timeBoxId, **locationId?**, title?, content, **originalTranscript?**, aiSummary?, **analysis?**, **contentUpdatedAt?**, isSensitive, **deletedAt?**, **occurredAt?**, **capturedAt?** | N:1 zu TimeBox, Type, Template, **Location**, 1:N zu JournalEntryAccess |
+| **JournalEntryAccess** | id, journalEntryId, userId, role (VIEWER/EDITOR), grantedByUserId? | N:1 zu JournalEntry, N:1 zu User |
 
 ### 3.4 ACT-Domäne
 
@@ -179,25 +198,26 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 
 | Entität | Wichtigste Attribute | Beziehungen |
 |---------|---------------------|-------------|
-| **Taxonomy** | id, userId, parentId?, slug, shortName, longName?, description?, icon?, imageUrl?, kind (CATEGORY/TAG/EMOTION/TOPIC/TRAIT/LIFE_AREA), origin (SYSTEM/USER/IMPORT/AI), isArchived, sortOrder | Hierarchisch, 1:N zu Tagging |
+| **Taxonomy** | id, userId, parentId?, slug, shortName, longName?, description?, icon?, imageUrl?, kind (CATEGORY/TAG/EMOTION/TOPIC/TRAIT/LIFE_AREA/**CONTACT_GROUP**), origin (SYSTEM/USER/IMPORT/AI), isArchived, sortOrder | Hierarchisch, 1:N zu Tagging |
 | **Tagging** | id, taxonomyId, entityId (→Entity), userId, source (USER/AI/IMPORT), confidence? | N:1 zu Taxonomy, N:1 zu Entity |
 
 ### 3.7 Personen & Orte
 
 | Entität | Wichtigste Attribute | Beziehungen |
 |---------|---------------------|-------------|
-| **Contact** | id (=Entity.id), userId, slug, name, nickname?, email?, phone?, notes?, birthday?, firstMetAt?, relationshipLevel?, isArchived, **locationId?** | 1:N zu PersonRelation, 1:N zu Interaction, **N:1 zu Location (Wohnort)** |
+| **Contact** | id (=Entity.id), userId, slug, name, **givenName?, familyName?**, nickname?, **emailPrivate?, emailWork?, phonePrivate?, phoneWork?, addressHome?, addressWork?, company?, jobTitle?**, notes?, birthday?, firstMetAt?, relationshipLevel?, isArchived, **isFavorite**, locationId?, **websiteUrl?, socialUrls (Json)?, googleResourceName?, googleEtag?, photoUrl?, namesToDetectAsMention[]** | 1:N zu PersonRelation, 1:N zu Interaction, 1:N zu Task, N:1 zu Location |
 | **PersonRelation** | id, personAId, personBId, relationType, validFrom?, validTo? | N:1 zu Contact (beide Seiten) |
-| **Interaction** | id, contactId, userId, timeBoxId?, kind (Enum: GENERAL/CALL/VIDEO/MEETING/MESSAGE/EMAIL/LETTER/SOCIAL), notes?, occurredAt | N:1 zu Contact, N:1 zu TimeBox |
-| **Location** | id (=Entity.id), userId, slug, name, lat?, lng?, address?, country?, city?, poiType (Enum: HOME/WORK/RESTAURANT/...), isFavorite, notes? | **1:N zu Contact, 1:N zu LocationVisit** |
+| **Interaction** | id, contactId, userId, timeBoxId?, **journalEntryId?**, kind (Enum: GENERAL/CALL/VIDEO/MEETING/MESSAGE/EMAIL/LETTER/SOCIAL/**MENTION**), notes?, occurredAt | N:1 zu Contact, N:1 zu TimeBox, **N:1 zu JournalEntry** |
+| **Location** | id (=Entity.id), userId, slug, name, lat?, lng?, address?, country?, city?, poiType (Enum: HOME/WORK/RESTAURANT/...), isFavorite, notes? | 1:N zu Contact, 1:N zu LocationVisit, **1:N zu RawGpsPoint, 1:N zu JournalEntry** |
 | **LocationVisit** | id, userId, locationId, timeBoxId, journalEntryId?, arrivedAt?, departedAt?, notes? | **N:1 zu Location, N:1 zu TimeBox, N:1 zu JournalEntry (optional)** |
 
 ### 3.8 Medien
 
 | Entität | Wichtigste Attribute | Beziehungen |
 |---------|---------------------|-------------|
-| **MediaAsset** | id (=Entity.id), userId, thumbnailData (Bytes)?, mimeType, width?, height?, duration?, externalProvider?, externalId?, externalUrl?, thumbnailUrl?, capturedAt? | 1:N zu MediaAttachment |
-| **MediaAttachment** | id, assetId, entityId (→Entity), userId, role (COVER/GALLERY/ATTACHMENT), displayOrder, timeBoxId? | N:1 zu MediaAsset, N:1 zu Entity |
+| **MediaAsset** | id (=Entity.id), userId, **filePath?**, thumbnailData (Bytes)?, mimeType, width?, height?, duration?, externalProvider?, externalId?, externalUrl?, thumbnailUrl?, capturedAt?, **ocrText?, ocrMetadata (Json)?, ocrStatus (Enum)?, ocrProcessedAt?** | 1:N zu MediaAttachment, **1:1 zu GeneratedImage** |
+| **MediaAttachment** | id, assetId, entityId (→Entity), userId, role (COVER/GALLERY/ATTACHMENT/**THUMBNAIL/SOURCE**), displayOrder, timeBoxId? | N:1 zu MediaAsset, N:1 zu Entity |
+| **GeneratedImage** | id, userId, entityId (→Entity), assetId, model, prompt, aspectRatio, steps, displayOrder | N:1 zu Entity, N:1 zu MediaAsset |
 
 ### 3.9 Messwerte
 
@@ -210,7 +230,7 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 
 | Entität | Wichtigste Attribute | Beziehungen |
 |---------|---------------------|-------------|
-| **SyncProvider** | id, userId, provider (Enum), credentialsEncrypted, settings (Json), isActive, lastSyncAt? | 1:N zu SyncRun, 1:N zu ExternalSync |
+| **SyncProvider** | id, userId, provider (Enum: PHOTOPRISM/SAMSUNG_GALLERY/TOGGL/GOOGLE_CALENDAR/APPLE_CALENDAR/SPOTIFY/LAST_FM/GOOGLE_CONTACTS/GOOGLE_TIMELINE), credentialsEncrypted, settings (Json), **syncToken?**, isActive, lastSyncAt?, **lastImportedDataAt?** | 1:N zu SyncRun, 1:N zu ExternalSync |
 | **SyncRun** | id, providerId, startedAt, finishedAt?, status, itemsProcessed, itemsCreated, itemsUpdated, itemsSkipped, errors (Json)? | N:1 zu SyncProvider |
 | **ExternalSync** | id, providerId, entityId (→Entity), externalId, externalUrl?, syncPayload (Json)?, lastSyncedAt | N:1 zu SyncProvider, N:1 zu Entity |
 | **TimeTrackingEntry** | id (=Entity.id), userId, externalSyncId?, timeBoxId?, project?, task?, description?, startedAt, endedAt?, duration | N:1 zu ExternalSync |
@@ -222,6 +242,8 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 | Entität | Wichtigste Attribute | Beziehungen |
 |---------|---------------------|-------------|
 | **ChatMethod** | id, userId, name, description?, systemPrompt, icon?, imageUrl?, createdAt, updatedAt | N:1 zu User |
+| **ImprovementPrompt** | id, userId, name, prompt, isSystem, sortOrder | N:1 zu User |
+| **LlmModel** | id, userId, modelId, name, provider, inputCost?, outputCost?, url?, bestFor?, supportsReasoningEffort, defaultReasoningEffort?, sortOrder | N:1 zu User |
 
 ### 3.12 Sonstiges
 
@@ -232,6 +254,20 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 | **EntityLink** | id, sourceId (→Entity), targetId (→Entity), userId, linkKind? | N:1 zu Entity (beide Seiten) |
 | **Embedding** | id, entityId (→Entity), userId, modelId, chunkIndex, vector, contentHash | N:1 zu Entity |
 | **Trash** | id, userId, entityType, entityId, entityTitle, entityData (Json), schemaVersion, deletedAt | - |
+
+### 3.13 Location Tracking
+
+| Entität | Wichtigste Attribute | Beziehungen |
+|---------|---------------------|-------------|
+| **RawGpsPoint** | id, userId, lat, lng, accuracy?, altitude?, velocity?, battery?, batteryState?, trackerId?, topic?, source (OWNTRACKS/GOOGLE_IMPORT/MANUAL), rawPayload (Json)?, capturedAt, geocodedAt?, geocodedName?, geocodedAddress?, geocodedConfidence?, mapboxPlaceId?, geocodeOverridden, geocodeError?, locationId?, visitCreated | N:1 zu User, N:1 zu Location |
+| **LocationWebhookToken** | id, userId, tokenHash, deviceName, isActive, lastUsedAt? | N:1 zu User |
+
+### 3.14 Aufgaben & Benachrichtigungen
+
+| Entität | Wichtigste Attribute | Beziehungen |
+|---------|---------------------|-------------|
+| **Task** | id, userId, entityId?, contactId?, title, description?, dueDate?, status (PENDING/COMPLETED/CANCELLED), completedAt? | N:1 zu User, N:1 zu Contact |
+| **Notification** | id, userId, type (GENERAL/BIRTHDAY_REMINDER/SYNC_CONFLICT/SYNC_ERROR/CONTACT_MATCH_REQUIRED), title, message?, data (Json)?, isRead, archivedAt? | N:1 zu User |
 
 ---
 
@@ -281,7 +317,7 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 
 ### 4.5 Taxonomy statt Tag
 
-**Entscheidung:** Eine selbstreferenzierende `Taxonomy`-Tabelle mit `kind`-Enum (CATEGORY/TAG/EMOTION/TOPIC/TRAIT/LIFE_AREA) und `origin`-Enum (SYSTEM/USER/IMPORT/AI).
+**Entscheidung:** Eine selbstreferenzierende `Taxonomy`-Tabelle mit `kind`-Enum (CATEGORY/TAG/EMOTION/TOPIC/TRAIT/LIFE_AREA/CONTACT_GROUP) und `origin`-Enum (SYSTEM/USER/IMPORT/AI).
 
 **Begründung:**
 - Einheitliches System für alle Klassifikationen
@@ -365,11 +401,52 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 **Entscheidung:** Verwendung von Prisma-Enums für Felder mit begrenztem, stabilen Wertebereich.
 
 **Begründung:**
-- `InteractionKind`: GENERAL, CALL, VIDEO, MEETING, MESSAGE, EMAIL, LETTER, SOCIAL
+- `InteractionKind`: GENERAL, CALL, VIDEO, MEETING, MESSAGE, EMAIL, LETTER, SOCIAL, MENTION
 - `PoiType`: HOME, WORK, RESTAURANT, SHOP, LANDMARK, TRANSPORT, NATURE, SPORT, HEALTH, OTHER
 - Type-Safety auf DB- und Application-Ebene
 - Verhindert Tippfehler und inkonsistente Daten
 - Migrationen nur bei echten Schema-Änderungen nötig
+
+### 4.14 Location Tracking mit On-Demand Geocoding (NEU)
+
+**Entscheidung:** `RawGpsPoint` speichert GPS-Daten vor Geocoding. Geocoding erfolgt nicht automatisch, sondern muss vom User explizit ausgelöst werden.
+
+**Begründung:**
+- Kostenkontrolle: Mapbox-Geocoding-API verursacht Kosten pro Request
+- User-Kontrolle: Entscheidung, welche Punkte geocoded werden sollen
+- Batch-Verarbeitung: Viele Punkte effizient auf einmal geocoden
+- `geocodedAt`, `geocodedName`, `mapboxPlaceId` für Geocoding-Ergebnisse
+- `locationId` für Zuordnung zu existierenden Locations
+
+### 4.15 Benutzerübergreifende Freigabe (NEU)
+
+**Entscheidung:** `JournalEntryAccess` ermöglicht Freigabe von Journal-Einträgen an andere User mit Rollen (VIEWER/EDITOR).
+
+**Begründung:**
+- Gemeinsame Einträge für Paare/Familien möglich
+- VIEWER kann nur lesen, EDITOR kann bearbeiten
+- `grantedByUserId` für Audit-Trail
+- Soft-Delete via `deletedAt` auf JournalEntry verhindert Datenverlust bei geteilten Einträgen
+
+### 4.16 OCR für Medien-Assets (NEU)
+
+**Entscheidung:** `MediaAsset` hat optionale OCR-Felder (`ocrText`, `ocrStatus`, `ocrMetadata`). OCR-Verarbeitung erfolgt asynchron.
+
+**Begründung:**
+- Volltextsuche in Bildern und PDFs möglich
+- `ocrStatus` für Verarbeitungsstatus (PENDING, PROCESSING, COMPLETED, FAILED, SKIPPED)
+- `ocrMetadata` für strukturierte Daten (Seitenzahl, Konfidenz, etc.)
+- `MediaRole.SOURCE` markiert OCR-Quelldateien
+
+### 4.17 KI-Bildgenerierung (NEU)
+
+**Entscheidung:** `GeneratedImage` verknüpft KI-generierte Bilder mit Entities und speichert Generierungsparameter.
+
+**Begründung:**
+- Reproduzierbarkeit: `model`, `prompt`, `aspectRatio`, `steps` gespeichert
+- Persistenz: Verknüpfung mit `MediaAsset` für lokale Speicherung
+- Polymorph: `entityId` ermöglicht Bilder für beliebige Entities (Tage, Reflexionen, etc.)
+- Sortierung: `displayOrder` für Galerie-Ansicht
 
 ---
 
@@ -425,6 +502,7 @@ enum EntityType {
   INVENTORY_ITEM
   TIME_TRACKING_ENTRY
   BOOKMARK
+  TIMEBOX              // NEU: TimeBox als Entity
 }
 
 enum TimeBoxKind {
@@ -442,6 +520,7 @@ enum TaxonomyKind {
   TOPIC
   TRAIT
   LIFE_AREA
+  CONTACT_GROUP        // NEU: Google Contact Groups
 }
 
 enum TaxonomyOrigin {
@@ -487,6 +566,15 @@ enum MediaRole {
   GALLERY
   ATTACHMENT
   THUMBNAIL
+  SOURCE               // NEU: OCR-Quelldatei
+}
+
+enum OcrStatus {       // NEU
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  SKIPPED
 }
 
 enum ConsumptionKind {
@@ -510,6 +598,75 @@ enum MeasurementSource {
   MANUAL
   IMPORT
   DEVICE
+}
+
+enum SyncStatus {      // NEU
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum SyncProviderType { // NEU
+  PHOTOPRISM
+  SAMSUNG_GALLERY
+  TOGGL
+  GOOGLE_CALENDAR
+  APPLE_CALENDAR
+  SPOTIFY
+  LAST_FM
+  GOOGLE_CONTACTS
+  GOOGLE_TIMELINE
+}
+
+enum InteractionKind { // NEU (war nur Kommentar)
+  GENERAL
+  CALL
+  VIDEO
+  MEETING
+  MESSAGE
+  EMAIL
+  LETTER
+  SOCIAL
+  MENTION              // NEU: Journal-Erwähnung
+}
+
+enum PoiType {         // NEU (war nur Kommentar)
+  HOME
+  WORK
+  RESTAURANT
+  SHOP
+  LANDMARK
+  TRANSPORT
+  NATURE
+  SPORT
+  HEALTH
+  OTHER
+}
+
+enum GpsSource {       // NEU
+  OWNTRACKS
+  GOOGLE_IMPORT
+  MANUAL
+}
+
+enum TaskStatus {      // NEU
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType { // NEU
+  GENERAL
+  BIRTHDAY_REMINDER
+  SYNC_CONFLICT
+  SYNC_ERROR
+  CONTACT_MATCH_REQUIRED
+}
+
+enum JournalEntryAccessRole { // NEU
+  VIEWER
+  EDITOR
 }
 ```
 
