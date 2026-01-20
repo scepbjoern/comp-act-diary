@@ -3,7 +3,7 @@
 Dieses Dokument beschreibt die finale Architektur des Datenmodells für die Comp-ACT-Diary Applikation. Es dient als Referenz für zukünftige Entwicklung und dokumentiert die getroffenen Architektur-Entscheidungen.
 
 *Erstellt: Dezember 2024*
-*Aktualisiert: Januar 2025*
+*Aktualisiert: Januar 2026*
 
 ---
 
@@ -101,7 +101,8 @@ Dieses Dokument beschreibt die finale Architektur des Datenmodells für die Comp
 │                               LOCATION TRACKING                                          │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │  RawGpsPoint (lat, lng, source, geocodedAt?, locationId?)                               │
-│  LocationWebhookToken (tokenHash, deviceName, isActive)                                 │
+│  WebhookToken (providerType, tokenHash, deviceName, isActive)                           │
+│  MatchPattern (sourceType, targetType, pattern, targetId, priority)                     │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │                         BENUTZERUEBERGREIFENDE FREIGABE                                 │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤
@@ -234,7 +235,7 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 | **SyncRun** | id, providerId, startedAt, finishedAt?, status, itemsProcessed, itemsCreated, itemsUpdated, itemsSkipped, errors (Json)? | N:1 zu SyncProvider |
 | **ExternalSync** | id, providerId, entityId (→Entity), externalId, externalUrl?, syncPayload (Json)?, lastSyncedAt | N:1 zu SyncProvider, N:1 zu Entity |
 | **TimeTrackingEntry** | id (=Entity.id), userId, externalSyncId?, timeBoxId?, project?, task?, description?, startedAt, endedAt?, duration | N:1 zu ExternalSync |
-| **CalendarEvent** | id (=Entity.id), userId, externalSyncId?, title, description?, startedAt, endedAt?, isAllDay, location? | N:1 zu ExternalSync |
+| **CalendarEvent** | id (=Entity.id), userId, externalSyncId?, title, description?, startedAt, endedAt?, isAllDay, location?, **sourceCalendar?**, **sourceEventId?**, **timezone?**, **locationId?** | N:1 zu ExternalSync, **N:1 zu Location**, N:1 zu TimeBox |
 | **Consumption** | id (=Entity.id), userId, kind (MUSIC/MOVIE/BOOK/PODCAST/GAME/...), title, artist?, externalId?, timeBoxId?, occurredAt | N:1 zu TimeBox |
 
 ### 3.11 KI-Assistenten
@@ -255,12 +256,13 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 | **Embedding** | id, entityId (→Entity), userId, modelId, chunkIndex, vector, contentHash | N:1 zu Entity |
 | **Trash** | id, userId, entityType, entityId, entityTitle, entityData (Json), schemaVersion, deletedAt | - |
 
-### 3.13 Location Tracking
+### 3.13 Location Tracking & Webhook-Tokens
 
 | Entität | Wichtigste Attribute | Beziehungen |
 |---------|---------------------|-------------|
 | **RawGpsPoint** | id, userId, lat, lng, accuracy?, altitude?, velocity?, battery?, batteryState?, trackerId?, topic?, source (OWNTRACKS/GOOGLE_IMPORT/MANUAL), rawPayload (Json)?, capturedAt, geocodedAt?, geocodedName?, geocodedAddress?, geocodedConfidence?, mapboxPlaceId?, geocodeOverridden, geocodeError?, locationId?, visitCreated | N:1 zu User, N:1 zu Location |
-| **LocationWebhookToken** | id, userId, tokenHash, deviceName, isActive, lastUsedAt? | N:1 zu User |
+| **WebhookToken** | id, userId, **providerType (OWNTRACKS/TASKER_CALENDAR)**, tokenHash, deviceName, isActive, lastUsedAt? | N:1 zu User |
+| **MatchPattern** | id, userId, **sourceType (CALENDAR_LOCATION/JOURNAL_CONTENT/IMPORT_TAG)**, **targetType (LOCATION/CONTACT)**, pattern (Regex), targetId, description?, priority, isActive | N:1 zu User |
 
 ### 3.14 Aufgaben & Benachrichtigungen
 
@@ -617,6 +619,19 @@ enum SyncProviderType { // NEU
   LAST_FM
   GOOGLE_CONTACTS
   GOOGLE_TIMELINE
+  OWNTRACKS            // Webhook-Token für OwnTracks Location Tracking
+  TASKER_CALENDAR      // Webhook-Token für Tasker Kalender-Sync
+}
+
+enum MatchSourceType { // NEU: Quelltyp für MatchPattern
+  CALENDAR_LOCATION    // CalendarEvent.location Feld
+  JOURNAL_CONTENT      // JournalEntry.notes Inhalt
+  IMPORT_TAG           // Tags aus Synchronisationsquellen
+}
+
+enum MatchTargetType { // NEU: Zieltyp für MatchPattern
+  LOCATION             // Verknüpfung zu Location-Entität
+  CONTACT              // Verknüpfung zu Contact-Entität (später)
 }
 
 enum InteractionKind { // NEU (war nur Kommentar)

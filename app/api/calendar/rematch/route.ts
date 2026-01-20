@@ -1,15 +1,18 @@
 /**
- * Single Token Management API
- * DELETE endpoint for deactivating/deleting tokens.
- * Uses generic WebhookToken model.
+ * Calendar Rematch API Route
+ * POST endpoint for re-matching unmatched events against current patterns.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/core/prisma'
-import { deleteWebhookToken } from '@/lib/services/webhookTokenService'
+import { rematchUnmatchedEvents } from '@/lib/services/calendarService'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
 
 async function getCurrentUser(req: NextRequest) {
   const prisma = getPrisma()
@@ -20,37 +23,29 @@ async function getCurrentUser(req: NextRequest) {
 }
 
 // =============================================================================
-// DELETE - Deactivate/delete token
+// POST - Re-match unmatched events
 // =============================================================================
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: NextRequest) {
   try {
-    const user = await getCurrentUser(request)
+    const user = await getCurrentUser(req)
     if (!user) {
       return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 
-    const { id } = await params
+    const result = await rematchUnmatchedEvents(user.id)
 
-    // Delete token using generic service (verifies ownership)
-    const deleted = await deleteWebhookToken(id, user.id)
-
-    if (!deleted) {
-      return NextResponse.json(
-        { error: 'Token nicht gefunden' },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      matched: result.matched,
+      total: result.total,
+      message: `${result.matched} von ${result.total} Events wurden gematcht`,
+    })
 
   } catch (error) {
-    console.error('Error deleting token:', error)
+    console.error('Error re-matching events:', error)
     return NextResponse.json(
-      { error: 'Fehler beim Löschen des Tokens' },
+      { error: 'Fehler beim Re-Matching der Events' },
       { status: 500 }
     )
   }

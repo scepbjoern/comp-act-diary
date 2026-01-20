@@ -1,7 +1,7 @@
 /**
- * Location Webhook Token Management API
- * CRUD operations for OwnTracks authentication tokens.
- * Uses generic WebhookToken with providerType=OWNTRACKS.
+ * Calendar Webhook Token Management API
+ * CRUD operations for TASKER_CALENDAR authentication tokens.
+ * Uses generic WebhookToken with providerType=TASKER_CALENDAR.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -25,7 +25,7 @@ async function getCurrentUser(req: NextRequest) {
 }
 
 // =============================================================================
-// GET - List all OWNTRACKS tokens for user
+// GET - List all TASKER_CALENDAR tokens for user
 // =============================================================================
 
 export async function GET(req: NextRequest) {
@@ -35,11 +35,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 })
     }
 
-    const tokens = await listWebhookTokens(user.id, 'OWNTRACKS')
+    const tokens = await listWebhookTokens(user.id, 'TASKER_CALENDAR')
     return NextResponse.json({ tokens })
 
   } catch (error) {
-    console.error('Error fetching tokens:', error)
+    console.error('Error fetching calendar tokens:', error)
     return NextResponse.json(
       { error: 'Fehler beim Laden der Tokens' },
       { status: 500 }
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 }
 
 // =============================================================================
-// POST - Create new OWNTRACKS token
+// POST - Create new TASKER_CALENDAR token
 // =============================================================================
 
 export async function POST(request: NextRequest) {
@@ -71,8 +71,8 @@ export async function POST(request: NextRequest) {
 
     const { deviceName } = validationResult.data
 
-    // Create token using generic service
-    const result = await createWebhookToken(user.id, deviceName, 'OWNTRACKS')
+    // Create token using generic service with TASKER_CALENDAR provider
+    const result = await createWebhookToken(user.id, deviceName, 'TASKER_CALENDAR')
 
     // Return token - IMPORTANT: Plain token is only shown once!
     return NextResponse.json({
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error creating token:', error)
+    console.error('Error creating calendar token:', error)
     return NextResponse.json(
       { error: 'Fehler beim Erstellen des Tokens' },
       { status: 500 }

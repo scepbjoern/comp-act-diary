@@ -1,6 +1,6 @@
 /**
- * Single Token Management API
- * DELETE endpoint for deactivating/deleting tokens.
+ * Single Calendar Token Management API
+ * DELETE endpoint for deactivating/deleting TASKER_CALENDAR tokens.
  * Uses generic WebhookToken model.
  */
 
@@ -48,7 +48,7 @@ export async function DELETE(
     return NextResponse.json({ success: true })
 
   } catch (error) {
-    console.error('Error deleting token:', error)
+    console.error('Error deleting calendar token:', error)
     return NextResponse.json(
       { error: 'Fehler beim Löschen des Tokens' },
       { status: 500 }

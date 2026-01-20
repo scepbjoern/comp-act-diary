@@ -1130,22 +1130,4 @@ var payload = JSON.stringify(enrichedEvents);
 | Location "SM O1.02" mit Pattern | Wird "SM-Gebäude" zugeordnet |
 | Re-Match nach neuem Pattern | Zuvor ungematchte Events werden gematcht |
 
-### 11.4 Debugging
-
-#### ngrok Request Inspector
-
-Öffne `http://127.0.0.1:4040` im Browser, um:
-- Eingehende Requests zu sehen
-- Request-Headers und -Body zu inspizieren
-- Response-Codes und -Body zu prüfen
-
-#### Häufige Fehler
-
-| Fehler | Ursache | Lösung |
-|--------|---------|--------|
-| `401 Unauthorized` | Token ungültig/falsch | Token prüfen, neu erstellen |
-| `400 Bad Request` | JSON-Format ungültig | JavaScriptlet prüfen |
-| `ngrok: tunnel not found` | ngrok neu gestartet | URL in Tasker aktualisieren |
-| Keine Events | Kalender-Query leer | AutoCalendar-Konfiguration prüfen |
-
 *Dokument erstellt gemäss Feature-Planungs-Prozess (__PROMPT_NEW_FEATURE_PLAN.md)*

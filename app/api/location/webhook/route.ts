@@ -8,81 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPrisma } from '@/lib/core/prisma'
 import { owntracksPayloadSchema, normalizeOwnTracksPayload } from '@/lib/validators/location'
 import { saveRawGpsPoint, matchLocationByCoords } from '@/lib/services/locationService'
-import bcrypt from 'bcryptjs'
-
-// =============================================================================
-// TOKEN VALIDATION
-// =============================================================================
-
-/**
- * Validate webhook authentication from Authorization header.
- * Supports both:
- * - HTTP Basic Auth: "Basic base64(username:password)" (OwnTracks standard)
- * - Bearer Token: "Bearer <token>" (legacy/alternative)
- * 
- * OwnTracks uses HTTP Basic Auth where:
- * - username = device name or user identifier
- * - password = the token created in the app
- */
-async function validateAuth(authHeader: string | null): Promise<string | null> {
-  if (!authHeader) return null
-
-  const prisma = getPrisma()
-
-  // Try HTTP Basic Auth first (OwnTracks standard)
-  const basicMatch = authHeader.match(/^Basic\s+(.+)$/i)
-  if (basicMatch) {
-    try {
-      const decoded = Buffer.from(basicMatch[1], 'base64').toString('utf-8')
-      const [_username, password] = decoded.split(':')
-      
-      if (password) {
-        // Find matching token by checking password against hash
-        const activeTokens = await prisma.locationWebhookToken.findMany({
-          where: { isActive: true },
-          select: { id: true, userId: true, tokenHash: true },
-        })
-
-        for (const tokenRecord of activeTokens) {
-          const isValid = await bcrypt.compare(password, tokenRecord.tokenHash)
-          if (isValid) {
-            await prisma.locationWebhookToken.update({
-              where: { id: tokenRecord.id },
-              data: { lastUsedAt: new Date() },
-            })
-            return tokenRecord.userId
-          }
-        }
-      }
-    } catch {
-      // Invalid base64, continue to try Bearer
-    }
-  }
-
-  // Fallback: Bearer Token (legacy support)
-  const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i)
-  if (bearerMatch) {
-    const token = bearerMatch[1]
-
-    const activeTokens = await prisma.locationWebhookToken.findMany({
-      where: { isActive: true },
-      select: { id: true, userId: true, tokenHash: true },
-    })
-
-    for (const tokenRecord of activeTokens) {
-      const isValid = await bcrypt.compare(token, tokenRecord.tokenHash)
-      if (isValid) {
-        await prisma.locationWebhookToken.update({
-          where: { id: tokenRecord.id },
-          data: { lastUsedAt: new Date() },
-        })
-        return tokenRecord.userId
-      }
-    }
-  }
-
-  return null
-}
+import { validateWebhookToken } from '@/lib/services/webhookTokenService'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -93,9 +19,9 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Validate authentication
+    // 1. Validate authentication (using generic WebhookToken with OWNTRACKS provider)
     const authHeader = request.headers.get('Authorization')
-    const userId = await validateAuth(authHeader)
+    const userId = await validateWebhookToken(authHeader, 'OWNTRACKS')
 
     if (!userId) {
       console.warn('Location webhook: Invalid or missing token')
