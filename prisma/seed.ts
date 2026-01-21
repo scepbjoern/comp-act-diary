@@ -174,12 +174,34 @@ const SAMPLE_RELATIONS = [
   { personAIndex: 0, personBIndex: 1, relationType: 'Bekannter' },
 ]
 
-// Beispiel-Tasks für Kontakte
-const SAMPLE_TASKS = [
-  { contactIndex: 0, title: 'Max zum Mittagessen einladen', dueDate: new Date(2025, 11, 20), status: 'PENDING' as const },
-  { contactIndex: 1, title: 'Fachbuch-Empfehlung nachfragen', dueDate: new Date(2025, 11, 15), status: 'COMPLETED' as const },
-  { contactIndex: 3, title: 'Startup-Pitch anschauen', dueDate: new Date(2025, 11, 10), status: 'PENDING' as const },
-  { contactIndex: 5, title: 'Termin für Checkup vereinbaren', dueDate: new Date(2025, 11, 25), status: 'PENDING' as const },
+// Beispiel-Tasks mit erweiterten Feldern (taskType, priority, source, isFavorite)
+const SAMPLE_TASKS: Array<{
+  contactIndex?: number
+  title: string
+  description?: string
+  dueDate?: Date
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED'
+  taskType: 'IMMEDIATE' | 'REFLECTION' | 'PLANNED_INTERACTION' | 'FOLLOW_UP' | 'RESEARCH' | 'HABIT_RELATED' | 'GENERAL'
+  priority: 'LOW' | 'MEDIUM' | 'HIGH'
+  source: 'MANUAL' | 'AI'
+  aiConfidence?: number
+  isFavorite?: boolean
+}> = [
+  // Kontaktbezogene Tasks
+  { contactIndex: 0, title: 'Max zum Mittagessen einladen', description: 'Im Restaurant Hiltl treffen', dueDate: new Date(2026, 0, 25), status: 'PENDING', taskType: 'PLANNED_INTERACTION', priority: 'MEDIUM', source: 'MANUAL', isFavorite: true },
+  { contactIndex: 1, title: 'Fachbuch-Empfehlung nachfragen', description: 'Nach dem ML-Buch fragen', dueDate: new Date(2026, 0, 15), status: 'COMPLETED', taskType: 'FOLLOW_UP', priority: 'LOW', source: 'MANUAL' },
+  { contactIndex: 3, title: 'Startup-Pitch anschauen', description: 'Feedback zur App geben', dueDate: new Date(2026, 0, 28), status: 'PENDING', taskType: 'PLANNED_INTERACTION', priority: 'HIGH', source: 'MANUAL', isFavorite: true },
+  { contactIndex: 5, title: 'Termin für Checkup vereinbaren', dueDate: new Date(2026, 0, 30), status: 'PENDING', taskType: 'IMMEDIATE', priority: 'HIGH', source: 'MANUAL' },
+  // Tasks ohne Kontakt
+  { title: 'Meditation wieder aufnehmen', description: 'Täglich 10 Minuten', dueDate: new Date(2026, 0, 22), status: 'PENDING', taskType: 'HABIT_RELATED', priority: 'MEDIUM', source: 'AI', aiConfidence: 0.85 },
+  { title: 'Steuererklärung vorbereiten', description: 'Belege sammeln', dueDate: new Date(2026, 1, 28), status: 'PENDING', taskType: 'GENERAL', priority: 'LOW', source: 'MANUAL' },
+  { title: 'Über Jobwechsel nachdenken', description: 'Pro/Contra Liste erstellen', status: 'PENDING', taskType: 'REFLECTION', priority: 'MEDIUM', source: 'AI', aiConfidence: 0.72 },
+  { title: 'Neue Therapiemöglichkeiten recherchieren', description: 'ACT und MBCT vergleichen', dueDate: new Date(2026, 0, 31), status: 'PENDING', taskType: 'RESEARCH', priority: 'MEDIUM', source: 'AI', aiConfidence: 0.91, isFavorite: true },
+  { title: 'Bei Bewerbung nachfragen', description: 'Nach 2 Wochen noch keine Antwort', dueDate: new Date(2026, 0, 20), status: 'PENDING', taskType: 'FOLLOW_UP', priority: 'HIGH', source: 'MANUAL', isFavorite: true },
+  { title: 'Altes Projekt abschliessen', description: 'Dokumentation fertigstellen', dueDate: new Date(2026, 0, 18), status: 'CANCELLED', taskType: 'GENERAL', priority: 'LOW', source: 'MANUAL' },
+  // Überfällige Tasks für Tests
+  { title: 'Zahnarzttermin vereinbaren', dueDate: new Date(2026, 0, 10), status: 'PENDING', taskType: 'IMMEDIATE', priority: 'HIGH', source: 'MANUAL' },
+  { title: 'Bücher zurückgeben', description: 'Bibliothek Oerlikon', dueDate: new Date(2026, 0, 15), status: 'PENDING', taskType: 'IMMEDIATE', priority: 'LOW', source: 'MANUAL' },
 ]
 
 // Beispiel-Notifications
@@ -308,25 +330,29 @@ async function seedContactsAndRelations(userId: string) {
   }
   console.log(`  Created ${interactionTypes.length} interactions`)
   
-  // Erstelle Tasks für Kontakte
+  // Erstelle Tasks (mit und ohne Kontakt)
   for (const taskData of SAMPLE_TASKS) {
-    const contactId = contactIds[taskData.contactIndex]
-    if (contactId) {
-      const exists = await prisma.task.findFirst({
-        where: { userId, contactId, title: taskData.title }
+    const contactId = taskData.contactIndex !== undefined ? contactIds[taskData.contactIndex] : null
+    const exists = await prisma.task.findFirst({
+      where: { userId, title: taskData.title }
+    })
+    if (!exists) {
+      await prisma.task.create({
+        data: {
+          userId,
+          contactId,
+          title: taskData.title,
+          description: taskData.description,
+          dueDate: taskData.dueDate,
+          status: taskData.status,
+          taskType: taskData.taskType,
+          priority: taskData.priority,
+          source: taskData.source,
+          aiConfidence: taskData.aiConfidence,
+          isFavorite: taskData.isFavorite ?? false,
+          completedAt: taskData.status === 'COMPLETED' ? new Date() : undefined,
+        }
       })
-      if (!exists) {
-        await prisma.task.create({
-          data: {
-            userId,
-            contactId,
-            title: taskData.title,
-            dueDate: taskData.dueDate,
-            status: taskData.status,
-            completedAt: taskData.status === 'COMPLETED' ? new Date() : undefined,
-          }
-        })
-      }
     }
   }
   console.log(`  Created ${SAMPLE_TASKS.length} tasks`)

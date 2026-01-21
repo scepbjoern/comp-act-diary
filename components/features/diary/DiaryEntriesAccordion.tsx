@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 import { MicrophoneButton } from '@/components/features/transcription/MicrophoneButton'
@@ -11,6 +11,38 @@ import { OriginalTranscriptPanel } from '@/components/features/transcription/Ori
 import { OCRSourcePanel } from '@/components/features/ocr/OCRSourcePanel'
 import { JournalEntrySection } from '@/components/features/diary/JournalEntrySection'
 import { AISettingsPopup } from '@/components/features/ai/AISettingsPopup'
+import dynamic from 'next/dynamic'
+
+// Lazy load JournalTasksPanel to avoid circular dependencies and reduce initial bundle
+const JournalTasksPanel = dynamic(
+  () => import('@/components/features/tasks/JournalTasksPanel'),
+  { loading: () => null }
+)
+
+import { useTasksForEntry } from '@/hooks/useTasksForEntry'
+
+// Wrapper component that fetches tasks for a journal entry
+function JournalTasksPanelWrapper({
+  journalEntryId,
+  onRefreshNotes,
+}: {
+  journalEntryId: string
+  onRefreshNotes?: () => void
+}) {
+  const { tasks, refetch } = useTasksForEntry(journalEntryId)
+
+  return (
+    <JournalTasksPanel
+      journalEntryId={journalEntryId}
+      tasks={tasks}
+      onTasksChange={() => {
+        void refetch()
+        onRefreshNotes?.()
+      }}
+      defaultExpanded={false}
+    />
+  )
+}
 import { TimestampModal } from '@/components/features/day/TimestampModal'
 import { JournalEntryImage } from '@/components/features/diary/JournalEntryImage'
 import { SharedBadge, ShareButton } from '@/components/features/diary/SharedBadge'
@@ -113,8 +145,28 @@ export function DiaryEntriesAccordion({
   const [timestampModalNoteId, setTimestampModalNoteId] = useState<string | null>(null)
   const [shareModalNoteId, setShareModalNoteId] = useState<string | null>(null)
   const [loadingStates, setLoadingStates] = useState<Record<string, 'content' | 'analysis' | 'summary' | 'pipeline' | null>>({})
+  const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null)
   
   const { generateContent, generateAnalysis, generateSummary, runPipeline } = useJournalAI()
+
+  // Scroll to and highlight entry when URL hash matches entry-{id}
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash && hash.startsWith('#entry-')) {
+      const entryId = hash.replace('#entry-', '')
+      // Delay to ensure DOM is ready
+      const timeoutId = setTimeout(() => {
+        const element = document.getElementById(`entry-${entryId}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          setHighlightedEntryId(entryId)
+          // Remove highlight after animation
+          setTimeout(() => setHighlightedEntryId(null), 2000)
+        }
+      }, 300)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [notes.length]) // Re-run when notes are loaded
 
   const fmtHMLocal = (iso?: string) => {
     if (!iso) return ''
@@ -311,7 +363,11 @@ export function DiaryEntriesAccordion({
           <div 
             key={n.id} 
             id={`entry-${n.id}`}
-            className="collapse collapse-arrow bg-base-200 border-2 border-slate-600"
+            className={`collapse collapse-arrow bg-base-200 border-2 transition-all duration-500 ${
+              highlightedEntryId === n.id 
+                ? 'border-primary ring-2 ring-primary/50 ring-offset-2' 
+                : 'border-slate-600'
+            }`}
           >
             <input type="checkbox" defaultChecked />
             <div className="collapse-title text-sm font-medium py-2">
@@ -576,6 +632,14 @@ export function DiaryEntriesAccordion({
                   onGenerate={() => handleGenerateAnalysis(n.id)}
                   onRegenerate={() => handleGenerateAnalysis(n.id)}
                 />
+                
+                {/* Tasks Panel (green background) - only show if not in read mode */}
+                {!readMode && (
+                  <JournalTasksPanelWrapper
+                    journalEntryId={n.id}
+                    onRefreshNotes={onRefreshNotes}
+                  />
+                )}
                 
                 {/* Audio section - compact with inline delete */}
                 {n.audioFilePath && (

@@ -218,6 +218,30 @@ enum TaskStatus {
   CANCELLED /// Abgebrochen
 }
 
+/// Typ/Kategorie einer Aufgabe
+enum TaskType {
+  IMMEDIATE           /// Kurzfristige, sofort umsetzbare Aufgabe
+  REFLECTION          /// Reflexions-/Nachdenkaufgabe
+  PLANNED_INTERACTION /// Geplante Interaktion mit einer Person
+  FOLLOW_UP           /// Nachfassaktion
+  RESEARCH            /// Recherche-Aufgabe
+  HABIT_RELATED       /// Gewohnheits-bezogene Aufgabe
+  GENERAL             /// Allgemeine Aufgabe
+}
+
+/// Priorität einer Aufgabe
+enum TaskPriority {
+  LOW    /// Niedrig
+  MEDIUM /// Mittel
+  HIGH   /// Hoch
+}
+
+/// Quelle/Herkunft einer Aufgabe
+enum TaskSource {
+  MANUAL /// Manuell vom User erstellt
+  AI     /// Automatisch von KI abgeleitet
+}
+
 /// Typ einer Benachrichtigung
 enum NotificationType {
   GENERAL              /// Allgemeine Benachrichtigung
@@ -225,6 +249,7 @@ enum NotificationType {
   SYNC_CONFLICT        /// Konflikt bei Synchronisation
   SYNC_ERROR           /// Fehler bei Synchronisation
   CONTACT_MATCH_REQUIRED /// Manuelle Zuordnung erforderlich
+  TASK_DUE             /// Fällige/überfällige Aufgaben
 }
 
 /// Art eines POI (Point of Interest)
@@ -566,6 +591,7 @@ model JournalEntry {
   locationVisits   LocationVisit[]
   interactions     Interaction[]
   accessGrants     JournalEntryAccess[]
+  tasks            Task[]
 
   @@index([userId, typeId])
   @@index([userId, typeId, createdAt])
@@ -1286,36 +1312,52 @@ model MatchPattern {
 // AUFGABEN & BENACHRICHTIGUNGEN
 // =============================================================================
 
-/// Aufgabe: Todo-Item, optional verknüpft mit Kontakt oder Entity.
+/// Aufgabe: Todo-Item, optional verknüpft mit Kontakt, Entity oder Tagebucheintrag.
 model Task {
   /// Eindeutige ID
-  id          String     @id @default(uuid())
+  id             String       @id @default(uuid())
   /// Besitzer-User
-  userId      String
+  userId         String
   /// Optionale Verknüpfung mit Entity (via Entity-Registry)
-  entityId    String?
+  entityId       String?
   /// Optionale Verknüpfung mit Kontakt
-  contactId   String?
+  contactId      String?
+  /// Optionale Verknüpfung mit Tagebucheintrag
+  journalEntryId String?
   /// Titel der Aufgabe
-  title       String
+  title          String
   /// Beschreibung (optional)
-  description String?
+  description    String?
   /// Fälligkeitsdatum (optional)
-  dueDate     DateTime?
+  dueDate        DateTime?
   /// Status der Aufgabe
-  status      TaskStatus @default(PENDING)
+  status         TaskStatus   @default(PENDING)
+  /// Typ/Kategorie der Aufgabe
+  taskType       TaskType     @default(GENERAL)
+  /// Priorität der Aufgabe
+  priority       TaskPriority @default(MEDIUM)
+  /// Quelle: manuell oder KI-generiert
+  source         TaskSource   @default(MANUAL)
+  /// KI-Konfidenz (0-1, nur bei source=AI)
+  aiConfidence   Float?
+  /// Als Favorit markiert (zur Hervorhebung)
+  isFavorite     Boolean      @default(false)
   /// Erledigungszeitpunkt
-  completedAt DateTime?
+  completedAt    DateTime?
   /// Erstellungszeitpunkt
-  createdAt   DateTime   @default(now())
+  createdAt      DateTime     @default(now())
   /// Letztes Update
-  updatedAt   DateTime   @updatedAt
+  updatedAt      DateTime     @updatedAt
 
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  contact Contact? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contact      Contact?      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  journalEntry JournalEntry? @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
+  @@index([userId, taskType])
+  @@index([userId, priority])
   @@index([contactId])
+  @@index([journalEntryId])
   @@index([dueDate])
 }
 

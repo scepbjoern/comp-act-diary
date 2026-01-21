@@ -155,7 +155,10 @@ export async function getContact(
       relationsAsA: { include: { personB: true } },
       relationsAsB: { include: { personA: true } },
       interactions: { orderBy: { occurredAt: 'desc' } },
-      tasks: { orderBy: { dueDate: 'asc' } },
+      tasks: { 
+        orderBy: { dueDate: 'asc' },
+        include: { journalEntry: { select: { id: true, title: true, occurredAt: true } } }
+      },
       location: true,
     },
   })

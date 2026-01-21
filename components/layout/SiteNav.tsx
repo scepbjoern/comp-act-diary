@@ -1,3 +1,7 @@
+/**
+ * SiteNav Component
+ * Main navigation with support for task count badge.
+ */
 "use client"
 import React, { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -25,6 +29,7 @@ export function SiteNav({ user }: { user: UserLite }) {
   const [mobileLinksOpen, setMobileLinksOpen] = useState(false)
   const [darmkurOpen, setDarmkurOpen] = useState(false)
   const [mobileDarmkurOpen, setMobileDarmkurOpen] = useState(false)
+  const [openTaskCount, setOpenTaskCount] = useState(0)
 
   // Listen for install prompt availability
   useEffect(() => {
@@ -100,6 +105,22 @@ export function SiteNav({ user }: { user: UserLite }) {
     return () => { aborted = true }
   }, [])
 
+  // Load open task count for badge
+  useEffect(() => {
+    let aborted = false
+    void (async () => {
+      try {
+        const res = await fetch('/api/tasks?stats=true', { credentials: 'same-origin' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (!aborted && data.stats?.pending !== undefined) {
+          setOpenTaskCount(data.stats.pending)
+        }
+      } catch { /* ignore */ }
+    })()
+    return () => { aborted = true }
+  }, [])
+
   // Open a link in a new browser tab/window. If relative, make absolute first.
   function openExternal(href: string) {
     try {
@@ -133,6 +154,14 @@ export function SiteNav({ user }: { user: UserLite }) {
         <Link href="/coach" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Coach</Link>
         <Link href="/locations" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Orte</Link>
         <Link href="/calendar" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Kalender</Link>
+        <Link href="/tasks" className="relative text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
+          Aufgaben
+          {openTaskCount > 0 && (
+            <span className="absolute -top-1.5 -right-3 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold bg-primary text-primary-content rounded-full px-1">
+              {openTaskCount > 99 ? '99+' : openTaskCount}
+            </span>
+          )}
+        </Link>
         {/* Links submenu (desktop) */}
         <div className="relative" ref={linksRef}>
           <button type="button" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onMouseEnter={() => setLinksOpen(true)} onClick={() => setLinksOpen(v => !v)} aria-expanded={linksOpen} aria-haspopup="menu">
@@ -325,6 +354,14 @@ export function SiteNav({ user }: { user: UserLite }) {
             <Link href="/coach" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Coach</Link>
             <Link href="/locations" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Orte</Link>
             <Link href="/calendar" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Kalender</Link>
+            <Link href="/tasks" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white flex items-center justify-between" onClick={close}>
+              <span>Aufgaben</span>
+              {openTaskCount > 0 && (
+                <span className="min-w-[20px] h-[20px] flex items-center justify-center text-xs font-bold bg-primary text-primary-content rounded-full px-1">
+                  {openTaskCount > 99 ? '99+' : openTaskCount}
+                </span>
+              )}
+            </Link>
             <Link href="/batch" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Batch-Verarbeitung</Link>
             <Link href="/export" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Export</Link>
             {/* Links submenu (mobile): collapsible */}

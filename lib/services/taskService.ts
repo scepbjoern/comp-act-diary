@@ -1,14 +1,45 @@
+/**
+ * Task Service
+ * Handles CRUD operations and business logic for tasks.
+ * Extended to support journal entry association, priorities, types, and AI-generated tasks.
+ */
+
 import { prisma } from '@/lib/core/prisma'
 import { Prisma } from '@prisma/client'
-import type { TaskCreate, TaskUpdate, TaskFilter } from '@/lib/validators/task'
+import type { TaskCreate, TaskUpdate, TaskFilter, TaskType, TaskPriority, TaskSource } from '@/lib/validators/task'
 
 // =============================================================================
-// TASK SERVICE
+// TYPES
 // =============================================================================
 
 export type TaskWithContact = Prisma.TaskGetPayload<{
   include: { contact: true }
 }>
+
+export type TaskWithRelations = Prisma.TaskGetPayload<{
+  include: { contact: true; journalEntry: { select: { id: true; title: true; occurredAt: true } } }
+}>
+
+/** Task suggestion from AI extraction */
+export interface TaskSuggestion {
+  title: string
+  description?: string
+  taskType: TaskType
+  priority: TaskPriority
+  suggestedDueDate?: Date | null
+  relatedContactName?: string | null
+  confidence: number
+}
+
+// Default include for full task relations
+const taskInclude = {
+  contact: true,
+  journalEntry: { select: { id: true, title: true, occurredAt: true } },
+} as const
+
+// =============================================================================
+// QUERY FUNCTIONS
+// =============================================================================
 
 /**
  * Get all tasks for a user with filtering and pagination
@@ -16,10 +47,14 @@ export type TaskWithContact = Prisma.TaskGetPayload<{
 export async function getTasks(
   userId: string,
   filter: TaskFilter = {} as TaskFilter
-): Promise<{ tasks: TaskWithContact[]; total: number }> {
+): Promise<{ tasks: TaskWithRelations[]; total: number }> {
   const {
     status,
     contactId,
+    journalEntryId,
+    taskType,
+    priority,
+    source,
     dueBefore,
     dueAfter,
     includeOverdue = false,
@@ -39,6 +74,22 @@ export async function getTasks(
     where.contactId = contactId
   }
 
+  if (journalEntryId) {
+    where.journalEntryId = journalEntryId
+  }
+
+  if (taskType) {
+    where.taskType = taskType
+  }
+
+  if (priority) {
+    where.priority = priority
+  }
+
+  if (source) {
+    where.source = source
+  }
+
   if (dueBefore || dueAfter) {
     where.dueDate = {}
     if (dueBefore) where.dueDate.lte = dueBefore
@@ -55,14 +106,19 @@ export async function getTasks(
     ]
   }
 
-  const orderBy: Prisma.TaskOrderByWithRelationInput = {
-    [sortBy]: sortOrder,
+  // Handle priority sorting specially (HIGH > MEDIUM > LOW)
+  let orderBy: Prisma.TaskOrderByWithRelationInput | Prisma.TaskOrderByWithRelationInput[]
+  if (sortBy === 'priority') {
+    // Priority is already stored as enum in correct order in DB
+    orderBy = { priority: sortOrder }
+  } else {
+    orderBy = { [sortBy]: sortOrder }
   }
 
   const [tasks, total] = await Promise.all([
     prisma.task.findMany({
       where,
-      include: { contact: true },
+      include: taskInclude,
       orderBy,
       take: limit,
       skip: offset,
@@ -79,12 +135,39 @@ export async function getTasks(
 export async function getTask(
   userId: string,
   taskId: string
-): Promise<TaskWithContact | null> {
+): Promise<TaskWithRelations | null> {
   return prisma.task.findFirst({
     where: { id: taskId, userId },
-    include: { contact: true },
+    include: taskInclude,
   })
 }
+
+/**
+ * Get all tasks for a specific journal entry
+ */
+export async function getTasksForJournalEntry(
+  userId: string,
+  journalEntryId: string
+): Promise<TaskWithRelations[]> {
+  return prisma.task.findMany({
+    where: { userId, journalEntryId },
+    include: taskInclude,
+    orderBy: [{ status: 'asc' }, { priority: 'desc' }, { createdAt: 'desc' }],
+  })
+}
+
+/**
+ * Get count of open tasks (PENDING) for navigation badge
+ */
+export async function getOpenTaskCount(userId: string): Promise<number> {
+  return prisma.task.count({
+    where: { userId, status: 'PENDING' },
+  })
+}
+
+// =============================================================================
+// MUTATION FUNCTIONS
+// =============================================================================
 
 /**
  * Create a new task
@@ -92,7 +175,7 @@ export async function getTask(
 export async function createTask(
   userId: string,
   data: TaskCreate
-): Promise<TaskWithContact> {
+): Promise<TaskWithRelations> {
   return prisma.task.create({
     data: {
       userId,
@@ -101,10 +184,50 @@ export async function createTask(
       dueDate: data.dueDate,
       contactId: data.contactId,
       entityId: data.entityId,
+      journalEntryId: data.journalEntryId,
+      taskType: data.taskType ?? 'GENERAL',
+      priority: data.priority ?? 'MEDIUM',
+      source: data.source ?? 'MANUAL',
+      aiConfidence: data.aiConfidence,
       status: 'PENDING',
     },
-    include: { contact: true },
+    include: taskInclude,
   })
+}
+
+/**
+ * Create multiple tasks from AI suggestions
+ */
+export async function createTasksFromSuggestions(
+  userId: string,
+  journalEntryId: string,
+  suggestions: TaskSuggestion[],
+  contactIdMap?: Map<string, string> // Map contact name to contactId
+): Promise<TaskWithRelations[]> {
+  const tasks = await prisma.$transaction(
+    suggestions.map((suggestion) =>
+      prisma.task.create({
+        data: {
+          userId,
+          journalEntryId,
+          title: suggestion.title,
+          description: suggestion.description,
+          dueDate: suggestion.suggestedDueDate,
+          taskType: suggestion.taskType,
+          priority: suggestion.priority,
+          source: 'AI' as TaskSource,
+          aiConfidence: suggestion.confidence,
+          contactId: suggestion.relatedContactName
+            ? contactIdMap?.get(suggestion.relatedContactName)
+            : undefined,
+          status: 'PENDING',
+        },
+        include: taskInclude,
+      })
+    )
+  )
+
+  return tasks
 }
 
 /**
@@ -114,7 +237,7 @@ export async function updateTask(
   userId: string,
   taskId: string,
   data: TaskUpdate
-): Promise<TaskWithContact> {
+): Promise<TaskWithRelations> {
   const task = await prisma.task.findFirst({
     where: { id: taskId, userId },
   })
@@ -140,9 +263,12 @@ export async function updateTask(
       ...(data.status !== undefined && { status: data.status }),
       ...(data.contactId !== undefined && { contactId: data.contactId }),
       ...(data.entityId !== undefined && { entityId: data.entityId }),
+      ...(data.journalEntryId !== undefined && { journalEntryId: data.journalEntryId }),
+      ...(data.taskType !== undefined && { taskType: data.taskType }),
+      ...(data.priority !== undefined && { priority: data.priority }),
       completedAt,
     },
-    include: { contact: true },
+    include: taskInclude,
   })
 }
 
@@ -172,7 +298,7 @@ export async function deleteTask(
 export async function completeTask(
   userId: string,
   taskId: string
-): Promise<TaskWithContact> {
+): Promise<TaskWithRelations> {
   const task = await prisma.task.findFirst({
     where: { id: taskId, userId },
   })
@@ -187,7 +313,7 @@ export async function completeTask(
       status: 'COMPLETED',
       completedAt: new Date(),
     },
-    include: { contact: true },
+    include: taskInclude,
   })
 }
 
@@ -197,7 +323,7 @@ export async function completeTask(
 export async function cancelTask(
   userId: string,
   taskId: string
-): Promise<TaskWithContact> {
+): Promise<TaskWithRelations> {
   const task = await prisma.task.findFirst({
     where: { id: taskId, userId },
   })
@@ -211,7 +337,7 @@ export async function cancelTask(
     data: {
       status: 'CANCELLED',
     },
-    include: { contact: true },
+    include: taskInclude,
   })
 }
 
@@ -221,7 +347,7 @@ export async function cancelTask(
 export async function reopenTask(
   userId: string,
   taskId: string
-): Promise<TaskWithContact> {
+): Promise<TaskWithRelations> {
   const task = await prisma.task.findFirst({
     where: { id: taskId, userId },
   })
@@ -236,23 +362,27 @@ export async function reopenTask(
       status: 'PENDING',
       completedAt: null,
     },
-    include: { contact: true },
+    include: taskInclude,
   })
 }
+
+// =============================================================================
+// QUERY HELPERS
+// =============================================================================
 
 /**
  * Get overdue tasks
  */
 export async function getOverdueTasks(
   userId: string
-): Promise<TaskWithContact[]> {
+): Promise<TaskWithRelations[]> {
   return prisma.task.findMany({
     where: {
       userId,
       status: 'PENDING',
       dueDate: { lt: new Date() },
     },
-    include: { contact: true },
+    include: taskInclude,
     orderBy: { dueDate: 'asc' },
   })
 }
@@ -262,7 +392,7 @@ export async function getOverdueTasks(
  */
 export async function getTasksDueToday(
   userId: string
-): Promise<TaskWithContact[]> {
+): Promise<TaskWithRelations[]> {
   const today = new Date()
   const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000)
@@ -276,7 +406,7 @@ export async function getTasksDueToday(
         lt: endOfDay,
       },
     },
-    include: { contact: true },
+    include: taskInclude,
     orderBy: { dueDate: 'asc' },
   })
 }
@@ -287,7 +417,7 @@ export async function getTasksDueToday(
 export async function getUpcomingTasks(
   userId: string,
   days = 7
-): Promise<TaskWithContact[]> {
+): Promise<TaskWithRelations[]> {
   const today = new Date()
   const futureDate = new Date(today.getTime() + days * 24 * 60 * 60 * 1000)
 
@@ -300,7 +430,7 @@ export async function getUpcomingTasks(
         lte: futureDate,
       },
     },
-    include: { contact: true },
+    include: taskInclude,
     orderBy: { dueDate: 'asc' },
   })
 }
@@ -346,10 +476,10 @@ export async function getTaskStats(userId: string): Promise<{
 export async function getTasksForContact(
   userId: string,
   contactId: string
-): Promise<TaskWithContact[]> {
+): Promise<TaskWithRelations[]> {
   return prisma.task.findMany({
     where: { userId, contactId },
-    include: { contact: true },
+    include: taskInclude,
     orderBy: [{ status: 'asc' }, { dueDate: 'asc' }],
   })
 }

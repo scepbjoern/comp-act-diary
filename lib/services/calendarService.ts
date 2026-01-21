@@ -6,7 +6,7 @@
 
 import { getPrisma } from '@/lib/core/prisma'
 import { TaskerCalendarEvent, CalendarSyncResult } from '@/lib/validators/calendar'
-import { convertAndTruncate, isTeamsMeetingOnly, cleanEventTitle } from '@/lib/utils/htmlToMarkdown'
+import { convertAndTruncate, cleanEventTitle } from '@/lib/utils/htmlToMarkdown'
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns'
 import { toZonedTime } from 'date-fns-tz'
 

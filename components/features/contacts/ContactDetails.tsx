@@ -13,6 +13,7 @@ import { de } from 'date-fns/locale'
 import RelationEditor from './RelationEditor'
 import InteractionEditor from './InteractionEditor'
 import TaskForm from '@/components/features/tasks/TaskForm'
+import TaskCard, { type TaskCardData } from '@/components/features/tasks/TaskCard'
 import ContactPhotoUpload from './ContactPhotoUpload'
 import ContactGroupsEditor from './ContactGroupsEditor'
 import { useReadMode } from '@/hooks/useReadMode'
@@ -44,7 +45,19 @@ interface Contact {
   relationsAsA?: Array<{ id: string; relationType: string; personB: { id: string; name: string; slug: string } }>
   relationsAsB?: Array<{ id: string; relationType: string; personA: { id: string; name: string; slug: string } }>
   interactions?: Array<{ id: string; kind: string; notes?: string | null; occurredAt: string }>
-  tasks?: Array<{ id: string; title: string; status: string; dueDate?: string | null }>
+  tasks?: Array<{
+    id: string
+    title: string
+    description?: string | null
+    status: string
+    dueDate?: string | null
+    taskType?: string
+    priority?: string
+    source?: string
+    aiConfidence?: number | null
+    isFavorite?: boolean
+    journalEntry?: { id: string; title?: string | null; occurredAt?: string | null } | null
+  }>
 }
 
 interface ContactDetailsProps {
@@ -67,6 +80,7 @@ export default function ContactDetails({ contact }: ContactDetailsProps) {
   const [showRelationEditor, setShowRelationEditor] = useState(false)
   const [showInteractionEditor, setShowInteractionEditor] = useState(false)
   const [showTaskForm, setShowTaskForm] = useState(false)
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [pushingToGoogle, setPushingToGoogle] = useState(false)
 
   const handlePushToGoogle = async () => {
@@ -163,6 +177,40 @@ export default function ContactDetails({ contact }: ContactDetailsProps) {
       console.error('Error toggling task:', error)
     }
   }
+
+  const handleToggleTaskFavorite = async (taskId: string, isFavorite: boolean) => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFavorite }),
+      })
+      if (res.ok) {
+        router.refresh()
+      }
+    } catch (error) {
+      console.error('Error toggling task favorite:', error)
+    }
+  }
+
+  const handleUpdateTaskDueDate = async (taskId: string, dueDate: string | null) => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dueDate }),
+      })
+      if (res.ok) {
+        router.refresh()
+      }
+    } catch (error) {
+      console.error('Error updating task due date:', error)
+    }
+  }
+
+  const editingTask = editingTaskId && contact.tasks 
+    ? contact.tasks.find(t => t.id === editingTaskId) 
+    : null
 
   return (
     <div className="space-y-6">
@@ -472,26 +520,39 @@ export default function ContactDetails({ contact }: ContactDetailsProps) {
             </div>
             {contact.tasks && contact.tasks.length > 0 ? (
               <div className="space-y-2 mt-2">
-                {contact.tasks.map((task) => (
-                  <div key={task.id} className="flex items-center gap-3 p-2 bg-base-200/50 rounded-lg">
-                    <input
-                      type="checkbox"
-                      checked={task.status === 'COMPLETED'}
-                      onChange={() => handleToggleTask(task.id, task.status)}
-                      className="w-4 h-4 rounded border-gray-300 cursor-pointer"
+                {contact.tasks.map((task) => {
+                  // Convert to TaskCardData format
+                  const taskData: TaskCardData = {
+                    id: task.id,
+                    title: task.title,
+                    description: task.description,
+                    dueDate: task.dueDate,
+                    status: task.status as 'PENDING' | 'COMPLETED' | 'CANCELLED',
+                    taskType: (task.taskType || 'GENERAL') as TaskCardData['taskType'],
+                    priority: (task.priority || 'MEDIUM') as TaskCardData['priority'],
+                    source: (task.source || 'MANUAL') as TaskCardData['source'],
+                    aiConfidence: task.aiConfidence,
+                    isFavorite: task.isFavorite,
+                    contact: { id: contact.id, name: contact.name, slug: contact.slug },
+                    journalEntry: task.journalEntry ? {
+                      id: task.journalEntry.id,
+                      title: task.journalEntry.title,
+                      occurredAt: task.journalEntry.occurredAt,
+                    } : null,
+                  }
+                  return (
+                    <TaskCard
+                      key={task.id}
+                      task={taskData}
+                      onComplete={(id) => handleToggleTask(id, 'PENDING')}
+                      onReopen={(id) => handleToggleTask(id, 'COMPLETED')}
+                      onEdit={(id) => setEditingTaskId(id)}
+                      onToggleFavorite={handleToggleTaskFavorite}
+                      onUpdateDueDate={handleUpdateTaskDueDate}
+                      showJournalLink={true}
                     />
-                    <div className="flex-1">
-                      <p className={task.status === 'COMPLETED' ? 'line-through text-base-content/50' : ''}>
-                        {task.title}
-                      </p>
-                      {task.dueDate && (
-                        <span className="text-xs text-base-content/50">
-                          Fällig: {format(new Date(task.dueDate), 'd.M.yy', { locale: de })}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <p className="text-base-content/60 text-sm">Keine Aufgaben vorhanden</p>
@@ -534,6 +595,24 @@ export default function ContactDetails({ contact }: ContactDetailsProps) {
           onClose={() => setShowTaskForm(false)}
           onSave={() => {
             setShowTaskForm(false)
+            router.refresh()
+          }}
+        />
+      )}
+      {editingTask && (
+        <TaskForm
+          contactId={contact.id}
+          initialData={{
+            id: editingTask.id,
+            title: editingTask.title,
+            description: editingTask.description || undefined,
+            dueDate: editingTask.dueDate || null,
+            taskType: (editingTask.taskType || 'GENERAL') as 'GENERAL' | 'IMMEDIATE' | 'REFLECTION' | 'PLANNED_INTERACTION' | 'FOLLOW_UP' | 'RESEARCH' | 'HABIT_RELATED',
+            priority: (editingTask.priority || 'MEDIUM') as 'LOW' | 'MEDIUM' | 'HIGH',
+          }}
+          onClose={() => setEditingTaskId(null)}
+          onSave={() => {
+            setEditingTaskId(null)
             router.refresh()
           }}
         />

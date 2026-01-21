@@ -99,18 +99,53 @@ export async function PATCH(
     const body = await request.json()
 
     let task
-    switch (body.action) {
-      case 'complete':
-        task = await completeTask(userId, id)
-        break
-      case 'cancel':
-        task = await cancelTask(userId, id)
-        break
-      case 'reopen':
-        task = await reopenTask(userId, id)
-        break
-      default:
-        return NextResponse.json({ error: 'Unbekannte Aktion' }, { status: 400 })
+
+    // Handle action-based updates (complete/cancel/reopen)
+    if (body.action) {
+      switch (body.action) {
+        case 'complete':
+          task = await completeTask(userId, id)
+          break
+        case 'cancel':
+          task = await cancelTask(userId, id)
+          break
+        case 'reopen':
+          task = await reopenTask(userId, id)
+          break
+        default:
+          return NextResponse.json({ error: 'Unbekannte Aktion' }, { status: 400 })
+      }
+    } else {
+      // Handle direct field updates (isFavorite, dueDate, etc.)
+      const updateData: Record<string, unknown> = {}
+      
+      if (typeof body.isFavorite === 'boolean') {
+        updateData.isFavorite = body.isFavorite
+      }
+      if (body.dueDate !== undefined) {
+        updateData.dueDate = body.dueDate ? new Date(body.dueDate) : null
+      }
+      if (body.title !== undefined) {
+        updateData.title = body.title
+      }
+      if (body.description !== undefined) {
+        updateData.description = body.description
+      }
+      if (body.priority !== undefined) {
+        updateData.priority = body.priority
+      }
+      if (body.taskType !== undefined) {
+        updateData.taskType = body.taskType
+      }
+      if (body.contactId !== undefined) {
+        updateData.contactId = body.contactId || null
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return NextResponse.json({ error: 'Keine gültigen Felder zum Aktualisieren' }, { status: 400 })
+      }
+
+      task = await updateTask(userId, id, updateData)
     }
 
     return NextResponse.json({ task })

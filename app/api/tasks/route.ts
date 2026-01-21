@@ -27,6 +27,10 @@ export async function GET(request: NextRequest) {
     const filterResult = TaskFilterSchema.safeParse({
       status: searchParams.get('status') || undefined,
       contactId: searchParams.get('contactId') || undefined,
+      journalEntryId: searchParams.get('journalEntryId') || undefined,
+      taskType: searchParams.get('taskType') || undefined,
+      priority: searchParams.get('priority') || undefined,
+      source: searchParams.get('source') || undefined,
       dueBefore: searchParams.get('dueBefore') ? new Date(searchParams.get('dueBefore')!) : undefined,
       dueAfter: searchParams.get('dueAfter') ? new Date(searchParams.get('dueAfter')!) : undefined,
       includeOverdue: searchParams.get('includeOverdue') === 'true',

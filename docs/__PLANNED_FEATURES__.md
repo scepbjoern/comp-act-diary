@@ -1,7 +1,7 @@
 # Planned Features
 ## Varia
-### Todos
-**Todos ableiten aus Tagebucheinträgen**: Todos kurzfristig, Anweisungen fürs Reflektieren / Lösungen suchen, Todos für geplante Interaktionen und mehr
+### SiteNav mit Icons
+**SiteNav mit Icons**: Aktuell haben einige SiteNav-Einträge ein Icon, andere hingegen sind lediglich Text. Aus Platzgründen ist es nicht möglich, Texte zu haben, sondern wir benötigen ausschliesslich Icons. Daher für alle Texteinträge wirklich passende TablerIcons suchen und vorschlagen. Zudem die SiteNav grob unterteilen (z.B. mit einem Vertikal Divider oder etwas Abstand) in übergeordnete Icons (Readmode, Suche, Notifications, Coach (= neu Chatbot)) und die weiteren sowie dann ganz rechts das Hamburger-Menü und Profilbild-Icon wie jetzt schon.
 
 ### Verlinkungen auf andere Ereignisse
 **On This Day - Rediscover memories from previous years on the same date**: für jeden Tag, wenn man gerade in einem aktuellen Tag ist, immer in der Datenbank geschaut wird, ob es vom Vorjahr und vom Vormonat Tagebucheinträge gibt von diesem einen Tag. Und falls ja, wird dieser Eintrag, aber auch diejenigen der Vorjahre, immer kurz angezeigt, so das Wichtigste zusammengefasst. Dies soll erlauben, dass man mit der Zeit ein bisschen das Bewusstsein schärft, so im Sinne von Carpe Diem, dass man sieht auch, dass vor einem Jahr vielleicht es besser war oder auch schlechter war. Und beides kann ja ermuntern und zur Reflexion beitragen. -> Bei journiv entspricht dies: "On This Day — Rediscover memories from previous years on the same date"

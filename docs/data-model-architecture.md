@@ -268,8 +268,8 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 
 | Entität | Wichtigste Attribute | Beziehungen |
 |---------|---------------------|-------------|
-| **Task** | id, userId, entityId?, contactId?, title, description?, dueDate?, status (PENDING/COMPLETED/CANCELLED), completedAt? | N:1 zu User, N:1 zu Contact |
-| **Notification** | id, userId, type (GENERAL/BIRTHDAY_REMINDER/SYNC_CONFLICT/SYNC_ERROR/CONTACT_MATCH_REQUIRED), title, message?, data (Json)?, isRead, archivedAt? | N:1 zu User |
+| **Task** | id, userId, entityId?, contactId?, **journalEntryId?**, title, description?, dueDate?, status (PENDING/COMPLETED/CANCELLED), completedAt?, **taskType** (IMMEDIATE/REFLECTION/PLANNED_INTERACTION/FOLLOW_UP/RESEARCH/HABIT_RELATED/GENERAL), **priority** (LOW/MEDIUM/HIGH), **source** (MANUAL/AI_EXTRACTED/IMPORT), **aiConfidence?**, **isFavorite** | N:1 zu User, N:1 zu Contact, **N:1 zu JournalEntry** |
+| **Notification** | id, userId, type (GENERAL/BIRTHDAY_REMINDER/SYNC_CONFLICT/SYNC_ERROR/CONTACT_MATCH_REQUIRED/**TASK_DUE**), title, message?, data (Json)?, isRead, archivedAt? | N:1 zu User |
 
 ---
 
