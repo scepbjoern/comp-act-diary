@@ -49,12 +49,20 @@ Die automatisch abgeleiteten und manuell erstellten Tasks werden in folgende Kat
 
 ### Kernfunktionen
 
-- **KI-gestützte Task-Extraktion**: Nach dem Speichern eines Tagebucheintrags werden potenzielle Tasks erkannt
+- **KI-gestützte Task-Extraktion (explizit)**: Per Button "Tasks erkennen" im Entry-Panel
 - **Task-Review**: User kann vorgeschlagene Tasks akzeptieren, bearbeiten oder ablehnen
 - **Prioritäten**: Jeder Task hat eine Priorität (LOW, MEDIUM, HIGH)
 - **Fälligkeitsdatum**: Optionales Due-Date für zeitkritische Tasks
+- **Benachrichtigungen**: Fällige Tasks erzeugen Notifications (Task-Due)
 - **Verknüpfungen**: Tasks können mit Tagebucheinträgen UND/ODER Kontakten verknüpft sein
 - **Filter & Sortierung**: Nach Typ, Status, Priorität, Fälligkeit filterbar
+- **Nav-Badge**: Anzahl offener Tasks im Nav-Link
+
+### Nicht im Scope (aktuell)
+
+- Wiederkehrende Tasks
+- Task-Historie
+- Tasks im PDF-Export
 
 ---
 
@@ -160,6 +168,7 @@ Die automatisch abgeleiteten und manuell erstellten Tasks werden in folgende Kat
 | **taskService** | Erweitert um journalEntryId-Support, Prioritäten, Typen |
 | **taskAIService** | NEU: KI-basierte Task-Extraktion aus Tagebuchtext |
 | **journalAIService** | Integration der Task-Extraktion in die AI-Pipeline |
+| **notificationService** | Erweitert: Task-Due Notifications erstellen |
 
 ### 3.3 Externe Anbieter
 
@@ -198,6 +207,16 @@ enum TaskPriority {
 enum TaskSource {
   MANUAL /// Manuell vom User erstellt
   AI     /// Automatisch von KI abgeleitet
+}
+```
+
+#### NotificationType (Erweiterung)
+
+```prisma
+/// Typ einer Benachrichtigung
+enum NotificationType {
+  // ... bestehende Typen
+  TASK_DUE /// Fällige/überfällige Aufgaben
 }
 ```
 
@@ -268,6 +287,7 @@ model JournalEntry {
 |---------|----------|
 | **Task** | Erweitert um `journalEntryId`, `taskType`, `priority`, `source`, `aiConfidence` |
 | **JournalEntry** | Neue Relation `tasks: Task[]` |
+| **Notification** | Neuer `NotificationType.TASK_DUE` für fällige Tasks |
 
 ---
 
@@ -376,6 +396,8 @@ export const TaskFilterSchema = z.object({
 
 ### 6.1 Tagebuch-Tagesansicht: Task-Panel (grün)
 
+Hinweis: Das Panel zeigt **nur Tasks, die mit dem jeweiligen JournalEntry verknüpft sind**. Auf Mobile bleibt das Panel standardmaessig offen.
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ 📅 Montag, 20. Januar 2026                                      │
@@ -452,6 +474,8 @@ export const TaskFilterSchema = z.object({
 
 ### 6.3 Task-Suggestion Modal (nach Speichern eines Eintrags)
 
+Kontakte werden automatisch erkannt und als Vorschlag angezeigt.
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ 🤖 Erkannte Aufgaben                                    [✕]     │
@@ -482,7 +506,7 @@ export const TaskFilterSchema = z.object({
 
 ### 6.4 Navigation
 
-Der Tasks-Link wird in der bestehenden Navigation ergänzt:
+Der Tasks-Link wird in der bestehenden Navigation ergänzt und zeigt ein Badge mit der Anzahl offener Tasks:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -561,6 +585,10 @@ components/
 components/
 └── layout/
     └── SiteNav.tsx (oder ähnlich)         # ÄNDERN: Tasks-Link hinzufügen
+
+lib/
+└── services/
+    └── notificationService.ts             # ÄNDERN: Task-Due Notifications
 ```
 
 ---
@@ -600,6 +628,7 @@ components/
 - `getTasksForJournalEntry()` implementieren
 - Filter um `taskType`, `priority`, `journalEntryId` erweitern
 - `createTask()` um neue Felder erweitern
+- Task-Due Notifications via `notificationService` erstellen
 - Bestehende Tests anpassen
 
 ---
@@ -730,7 +759,7 @@ Antworte als JSON-Array.
 
 **Anforderungen:**
 - Icon + Label "Aufgaben"
-- Badge mit Anzahl offener Tasks (optional)
+- Badge mit Anzahl offener Tasks (PENDING + überfällig)
 - Mobile-responsive
 
 ---
@@ -758,14 +787,13 @@ Antworte als JSON-Array.
 
 ---
 
-### Schritt 15 (LLM): KI-Extraktion in Pipeline integrieren
+### Schritt 15 (LLM): KI-Extraktion explizit triggern
 
-**Ziel:** Automatische Task-Erkennung
+**Ziel:** Explizite Task-Erkennung
 
 **Anforderungen:**
-- Nach Speichern eines Entries optional Task-Extraktion triggern
-- User-Setting für automatische vs. manuelle Extraktion
-- TaskSuggestionModal anzeigen wenn Tasks erkannt
+- Task-Extraktion nur via Button "Tasks erkennen" auslösen
+- TaskSuggestionModal nach Trigger anzeigen, wenn Tasks erkannt werden
 
 ---
 
@@ -822,7 +850,7 @@ Antworte als JSON-Array.
 
 3. **KI-Task-Extraktion**
    - Neuen Tagebucheintrag schreiben mit Aufgaben-Hinweisen
-   - Speichern → Modal mit Vorschlägen erscheint
+   - Button "Tasks erkennen" klicken → Modal mit Vorschlägen erscheint
    - Tasks auswählen/bearbeiten → Speichern
    - Tasks erscheinen im Panel und auf `/tasks`
 
@@ -841,38 +869,6 @@ Antworte als JSON-Array.
    - Task mit vergangenem Datum erstellen
    - Prüfen: Rote Markierung, Gruppierung "Überfällig"
 
----
-
-## 12. Fragen an den Auftraggeber
-
-### Funktionalität
-
-1. **Automatische vs. manuelle Task-Extraktion:** Soll die KI-Extraktion automatisch nach jedem Speichern laufen, oder soll der User sie explizit triggern (z.B. via Button "Tasks erkennen")? -> explizit
-
-2. **Konfidenz-Schwellwert:** Ab welcher Konfidenz sollen Tasks automatisch vorselektiert sein im Suggestion-Modal? (Vorschlag: ≥70%)
-
-3. **Kontakt-Zuordnung:** Wenn die KI einen Personennamen erkennt: Soll automatisch nach passenden Kontakten gesucht und vorgeschlagen werden?
-
-### UX
-
-4. **Tasks in Tagesansicht:** Sollen im grünen Panel ALLE Tasks des Tages angezeigt werden, oder nur die, die mit Einträgen dieses Tages verknüpft sind?
-
-5. **Badge in Navigation:** Soll ein Badge mit der Anzahl offener (oder überfälliger) Tasks im Nav-Link angezeigt werden?
-
-6. **Mobile-Ansicht:** Soll das Task-Panel auf Mobile initial eingeklappt sein?
-
-### Datenmodell
-
-7. **Wiederkehrende Tasks:** Ist Unterstützung für wiederkehrende Tasks (z.B. "Jeden Montag meditieren") gewünscht? (Könnte später ergänzt werden)
-
-8. **Task-Historie:** Soll eine Historie der Änderungen an Tasks gespeichert werden?
-
-### Sonstiges
-
-9. **Benachrichtigungen:** Sollen Benachrichtigungen für fällige Tasks generiert werden (Integration mit bestehendem Notification-System)?
-
-10. **Export:** Sollen Tasks im PDF-Export des Tagebuchs enthalten sein?
-
----
-
-**Ende des Konzeptdokuments**
+7. **Task-Benachrichtigungen**
+   - Task mit heutigem/überfälligem Datum erstellen
+   - Prüfen: Notification vom Typ `TASK_DUE` wird erstellt
