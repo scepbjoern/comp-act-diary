@@ -6,6 +6,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { IconX, IconPlus, IconFlag, IconFlag2, IconFlag3, IconSearch, IconUser } from '@tabler/icons-react'
 import { format } from 'date-fns'
 
@@ -91,6 +92,7 @@ export default function TaskForm({
   const [showContactDropdown, setShowContactDropdown] = useState(false)
   const [loading, setLoading] = useState(false)
   const [loadingContacts, setLoadingContacts] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const contactInputRef = useRef<HTMLInputElement>(null)
 
   const isEditing = Boolean(initialData?.id)
@@ -124,6 +126,10 @@ export default function TaskForm({
       void fetchContacts()
     }
   }, [contactId, initialData?.contactId])
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Filter contacts based on search input
   useEffect(() => {
@@ -202,7 +208,9 @@ export default function TaskForm({
     }
   }
 
-  return (
+  if (!isMounted) return null
+
+  return createPortal(
     <div className="modal modal-open z-[1200]">
       <div className="modal-box max-w-md">
         <button
@@ -386,6 +394,7 @@ export default function TaskForm({
         </form>
       </div>
       <div className="modal-backdrop bg-black/50" onClick={onClose} />
-    </div>
+    </div>,
+    document.body
   )
 }

@@ -18,6 +18,25 @@ body {
   @apply bg-base-100 text-base-content;
 }
 
+/* Modal stacking: keep overlays above entry content */
+.modal,
+.modal.modal-open,
+dialog.modal.modal-open {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 3000 !important;
+  isolation: isolate;
+}
+
+.modal-box {
+  position: relative;
+  z-index: 3001 !important;
+}
+
+.modal-backdrop {
+  z-index: 2999 !important;
+}
+
 /* Bright overrides for utility classes used widely in components */
 .bright .bg-background { background-color: #f8fafc; }
 .bright .bg-surface { background-color: #ffffff; }
