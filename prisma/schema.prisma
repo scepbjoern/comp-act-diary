@@ -173,6 +173,22 @@ enum SyncProviderType {
   LAST_FM          /// Last.fm Scrobbling
   GOOGLE_CONTACTS  /// Google Contacts
   GOOGLE_TIMELINE  /// Google Maps Timeline Import
+  OWNTRACKS        /// OwnTracks App (HTTP Mode) - für Location Tracking
+  TASKER_CALENDAR  /// Tasker Kalender-Sync
+}
+
+/// Quelltyp für MatchPattern: Welches Feld wird gematcht?
+enum MatchSourceType {
+  CALENDAR_LOCATION    /// CalendarEvent.location Feld
+  JOURNAL_CONTENT      /// JournalEntry.notes Inhalt (für Personennamen etc.)
+  IMPORT_TAG           /// Tags aus Synchronisationsquellen
+}
+
+/// Zieltyp für MatchPattern: Welche Entität wird verknüpft?
+enum MatchTargetType {
+  LOCATION    /// Verknüpfung zu Location-Entität
+  CONTACT     /// Verknüpfung zu Contact-Entität (später)
+  TAG         /// Überschreiben mit anderem Tag (später)
 }
 
 /// Quelle eines GPS-Punkts (für Location Tracking)
@@ -292,7 +308,8 @@ model User {
   tasks                 Task[]
   notifications         Notification[]
   rawGpsPoints           RawGpsPoint[]
-  locationWebhookTokens  LocationWebhookToken[]
+  webhookTokens          WebhookToken[]
+  matchPatterns          MatchPattern[]
   generatedImages        GeneratedImage[]
   journalEntryAccess     JournalEntryAccess[]     @relation("AccessGrantee")
   grantedAccess          JournalEntryAccess[]     @relation("AccessGranter")
@@ -1099,6 +1116,7 @@ model Location {
   contacts       Contact[]
   visits         LocationVisit[]
   rawGpsPoints   RawGpsPoint[]
+  calendarEvents CalendarEvent[]
 
   @@unique([userId, slug])
   @@index([userId, isFavorite])
@@ -1208,27 +1226,60 @@ model RawGpsPoint {
   @@index([lat, lng])
 }
 
-/// Webhook-Token: Authentifizierungs-Token für OwnTracks Webhook-Zugriff.
-/// Ermöglicht Location-Tracking ohne Session-Auth.
-model LocationWebhookToken {
+/// Webhook-Token: Authentifizierungs-Token für Webhook-Zugriff ohne Session-Auth.
+/// Ersetzt LocationWebhookToken und ist generisch für alle Webhook-Typen nutzbar.
+model WebhookToken {
   /// Eindeutige ID
-  id          String    @id @default(uuid())
+  id           String           @id @default(uuid())
   /// Besitzer-User
-  userId      String
+  userId       String
   /// bcrypt-Hash des Tokens (Plain-Token wird nur einmal bei Erstellung angezeigt)
-  tokenHash   String
+  tokenHash    String
   /// Gerätename zur Identifikation (z.B. "Pixel 7 Pro")
-  deviceName  String
+  deviceName   String
+  /// Provider-Typ (welcher Webhook darf dieses Token nutzen)
+  providerType SyncProviderType
   /// Ist der Token aktiv?
-  isActive    Boolean   @default(true)
+  isActive     Boolean          @default(true)
   /// Letzter Zugriff
-  lastUsedAt  DateTime?
+  lastUsedAt   DateTime?
   /// Erstellungszeitpunkt
-  createdAt   DateTime  @default(now())
+  createdAt    DateTime         @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, isActive])
+  @@index([userId, isActive, providerType])
+}
+
+/// MatchPattern: Generisches Regex-Pattern für automatisches Matching.
+/// Ermöglicht verschiedene Anwendungsfälle über sourceType und targetType.
+model MatchPattern {
+  /// Eindeutige ID
+  id          String          @id @default(uuid())
+  /// Besitzer-User
+  userId      String
+  /// Quelltyp: Welches Feld wird gematcht?
+  sourceType  MatchSourceType
+  /// Zieltyp: Was wird verknüpft?
+  targetType  MatchTargetType
+  /// ID der Ziel-Entität (z.B. Location-ID, Contact-ID)
+  targetId    String
+  /// Regex-Pattern (siehe https://regex101.com für Hilfe)
+  pattern     String
+  /// Beschreibung (z.B. "Alle SM-Räume")
+  description String?
+  /// Priorität (höher = wird zuerst geprüft)
+  priority    Int             @default(0)
+  /// Ist das Pattern aktiv?
+  isActive    Boolean         @default(true)
+  /// Erstellungszeitpunkt
+  createdAt   DateTime        @default(now())
+  /// Letztes Update
+  updatedAt   DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive, sourceType, priority])
 }
 
 // =============================================================================
@@ -1635,19 +1686,19 @@ model TimeTrackingEntry {
   @@index([userId, startedAt])
 }
 
-/// Kalender-Event: Termin aus externem Kalender.
+/// Kalender-Event: Termin aus externem Kalender (z.B. Tasker-Sync).
 model CalendarEvent {
   /// Eindeutige ID (= Entity.id)
   id             String    @id @default(uuid())
   /// Besitzer-User
   userId         String
-  /// Referenz auf ExternalSync (falls importiert)
+  /// Referenz auf ExternalSync (für Deduplizierung)
   externalSyncId String?
-  /// Zeitraum (optional)
+  /// Zeitraum (DAY-TimeBox für Tagesverknüpfung)
   timeBoxId      String?
   /// Titel
   title          String
-  /// Beschreibung (optional)
+  /// Beschreibung (Markdown-Format nach HTML-Konvertierung)
   description    String?
   /// Startzeitpunkt
   startedAt      DateTime
@@ -1655,18 +1706,32 @@ model CalendarEvent {
   endedAt        DateTime?
   /// Ganztägig?
   isAllDay       Boolean   @default(false)
-  /// Ort (optional)
+  /// Roher Orts-String aus Kalender
   location       String?
+  /// Quellkalender-Kennung (z.B. "ZHAW-Outlook", "Privat-Google")
+  sourceCalendar String?
+  /// Originale Timezone des Events (z.B. "Europe/Zurich")
+  timezone       String?
+  /// Verknüpfung zu gematchter Location (optional)
+  locationId     String?
+  /// Event ausgeblendet (nicht relevant für Anzeige)
+  isHidden       Boolean   @default(false)
+  /// Event wurde manuell bearbeitet (vor Sync-Überschreibung schützen)
+  isManuallyEdited Boolean @default(false)
   /// Erstellungszeitpunkt
   createdAt      DateTime  @default(now())
   /// Letztes Update
   updatedAt      DateTime  @updatedAt
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  externalSync ExternalSync? @relation(fields: [externalSyncId], references: [id])
-  timeBox      TimeBox?      @relation(fields: [timeBoxId], references: [id])
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  externalSync    ExternalSync? @relation(fields: [externalSyncId], references: [id])
+  timeBox         TimeBox?      @relation(fields: [timeBoxId], references: [id])
+  matchedLocation Location?     @relation(fields: [locationId], references: [id])
 
   @@index([userId, startedAt])
+  @@index([userId, timeBoxId])
+  @@index([externalSyncId])
+  @@index([locationId])
 }
 
 /// Medienkonsum: Gelesene Bücher, gehörte Musik, geschaute Filme, etc.

@@ -5,7 +5,8 @@ Gehe hierzu schrittweise vor:
 2. Local-Rules und Coding-Guidelines lesen
 3. Implementierungsplan abarbeiten
 4. npm run build und npm run dev und npm run test
-5. Zusammenfassung
+5. Dokumentation anpassen
+6. Zusammenfassung
 
 # Schritte
 ## Konzept lesen
@@ -25,6 +26,10 @@ Gehe hierzu schrittweise vor:
 2. Führe `npm run dev` aus, um das Projekt im Entwicklungsmodus zu starten, bis weder Fehler noch Warnungen mehr auftreten.
 3. Führe `npm run test -- --run` und `npx vitest --run --reporter=verbose 2>&1 | Out-String -Width 1000` aus, um die Tests auszuführen, bis weder Fehler noch Warnungen mehr auftreten.
 4. Schliesse die Implementation nicht ab, solange es noch Build- oder Testfehler gibt.
+
+## Dokumentation anpassen
+1. Falls sich etwas gegenüber dem Konzept geändert hat, aktualisiere das Konzept.
+2. Falls Du bei der Implementation das [Datenbankschema](../prisma/schema.prisma) verändert hast, aktualisiere die [Data Model Architecture-Dokumentation](data-model-architecture.md).
 
 ## Zusammenfassung
 1. Sobald alles erfolgreich getestet und ausgeführt wurde, kannst Du als letztes eine Zusammenfassung des gesamten Implementierungsplans erstellen.

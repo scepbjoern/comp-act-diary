@@ -132,6 +132,7 @@ export function SiteNav({ user }: { user: UserLite }) {
         <Link href="/prm" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Kontakte</Link>
         <Link href="/coach" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Coach</Link>
         <Link href="/locations" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Orte</Link>
+        <Link href="/calendar" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Kalender</Link>
         {/* Links submenu (desktop) */}
         <div className="relative" ref={linksRef}>
           <button type="button" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onMouseEnter={() => setLinksOpen(true)} onClick={() => setLinksOpen(v => !v)} aria-expanded={linksOpen} aria-haspopup="menu">
@@ -323,6 +324,7 @@ export function SiteNav({ user }: { user: UserLite }) {
             <Link href="/prm" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Kontakte</Link>
             <Link href="/coach" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Coach</Link>
             <Link href="/locations" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Orte</Link>
+            <Link href="/calendar" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Kalender</Link>
             <Link href="/batch" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Batch-Verarbeitung</Link>
             <Link href="/export" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Export</Link>
             {/* Links submenu (mobile): collapsible */}
