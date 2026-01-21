@@ -5,6 +5,8 @@
 
 'use client'
 
+import Link from 'next/link'
+import { IconMessageChatbot } from '@tabler/icons-react'
 import { GlobalSearch } from '@/components/features/search/GlobalSearch'
 import NotificationBell from '@/components/features/notifications/NotificationBell'
 import { SiteNav } from '@/components/layout/SiteNav'
@@ -23,6 +25,14 @@ export function HeaderClient({ user }: HeaderClientProps) {
     <div className="flex items-center gap-2">
       <ReadModeToggle />
       <GlobalSearch />
+      <Link
+        href="/coach"
+        className="btn btn-ghost btn-circle btn-sm"
+        title="Coach"
+        aria-label="Coach"
+      >
+        <IconMessageChatbot size={20} />
+      </Link>
       <NotificationBell />
       <SiteNav user={user} />
     </div>

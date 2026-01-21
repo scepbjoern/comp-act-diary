@@ -6,6 +6,18 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import {
+  IconCalendar,
+  IconChecklist,
+  IconChartBar,
+  IconExternalLink,
+  IconLogin,
+  IconMapPin,
+  IconMenu2,
+  IconNotebook,
+  IconSparkles,
+  IconUsers,
+} from '@tabler/icons-react'
 import { AuthNav } from '@/components/layout/AuthNav'
 
 type UserLite = { id: string; username: string; displayName: string | null; profileImageUrl?: string | null } | null
@@ -142,141 +154,174 @@ export function SiteNav({ user }: { user: UserLite }) {
   ]
 
   const staticLinks: { name: string; url: string }[] = []
+  const navIconClass = 'btn btn-ghost btn-circle btn-sm text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
 
   return (
     <div className="relative">
       {/* Desktop nav */}
-      <nav className="hidden md:flex items-center gap-4">
-        <Link href="/" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Tagebuch</Link>
-        <Link href="/reflections" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Reflexionen</Link>
-        <Link href="/analytics" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Auswertungen</Link>
-        <Link href="/prm" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Kontakte</Link>
-        <Link href="/coach" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Coach</Link>
-        <Link href="/locations" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Orte</Link>
-        <Link href="/calendar" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Kalender</Link>
-        <Link href="/tasks" className="relative text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">
-          Aufgaben
-          {openTaskCount > 0 && (
-            <span className="absolute -top-1.5 -right-3 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold bg-primary text-primary-content rounded-full px-1">
-              {openTaskCount > 99 ? '99+' : openTaskCount}
-            </span>
-          )}
-        </Link>
-        {/* Links submenu (desktop) */}
-        <div className="relative" ref={linksRef}>
-          <button type="button" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onMouseEnter={() => setLinksOpen(true)} onClick={() => setLinksOpen(v => !v)} aria-expanded={linksOpen} aria-haspopup="menu">
-            Links ▾
-          </button>
-          {linksOpen && (
-            <div className="absolute right-0 mt-2 w-72 bg-surface border border-slate-800 rounded-xl shadow-lg p-2 z-30" onMouseEnter={() => setLinksOpen(true)}>
-              <div className="flex flex-col gap-1">
-                {staticLinks.map(l => (
-                  <button key={`static-${l.name}`} className="text-left px-3 py-2 rounded hover:bg-pill text-sm text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => { openExternal(l.url); setLinksOpen(false) }}>
-                    {l.name}
-                  </button>
-                ))}
-                {/* Darmkur submenu */}
-                {darmkurLinks.length > 0 && (
-                  <>
-                    {(staticLinks.length > 0 || customLinks.length > 0) && <div className="h-px bg-slate-800 my-1" />}
-                    <button
-                      type="button"
-                      className="text-left px-3 py-2 rounded hover:bg-pill text-sm text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white flex items-center justify-between"
-                      onClick={() => setDarmkurOpen(v => !v)}
-                    >
-                      <span>Darmkur</span>
-                      <span>{darmkurOpen ? '▴' : '▾'}</span>
+      <nav className="hidden md:flex items-center gap-3">
+        <div className="h-6 w-px bg-slate-700/60" />
+        <div className="flex items-center gap-2">
+          <Link href="/" className={navIconClass} title="Tagebuch" aria-label="Tagebuch">
+            <IconNotebook size={20} />
+          </Link>
+          <Link href="/reflections" className={navIconClass} title="Reflexionen" aria-label="Reflexionen">
+            <IconSparkles size={20} />
+          </Link>
+          <Link href="/analytics" className={navIconClass} title="Auswertungen" aria-label="Auswertungen">
+            <IconChartBar size={20} />
+          </Link>
+          <Link href="/prm" className={navIconClass} title="Kontakte" aria-label="Kontakte">
+            <IconUsers size={20} />
+          </Link>
+          <Link href="/locations" className={navIconClass} title="Orte" aria-label="Orte">
+            <IconMapPin size={20} />
+          </Link>
+          <Link href="/calendar" className={navIconClass} title="Kalender" aria-label="Kalender">
+            <IconCalendar size={20} />
+          </Link>
+          <Link href="/tasks" className={`relative ${navIconClass}`} title="Aufgaben" aria-label="Aufgaben">
+            <IconChecklist size={20} />
+            {openTaskCount > 0 && (
+              <span className="absolute -top-1.5 -right-1 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold bg-primary text-primary-content rounded-full px-1">
+                {openTaskCount > 99 ? '99+' : openTaskCount}
+              </span>
+            )}
+          </Link>
+          {/* Links submenu (desktop) */}
+          <div className="relative" ref={linksRef}>
+            <button
+              type="button"
+              className={navIconClass}
+              onMouseEnter={() => setLinksOpen(true)}
+              onClick={() => setLinksOpen(v => !v)}
+              aria-expanded={linksOpen}
+              aria-haspopup="menu"
+              title="Links"
+              aria-label="Links"
+            >
+              <IconExternalLink size={20} />
+            </button>
+            {linksOpen && (
+              <div className="absolute right-0 mt-2 w-72 bg-surface border border-slate-800 rounded-xl shadow-lg p-2 z-30" onMouseEnter={() => setLinksOpen(true)}>
+                <div className="flex flex-col gap-1">
+                  {staticLinks.map(l => (
+                    <button key={`static-${l.name}`} className="text-left px-3 py-2 rounded hover:bg-pill text-sm text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => { openExternal(l.url); setLinksOpen(false) }}>
+                      {l.name}
                     </button>
-                    {darmkurOpen && (
-                      <div className="pl-3 flex flex-col">
-                        {darmkurLinks.map(l => (
-                          <button key={`darmkur-${l.name}`} className="text-left px-3 py-2 rounded hover:bg-pill text-sm text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => { openExternal(l.url); setLinksOpen(false); setDarmkurOpen(false) }}>
-                            {l.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-                {customLinks.length > 0 && <div className="h-px bg-slate-800 my-1" />}
-                {customLinks.map(l => (
-                  <button key={l.id} className="text-left px-3 py-2 rounded hover:bg-pill text-sm text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => { openExternal(l.url); setLinksOpen(false) }}>
-                    {l.name}
-                  </button>
-                ))}
+                  ))}
+                  {/* Darmkur submenu */}
+                  {darmkurLinks.length > 0 && (
+                    <>
+                      {(staticLinks.length > 0 || customLinks.length > 0) && <div className="h-px bg-slate-800 my-1" />}
+                      <button
+                        type="button"
+                        className="text-left px-3 py-2 rounded hover:bg-pill text-sm text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white flex items-center justify-between"
+                        onClick={() => setDarmkurOpen(v => !v)}
+                      >
+                        <span>Darmkur</span>
+                        <span>{darmkurOpen ? '▴' : '▾'}</span>
+                      </button>
+                      {darmkurOpen && (
+                        <div className="pl-3 flex flex-col">
+                          {darmkurLinks.map(l => (
+                            <button key={`darmkur-${l.name}`} className="text-left px-3 py-2 rounded hover:bg-pill text-sm text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => { openExternal(l.url); setLinksOpen(false); setDarmkurOpen(false) }}>
+                              {l.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {customLinks.length > 0 && <div className="h-px bg-slate-800 my-1" />}
+                  {customLinks.map(l => (
+                    <button key={l.id} className="text-left px-3 py-2 rounded hover:bg-pill text-sm text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => { openExternal(l.url); setLinksOpen(false) }}>
+                      {l.name}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-        {/* Desktop: hamburger for secondary items */}
-        <div className="relative">
-          <button aria-label="Menü" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(v => !v)}>☰</button>
-          {menuOpen && (
-            <div className="absolute right-0 mt-2 w-56 bg-surface border border-slate-800 rounded-xl shadow-lg p-2 z-30" role="menu">
-              <div className="flex flex-col gap-1">
-                <Link href="/batch" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(false)}>Batch-Verarbeitung</Link>
-                <Link href="/export" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(false)}>Export</Link>
-                <Link href="/settings" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(false)}>Einstellungen</Link>
-                <Link href="/help" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(false)}>App-Hilfe</Link>
-                {canInstall && (
-                  <button type="button" className="px-3 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 text-left" onClick={() => { setMenuOpen(false); void doInstall() }}>Installieren</button>
-                )}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* User avatar menu */}
-        <div className="relative" ref={userMenuRefDesktop}>
-          {user ? (
-            <button className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden border border-slate-600" onClick={() => setUserMenuOpen(v => !v)} aria-haspopup="menu" aria-expanded={userMenuOpen}>
-              {user.profileImageUrl ? (
-                <Image 
-                  src={user.profileImageUrl} 
-                  alt="Avatar" 
-                  width={32}
-                  height={32}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="text-xs text-gray-200 font-semibold">{(user.displayName || user.username || '?').slice(0,1).toUpperCase()}</span>
-              )}
+        <div className="h-6 w-px bg-slate-700/60" />
+
+        <div className="flex items-center gap-2">
+          {/* Desktop: hamburger for secondary items */}
+          <div className="relative">
+            <button aria-label="Menü" title="Menü" className={navIconClass} onClick={() => setMenuOpen(v => !v)}>
+              <IconMenu2 size={20} />
             </button>
-          ) : (
-            <Link href="/login" className="text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white">Login</Link>
-          )}
-          {user && userMenuOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-surface border border-slate-800 rounded-xl shadow-lg p-3 z-30" role="menu">
-              <div className="flex items-center gap-3 pb-2 border-b border-slate-800">
-                <div className="h-10 w-10 rounded-full bg-slate-700 overflow-hidden border border-slate-600">
-                  {user.profileImageUrl ? (
-                    <Image 
-                  src={user.profileImageUrl} 
-                  alt="Avatar" 
-                  width={32}
-                  height={32}
-                  className="h-full w-full object-cover"
-                />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center text-sm text-gray-200 font-semibold">
-                      {(user.displayName || user.username || '?').slice(0,1).toUpperCase()}
-                    </div>
+            {menuOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-surface border border-slate-800 rounded-xl shadow-lg p-2 z-30" role="menu">
+                <div className="flex flex-col gap-1">
+                  <Link href="/batch" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(false)}>Batch-Verarbeitung</Link>
+                  <Link href="/export" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(false)}>Export</Link>
+                  <Link href="/settings" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(false)}>Einstellungen</Link>
+                  <Link href="/help" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setMenuOpen(false)}>App-Hilfe</Link>
+                  {canInstall && (
+                    <button type="button" className="px-3 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 text-left" onClick={() => { setMenuOpen(false); void doInstall() }}>Installieren</button>
                   )}
                 </div>
-                <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{user.displayName || user.username}</div>
-                  <div className="text-xs text-gray-400 truncate">@{user.username}</div>
+              </div>
+            )}
+          </div>
+
+          {/* User avatar menu */}
+          <div className="relative" ref={userMenuRefDesktop}>
+            {user ? (
+              <button className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden border border-slate-600" onClick={() => setUserMenuOpen(v => !v)} aria-haspopup="menu" aria-expanded={userMenuOpen}>
+                {user.profileImageUrl ? (
+                  <Image 
+                    src={user.profileImageUrl} 
+                    alt="Avatar" 
+                    width={32}
+                    height={32}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-xs text-gray-200 font-semibold">{(user.displayName || user.username || '?').slice(0,1).toUpperCase()}</span>
+                )}
+              </button>
+            ) : (
+              <Link href="/login" className={navIconClass} title="Login" aria-label="Login">
+                <IconLogin size={20} />
+              </Link>
+            )}
+            {user && userMenuOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-surface border border-slate-800 rounded-xl shadow-lg p-3 z-30" role="menu">
+                <div className="flex items-center gap-3 pb-2 border-b border-slate-800">
+                  <div className="h-10 w-10 rounded-full bg-slate-700 overflow-hidden border border-slate-600">
+                    {user.profileImageUrl ? (
+                      <Image 
+                    src={user.profileImageUrl} 
+                    alt="Avatar" 
+                    width={32}
+                    height={32}
+                    className="h-full w-full object-cover"
+                  />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-sm text-gray-200 font-semibold">
+                        {(user.displayName || user.username || '?').slice(0,1).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate">{user.displayName || user.username}</div>
+                    <div className="text-xs text-gray-400 truncate">@{user.username}</div>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 pt-2">
+                  <Link href="/settings" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setUserMenuOpen(false)}>Profil ändern</Link>
+                  <button
+                    className="px-3 py-2 rounded text-left hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                    onClick={async () => { try { await fetch('/api/auth/logout', { method: 'POST' }) } finally { window.location.href = '/login' } }}
+                  >Abmelden</button>
                 </div>
               </div>
-              <div className="flex flex-col gap-1 pt-2">
-                <Link href="/settings" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={() => setUserMenuOpen(false)}>Profil ändern</Link>
-                <button
-                  className="px-3 py-2 rounded text-left hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                  onClick={async () => { try { await fetch('/api/auth/logout', { method: 'POST' }) } finally { window.location.href = '/login' } }}
-                >Abmelden</button>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </nav>
 
