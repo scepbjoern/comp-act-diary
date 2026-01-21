@@ -6,7 +6,7 @@
 
 import { getPrisma } from '@/lib/core/prisma'
 import { TaskerCalendarEvent, CalendarSyncResult } from '@/lib/validators/calendar'
-import { convertAndTruncate } from '@/lib/utils/htmlToMarkdown'
+import { convertAndTruncate, isTeamsMeetingOnly, cleanEventTitle } from '@/lib/utils/htmlToMarkdown'
 import { format, parseISO, startOfDay, endOfDay } from 'date-fns'
 import { toZonedTime } from 'date-fns-tz'
 
@@ -15,7 +15,7 @@ import { toZonedTime } from 'date-fns-tz'
 // =============================================================================
 
 const DEFAULT_TIMEZONE = 'Europe/Zurich'
-const MAX_DESCRIPTION_LENGTH = 5000
+const MAX_DESCRIPTION_LENGTH = 20000
 
 // =============================================================================
 // MAIN SYNC FUNCTION
@@ -90,7 +90,10 @@ export async function upsertCalendarEvent(
   // Fix all-day event dates (UTC → local)
   const { start, end } = fixAllDayEventDate(event)
 
-  // Convert HTML description to Markdown
+  // Clean event title (remove $$ suffix)
+  const cleanedTitle = cleanEventTitle(event.title)
+
+  // Convert HTML description to Markdown, filter out Teams-only invitations
   const description = event.description 
     ? convertAndTruncate(event.description, MAX_DESCRIPTION_LENGTH)
     : null
@@ -104,37 +107,44 @@ export async function upsertCalendarEvent(
     : null
 
   // Check if ExternalSync exists for this event
-  const existingSync = await prisma.externalSync.findUnique({
+  const existingSync = await prisma.externalSync.findFirst({
     where: {
-      providerId_externalId: {
-        providerId,
-        externalId: event.eventId,
-      },
+      userId,
+      providerId,
+      externalId: event.eventId,
     },
     include: {
-      calendarEvents: true,
+      calendarEvents: {
+        select: {
+          id: true,
+          isManuallyEdited: true,
+        },
+      },
     },
   })
 
   if (existingSync && existingSync.calendarEvents.length > 0) {
-    // Update existing event
+    // Update existing event (only if not manually edited)
     const calendarEvent = existingSync.calendarEvents[0]
     
-    await prisma.calendarEvent.update({
-      where: { id: calendarEvent.id },
-      data: {
-        title: event.title,
-        description,
-        startedAt: start,
-        endedAt: end,
-        isAllDay: event.allDay,
-        location: event.location || null,
-        sourceCalendar: event.sourceCalendar || null,
-        timezone: event.timezone || DEFAULT_TIMEZONE,
-        locationId,
-        timeBoxId: timeBox.id,
-      },
-    })
+    // Skip update if event was manually edited
+    if (!calendarEvent.isManuallyEdited) {
+      await prisma.calendarEvent.update({
+        where: { id: calendarEvent.id },
+        data: {
+          title: cleanedTitle,
+          description,
+          startedAt: start,
+          endedAt: end,
+          isAllDay: event.allDay,
+          location: event.location || null,
+          sourceCalendar: event.sourceCalendar || null,
+          timezone: event.timezone || DEFAULT_TIMEZONE,
+          locationId,
+          timeBoxId: timeBox.id,
+        },
+      })
+    }
 
     // Update ExternalSync lastSyncedAt
     await prisma.externalSync.update({
@@ -157,7 +167,7 @@ export async function upsertCalendarEvent(
       data: {
         id: entity.id, // Use same ID as Entity
         userId,
-        title: event.title,
+        title: cleanedTitle,
         description,
         startedAt: start,
         endedAt: end,
@@ -437,10 +447,12 @@ export async function rematchUnmatchedEvents(
 
 /**
  * Get calendar events for a specific day.
+ * @param includeHidden - If true, include hidden events (default: false)
  */
 export async function getEventsForDay(
   userId: string,
-  date: string // YYYY-MM-DD format
+  date: string, // YYYY-MM-DD format
+  includeHidden: boolean = false
 ): Promise<Array<{
   id: string
   title: string
@@ -451,6 +463,7 @@ export async function getEventsForDay(
   location: string | null
   sourceCalendar: string | null
   locationId: string | null
+  isHidden: boolean
   matchedLocation: { id: string; name: string } | null
 }>> {
   const prisma = getPrisma()
@@ -465,6 +478,7 @@ export async function getEventsForDay(
         gte: dayStart,
         lte: dayEnd,
       },
+      ...(includeHidden ? {} : { isHidden: false }),
     },
     include: {
       matchedLocation: {
@@ -482,11 +496,13 @@ export async function getEventsForDay(
 
 /**
  * Get calendar events for a date range.
+ * @param includeHidden - If true, include hidden events (default: false)
  */
 export async function getEventsForRange(
   userId: string,
   startDate: string, // YYYY-MM-DD format
-  endDate: string    // YYYY-MM-DD format
+  endDate: string,   // YYYY-MM-DD format
+  includeHidden: boolean = false
 ): Promise<Array<{
   id: string
   title: string
@@ -497,6 +513,7 @@ export async function getEventsForRange(
   location: string | null
   sourceCalendar: string | null
   locationId: string | null
+  isHidden: boolean
   matchedLocation: { id: string; name: string } | null
 }>> {
   const prisma = getPrisma()
@@ -511,6 +528,7 @@ export async function getEventsForRange(
         gte: rangeStart,
         lte: rangeEnd,
       },
+      ...(includeHidden ? {} : { isHidden: false }),
     },
     include: {
       matchedLocation: {
@@ -524,6 +542,48 @@ export async function getEventsForRange(
   })
 
   return events
+}
+
+/**
+ * Update a calendar event (title, description, isHidden).
+ * Sets isManuallyEdited=true if title or description is changed.
+ */
+export async function updateCalendarEvent(
+  userId: string,
+  eventId: string,
+  data: {
+    title?: string
+    description?: string | null
+    isHidden?: boolean
+  }
+): Promise<{ id: string } | null> {
+  const prisma = getPrisma()
+
+  // Verify ownership
+  const existing = await prisma.calendarEvent.findFirst({
+    where: { id: eventId, userId },
+    select: { id: true },
+  })
+
+  if (!existing) {
+    return null
+  }
+
+  // Mark as manually edited if title or description changed
+  const isContentEdit = data.title !== undefined || data.description !== undefined
+
+  const updated = await prisma.calendarEvent.update({
+    where: { id: eventId },
+    data: {
+      ...(data.title !== undefined && { title: data.title }),
+      ...(data.description !== undefined && { description: data.description }),
+      ...(data.isHidden !== undefined && { isHidden: data.isHidden }),
+      ...(isContentEdit && { isManuallyEdited: true }),
+    },
+    select: { id: true },
+  })
+
+  return updated
 }
 
 // =============================================================================

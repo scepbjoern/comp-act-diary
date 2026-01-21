@@ -1714,6 +1714,10 @@ model CalendarEvent {
   timezone       String?
   /// Verknüpfung zu gematchter Location (optional)
   locationId     String?
+  /// Event ausgeblendet (nicht relevant für Anzeige)
+  isHidden       Boolean   @default(false)
+  /// Event wurde manuell bearbeitet (vor Sync-Überschreibung schützen)
+  isManuallyEdited Boolean @default(false)
   /// Erstellungszeitpunkt
   createdAt      DateTime  @default(now())
   /// Letztes Update

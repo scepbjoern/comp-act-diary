@@ -63,7 +63,7 @@ Konzept für die Integration von Android-Systemkalender-Daten in die Comp-ACT-Di
 | **Sync-Trigger** | Nur passiv (Tasker triggert, max. 3x täglich) |
 | **Token-System** | Generisches `WebhookToken` pro SyncProvider |
 | **Description-Format** | Markdown (konsistent mit JournalEntry.notes) |
-| **Description-Länge** | Max. 5000 Zeichen nach Sanitization, dann "..." |
+| **Description-Länge** | Max. 20000 Zeichen nach Sanitization, dann "..." |
 | **Deduplizierung** | Via bestehendes `ExternalSync`-Pattern |
 | **Pattern-UI** | Ja, in Phase 1 (GUI zum Anlegen/Bearbeiten) |
 | **Pattern-Syntax** | Echte Regex (siehe [regex101.com](https://regex101.com)) |
@@ -1028,93 +1028,57 @@ Forwarding                    https://abc123.ngrok-free.app -> http://localhost:
 #### Voraussetzungen
 
 - Tasker App installiert (Play Store)
-- AutoCalendar Plugin installiert (für Kalender-Zugriff)
 - Webhook-Token in CompACT Diary erstellt
 
-#### Schritt 1: Token in CompACT Diary erstellen
+**Hinweis:** Tasker hat eine eingebaute Funktion zum Lesen von Kalender-Events. Das AutoCalendar-Plugin ist **nicht** erforderlich.
 
-1. App öffnen → **Einstellungen** → **Webhook-Tokens**
-2. **Neues Token** → Typ: **Tasker Kalender** auswählen
-3. Gerätename eingeben (z.B. "Pixel 7 Pro")
-4. **Token kopieren** (wird nur einmal angezeigt!)
+#### Schritt 1: Tasker-Projekt herunterladen
 
-#### Schritt 2: Tasker-Task erstellen
+1. In CompACT Diary: **Einstellungen** → **Daten** → **Kalender-Synchronisation**
+2. Auf **Tasker-Projekt herunterladen** klicken
+3. Die Datei `CompACT_Diary.prj.xml` wird heruntergeladen
 
-1. **Tasker öffnen** → **Tasks** → **+** (neuer Task)
-2. Task benennen: z.B. "Kalender Sync"
+Alternativ direkt von: `/varia/CompACT_Diary.prj.xml`
 
-#### Schritt 3: AutoCalendar Query Action hinzufügen
+#### Schritt 2: Projekt in Tasker importieren
 
-1. **+** → **Plugin** → **AutoCalendar** → **Calendar Query**
-2. Konfiguration:
-   - **Calendar**: Gewünschten Kalender auswählen (z.B. "ZHAW-Outlook")
-   - **Start Date**: `%DATE` (heute)
-   - **End Date**: z.B. `+30d` (nächsten 30 Tage)
-   - **Output Format**: JSON
-   - **Fields**: title, start, end, allDay, location, description, eventId, visible
-3. **Output Variable**: `%calendar_json`
+1. Öffne **Tasker** auf deinem Android-Gerät
+2. Tippe auf das **Haus-Symbol** (oben links)
+3. Wähle **Projekt importieren**
+4. Navigiere zur heruntergeladenen `CompACT_Diary.prj.xml`
+5. Das Projekt "CompACT Diary" erscheint mit dem Task "CalendarCompACTDiary"
 
-#### Schritt 4: Variable Set für sourceCalendar
+#### Schritt 3: Token in CompACT Diary erstellen
 
-1. **+** → **Variable** → **Variable Set**
-2. Name: `%source_calendar`
-3. Wert: `ZHAW-Outlook` (oder entsprechender Kalendername)
+1. App öffnen → **Einstellungen** → **Daten** → **Kalender-Synchronisation**
+2. Gerätename eingeben (z.B. "Pixel 7 Pro")
+3. **Token erstellen** und kopieren (wird nur einmal angezeigt!)
 
-#### Schritt 5: JavaScriptlet für JSON-Aufbereitung
+#### Schritt 4: Variablen in Tasker konfigurieren
 
-1. **+** → **Code** → **JavaScriptlet**
-2. Code:
+Öffne den Task "CalendarCompACTDiary" und passe die Variablen in den "Variable Set"-Aktionen an:
 
-```javascript
-// Kalender-Events parsen und sourceCalendar hinzufügen
-var events = JSON.parse(calendar_json);
-var sourceCalendar = source_calendar;
+| Variable | Beschreibung | Beispielwert |
+|----------|--------------|---------------|
+| `%cd_webhooktoken` | Dein Authentifizierungs-Token | `abc123...` |
+| `%cd_webhookurl` | Die Webhook-URL deiner Installation | `https://deine-domain.ch/api/calendar/webhook` |
+| `%cd_calendarname` | Name des zu synchronisierenden Kalenders | `ZHAW-Outlook` |
+| `%cd_pastdays` | Anzahl Tage in der Vergangenheit | `10` |
+| `%cd_futuredays` | Anzahl Tage in der Zukunft | `10` |
 
-var enrichedEvents = events.map(function(event) {
-  return {
-    title: event.title || "",
-    start: event.start,
-    end: event.end,
-    allDay: event.allDay === "true" || event.allDay === true,
-    location: event.location || "",
-    description: event.description || "",
-    visible: event.visible !== "false" && event.visible !== false,
-    eventId: String(event.eventId),
-    timezone: "Europe/Zurich",
-    sourceCalendar: sourceCalendar
-  };
-});
+#### Schritt 5: Trigger einrichten
 
-var payload = JSON.stringify(enrichedEvents);
-```
+Das Projekt enthält bereits einen Profil-Trigger für täglich um 18:00 Uhr. Du kannst:
+- Weitere Profile hinzufügen (z.B. morgens, mittags)
+- Den Task manuell ausführen (Play-Button)
+- Den Trigger bei Kalender-Änderungen aktivieren
 
-3. **Auto Exit**: aktivieren
+#### Schritt 6: Testen
 
-#### Schritt 6: HTTP Request Action hinzufügen
-
-1. **+** → **Net** → **HTTP Request**
-2. Konfiguration:
-
-| Feld | Wert |
-|------|------|
-| **Method** | POST |
-| **URL** | `https://abc123.ngrok-free.app/api/calendar/webhook` |
-| **Headers** | `Authorization: Bearer <dein-token>` |
-| **Content Type** | `application/json` |
-| **Body** | `%payload` |
-| **Timeout** | 30 Sekunden |
-
-#### Schritt 7: Task testen
-
-1. **Play-Button** drücken
-2. Response prüfen (sollte `200 OK` mit Sync-Statistik sein)
-3. App öffnen → **Kalender** → Events verifizieren
-
-#### Schritt 8: Profil für automatischen Sync erstellen (optional)
-
-1. **Profiles** → **+** → **Time**
-2. Zeiten festlegen (z.B. 07:00, 12:00, 18:00)
-3. Task "Kalender Sync" verknüpfen
+1. Führe den Task manuell aus (Play-Button)
+2. Prüfe die Benachrichtigung "Kalender Sync beendet"
+3. Öffne die **Kalender-Seite** in CompACT Diary
+4. Die Events sollten nun sichtbar sein
 
 ### 11.3 Sync-Szenarien
 
@@ -1129,5 +1093,45 @@ var payload = JSON.stringify(enrichedEvents);
 | Ganztages-Event | Korrektes Datum, als "Ganztägig" markiert |
 | Location "SM O1.02" mit Pattern | Wird "SM-Gebäude" zugeordnet |
 | Re-Match nach neuem Pattern | Zuvor ungematchte Events werden gematcht |
+| Teams-Meeting-Einladung | Description wird nicht angezeigt (gefiltert) |
+| Event "Meeting$$" | Titel wird zu "Meeting" ($$-Suffix entfernt) |
+| Event ausblenden | Event wird mit isHidden=true markiert, Filter möglich |
+
+---
+
+## 12. Ergänzende Features (Januar 2026)
+
+### 12.1 Event-Bearbeitung und Ausblenden
+
+| Feature | Beschreibung |
+|---------|-------------|
+| **isHidden-Feld** | Neues Boolean-Feld in `CalendarEvent` zum Ausblenden irrelevanter Events |
+| **Event bearbeiten** | Titel und Beschreibung können direkt in der Kalender-Übersicht geändert werden |
+| **Ausblenden-Toggle** | Button zum Ein-/Ausblenden von Events (Hover-Aktion) |
+| **Filter-Toggle** | Button in Navigation zum Anzeigen/Verstecken ausgeblendeter Events |
+
+### 12.2 Description-Verbesserungen
+
+| Feature | Beschreibung |
+|---------|-------------|
+| **Teams-Meeting-Filter** | Descriptions, die nur Teams-Einladungen enthalten, werden automatisch gefiltert |
+| **4x längere Descriptions** | Max. Länge von 5000 auf 20000 Zeichen erhöht |
+| **$$-Suffix entfernen** | Titel mit `$$` am Ende werden automatisch bereinigt |
+
+### 12.3 Match-Pattern-Verbesserungen
+
+| Feature | Beschreibung |
+|---------|-------------|
+| **Location-Autocomplete** | Statt Dropdown: Textfeld mit Suche und Vorschlägen |
+| **KI-Regex-Helfer** | LLM-basierte Generierung von Regex-Patterns aus Beispielen |
+| **HTML-Checkbox** | Native HTML-Checkbox statt DaisyUI-Komponente |
+
+### 12.4 Settings-Integration
+
+| Feature | Beschreibung |
+|---------|-------------|
+| **Kalender-Sync in Settings** | Neuer Accordion-Eintrag im Tab "Daten" |
+| **Tasker-Projekt-Download** | Download-Button für vorkonfiguriertes Tasker-Projekt |
+| **Variable-Dokumentation** | Tabelle mit allen Tasker-Variablen und deren Zweck |
 
 *Dokument erstellt gemäss Feature-Planungs-Prozess (__PROMPT_NEW_FEATURE_PLAN.md)*

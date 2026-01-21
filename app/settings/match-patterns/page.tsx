@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { IconPlus, IconTrash, IconPencil, IconCheck, IconX, IconMapPin } from '@tabler/icons-react'
+import { IconPlus, IconTrash, IconPencil, IconCheck, IconX, IconMapPin, IconSparkles, IconLoader } from '@tabler/icons-react'
 import Link from 'next/link'
 
 // =============================================================================
@@ -65,6 +65,15 @@ export default function MatchPatternsPage() {
   })
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+
+  // Location autocomplete state
+  const [locationSearch, setLocationSearch] = useState('')
+  const [filteredLocations, setFilteredLocations] = useState<Location[]>([])
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false)
+
+  // Regex helper state
+  const [regexExamples, setRegexExamples] = useState('')
+  const [generatingRegex, setGeneratingRegex] = useState(false)
 
   // Load patterns and locations
   const loadData = useCallback(async () => {
@@ -236,6 +245,54 @@ export default function MatchPatternsPage() {
     return targetId
   }
 
+  // Location autocomplete filter
+  const handleLocationSearch = (search: string) => {
+    setLocationSearch(search)
+    if (search.trim()) {
+      const filtered = locations.filter(l => 
+        l.name.toLowerCase().includes(search.toLowerCase()) ||
+        l.slug.toLowerCase().includes(search.toLowerCase())
+      )
+      setFilteredLocations(filtered)
+      setShowLocationDropdown(true)
+    } else {
+      setFilteredLocations(locations)
+      setShowLocationDropdown(false)
+    }
+  }
+
+  // Select location from autocomplete
+  const selectLocation = (location: Location) => {
+    setFormData(prev => ({ ...prev, targetId: location.id }))
+    setLocationSearch(location.name)
+    setShowLocationDropdown(false)
+  }
+
+  // Generate regex from examples using LLM
+  const generateRegex = async () => {
+    if (!regexExamples.trim()) return
+    
+    setGeneratingRegex(true)
+    try {
+      const res = await fetch('/api/ai/regex-helper', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examples: regexExamples }),
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        if (data.pattern) {
+          setFormData(prev => ({ ...prev, pattern: data.pattern }))
+        }
+      }
+    } catch (error) {
+      console.error('Failed to generate regex:', error)
+    } finally {
+      setGeneratingRegex(false)
+    }
+  }
+
   // Group patterns by source type
   const patternsBySource = patterns.reduce((acc, p) => {
     if (!acc[p.sourceType]) acc[p.sourceType] = []
@@ -321,28 +378,48 @@ export default function MatchPatternsPage() {
                 </div>
               )}
 
-              {/* Target Selection */}
+              {/* Target Selection with Autocomplete */}
               {!editingId && formData.targetType === 'LOCATION' && (
-                <div className="form-control md:col-span-2">
+                <div className="form-control md:col-span-2 relative">
                   <label className="label">
                     <span className="label-text">Ziel-Location</span>
                   </label>
-                  <select
-                    value={formData.targetId}
-                    onChange={(e) => setFormData(prev => ({ ...prev, targetId: e.target.value }))}
-                    className="select select-bordered"
-                  >
-                    <option value="">Location wählen...</option>
-                    {locations.map(location => (
-                      <option key={location.id} value={location.id}>
-                        {location.name}
-                      </option>
-                    ))}
-                  </select>
+                  <input
+                    type="text"
+                    value={locationSearch}
+                    onChange={(e) => handleLocationSearch(e.target.value)}
+                    onFocus={() => {
+                      setFilteredLocations(locations)
+                      setShowLocationDropdown(true)
+                    }}
+                    onBlur={() => setTimeout(() => setShowLocationDropdown(false), 200)}
+                    className="input input-bordered"
+                    placeholder="Location suchen..."
+                  />
+                  {showLocationDropdown && filteredLocations.length > 0 && (
+                    <ul className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-auto bg-base-100 border border-base-300 rounded-lg shadow-lg">
+                      {filteredLocations.slice(0, 10).map(location => (
+                        <li
+                          key={location.id}
+                          onClick={() => selectLocation(location)}
+                          className={`px-4 py-2 cursor-pointer hover:bg-base-200 ${
+                            formData.targetId === location.id ? 'bg-primary/10' : ''
+                          }`}
+                        >
+                          {location.name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {formData.targetId && (
+                    <div className="text-xs text-success mt-1">
+                      Ausgewählt: {locations.find(l => l.id === formData.targetId)?.name}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Pattern */}
+              {/* Pattern with Regex Helper */}
               <div className="form-control md:col-span-2">
                 <label className="label">
                   <span className="label-text">Regex-Pattern</span>
@@ -367,6 +444,39 @@ export default function MatchPatternsPage() {
                     Case-insensitive. Beispiel: <code>SM\s*\d+</code> matcht &quot;SM 101&quot;, &quot;SM101&quot;
                   </span>
                 </label>
+
+                {/* LLM Regex Helper */}
+                <div className="mt-2 p-3 bg-base-200 rounded-lg">
+                  <label className="label pt-0">
+                    <span className="label-text text-sm font-medium flex items-center gap-1">
+                      <IconSparkles className="w-4 h-4 text-primary" />
+                      KI-Regex-Helfer
+                    </span>
+                  </label>
+                  <p className="text-xs text-base-content/60 mb-2">
+                    Gib Beispiele ein (ein Beispiel pro Zeile), die das Pattern matchen soll:
+                  </p>
+                  <textarea
+                    value={regexExamples}
+                    onChange={(e) => setRegexExamples(e.target.value)}
+                    className="textarea textarea-bordered textarea-sm w-full font-mono"
+                    rows={3}
+                    placeholder={"SM O1.02\nSM O2.15\nSM E0.01"}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void generateRegex()}
+                    disabled={generatingRegex || !regexExamples.trim()}
+                    className="btn btn-sm btn-outline mt-2"
+                  >
+                    {generatingRegex ? (
+                      <IconLoader className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <IconSparkles className="w-4 h-4" />
+                    )}
+                    Pattern generieren
+                  </button>
+                </div>
               </div>
 
               {/* Description */}
@@ -402,16 +512,16 @@ export default function MatchPatternsPage() {
                 </label>
               </div>
 
-              {/* Is Active */}
+              {/* Is Active - Plain HTML checkbox */}
               <div className="form-control">
-                <label className="label cursor-pointer justify-start gap-3">
+                <label className="flex items-center gap-3 cursor-pointer py-2">
                   <input
                     type="checkbox"
                     checked={formData.isActive}
                     onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                    className="checkbox checkbox-primary"
+                    className="w-5 h-5 rounded border-2 border-base-300 checked:bg-primary checked:border-primary focus:ring-2 focus:ring-primary focus:ring-offset-2"
                   />
-                  <span className="label-text">Pattern aktiv</span>
+                  <span className="text-sm">Pattern aktiv</span>
                 </label>
               </div>
             </div>

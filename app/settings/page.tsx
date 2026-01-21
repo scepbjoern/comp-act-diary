@@ -1063,6 +1063,24 @@ export default function SettingsPage() {
                 </a>
               </div>
             </details>
+
+            {/* Accordion: Kalender-Synchronisation */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="calendar_month" size={18} />
+                  Kalender-Synchronisation
+                </span>
+              </summary>
+              <div className="collapse-content pt-2">
+                <div className="text-sm text-gray-400 mb-2">
+                  Tasker-Webhook konfigurieren, Tokens verwalten und Pattern-Matching einrichten.
+                </div>
+                <a href="/settings/calendar" className="btn btn-primary btn-sm">
+                  Kalender-Einstellungen öffnen
+                </a>
+              </div>
+            </details>
           </div>
         </div>
       </div>

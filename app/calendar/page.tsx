@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { format, parseISO, addDays, subDays, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns'
 import { de } from 'date-fns/locale'
-import { IconChevronLeft, IconChevronRight, IconCalendarEvent, IconMapPin, IconRefresh } from '@tabler/icons-react'
+import { IconChevronLeft, IconChevronRight, IconCalendarEvent, IconMapPin, IconRefresh, IconEye, IconEyeOff, IconPencil, IconCheck, IconX } from '@tabler/icons-react'
 import Link from 'next/link'
 
 // =============================================================================
@@ -20,6 +20,7 @@ interface CalendarEvent {
   location: string | null
   sourceCalendar: string | null
   locationId: string | null
+  isHidden: boolean
   matchedLocation: { id: string; name: string } | null
 }
 
@@ -33,6 +34,7 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showHidden, setShowHidden] = useState(false)
 
   // Load events
   const loadEvents = useCallback(async () => {
@@ -41,12 +43,13 @@ export default function CalendarPage() {
 
     try {
       let url: string
+      const hiddenParam = showHidden ? '&includeHidden=true' : ''
       if (viewMode === 'day') {
-        url = `/api/calendar/events?date=${selectedDate}`
+        url = `/api/calendar/events?date=${selectedDate}${hiddenParam}`
       } else {
         const weekStart = format(startOfWeek(parseISO(selectedDate), { locale: de }), 'yyyy-MM-dd')
         const weekEnd = format(endOfWeek(parseISO(selectedDate), { locale: de }), 'yyyy-MM-dd')
-        url = `/api/calendar/events?startDate=${weekStart}&endDate=${weekEnd}`
+        url = `/api/calendar/events?startDate=${weekStart}&endDate=${weekEnd}${hiddenParam}`
       }
 
       const res = await fetch(url)
@@ -61,7 +64,23 @@ export default function CalendarPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedDate, viewMode])
+  }, [selectedDate, viewMode, showHidden])
+
+  // Update event (hide/unhide, edit)
+  const updateEvent = async (eventId: string, data: { title?: string; description?: string | null; isHidden?: boolean }) => {
+    try {
+      const res = await fetch(`/api/calendar/events/${eventId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (res.ok) {
+        void loadEvents()
+      }
+    } catch (error) {
+      console.error('Failed to update event:', error)
+    }
+  }
 
   useEffect(() => {
     void loadEvents()
@@ -174,6 +193,13 @@ export default function CalendarPage() {
             </button>
           </div>
           <button 
+            onClick={() => setShowHidden(!showHidden)}
+            className={`btn btn-sm ${showHidden ? 'btn-active' : 'btn-ghost'}`}
+            title={showHidden ? 'Ausgeblendete verstecken' : 'Ausgeblendete anzeigen'}
+          >
+            {showHidden ? <IconEye className="w-4 h-4" /> : <IconEyeOff className="w-4 h-4" />}
+          </button>
+          <button 
             onClick={() => void loadEvents()} 
             className="btn btn-ghost btn-sm btn-circle"
             title="Aktualisieren"
@@ -209,7 +235,7 @@ export default function CalendarPage() {
                 ) : (
                   <div className="space-y-3">
                     {dayEvents.map(event => (
-                      <EventCard key={event.id} event={event} />
+                      <EventCard key={event.id} event={event} onUpdate={updateEvent} />
                     ))}
                   </div>
                 )}
@@ -240,7 +266,15 @@ export default function CalendarPage() {
 // EVENT CARD COMPONENT
 // =============================================================================
 
-function EventCard({ event }: { event: CalendarEvent }) {
+function EventCard({ event, onUpdate }: { 
+  event: CalendarEvent
+  onUpdate: (id: string, data: { title?: string; description?: string | null; isHidden?: boolean }) => Promise<void>
+}) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState(event.title)
+  const [editDescription, setEditDescription] = useState(event.description || '')
+  const [saving, setSaving] = useState(false)
+
   const startTime = parseISO(event.startedAt)
   const endTime = event.endedAt ? parseISO(event.endedAt) : null
 
@@ -248,8 +282,67 @@ function EventCard({ event }: { event: CalendarEvent }) {
     ? 'Ganztägig'
     : `${format(startTime, 'HH:mm')}${endTime ? ` - ${format(endTime, 'HH:mm')}` : ''}`
 
+  const handleSave = async () => {
+    setSaving(true)
+    await onUpdate(event.id, {
+      title: editTitle,
+      description: editDescription || null,
+    })
+    setSaving(false)
+    setIsEditing(false)
+  }
+
+  const handleToggleHidden = async () => {
+    await onUpdate(event.id, { isHidden: !event.isHidden })
+  }
+
+  if (isEditing) {
+    return (
+      <div className={`p-3 rounded-lg bg-base-200 border-2 border-primary ${event.isHidden ? 'opacity-50' : ''}`}>
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            className="input input-bordered input-sm w-full"
+            placeholder="Titel"
+          />
+          <textarea
+            value={editDescription}
+            onChange={(e) => setEditDescription(e.target.value)}
+            className="textarea textarea-bordered textarea-sm w-full"
+            rows={3}
+            placeholder="Beschreibung (optional)"
+          />
+          <div className="flex justify-end gap-2">
+            <button 
+              onClick={() => setIsEditing(false)} 
+              className="btn btn-ghost btn-xs"
+              disabled={saving}
+            >
+              <IconX className="w-3 h-3" />
+              Abbrechen
+            </button>
+            <button 
+              onClick={() => void handleSave()} 
+              className="btn btn-primary btn-xs"
+              disabled={saving}
+            >
+              {saving ? (
+                <span className="loading loading-spinner loading-xs"></span>
+              ) : (
+                <IconCheck className="w-3 h-3" />
+              )}
+              Speichern
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex gap-3 p-3 rounded-lg bg-base-200/50 hover:bg-base-200 transition-colors">
+    <div className={`flex gap-3 p-3 rounded-lg bg-base-200/50 hover:bg-base-200 transition-colors group ${event.isHidden ? 'opacity-50' : ''}`}>
       {/* Time column */}
       <div className="w-20 flex-shrink-0 text-sm">
         <span className={event.isAllDay ? 'badge badge-info badge-sm' : 'text-base-content/70'}>
@@ -259,7 +352,31 @@ function EventCard({ event }: { event: CalendarEvent }) {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <h3 className="font-medium truncate">{event.title}</h3>
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-medium truncate">{event.title}</h3>
+          
+          {/* Action buttons */}
+          <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+            <button
+              onClick={() => setIsEditing(true)}
+              className="btn btn-ghost btn-xs btn-square"
+              title="Bearbeiten"
+            >
+              <IconPencil className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => void handleToggleHidden()}
+              className="btn btn-ghost btn-xs btn-square"
+              title={event.isHidden ? 'Einblenden' : 'Ausblenden'}
+            >
+              {event.isHidden ? (
+                <IconEye className="w-3 h-3" />
+              ) : (
+                <IconEyeOff className="w-3 h-3" />
+              )}
+            </button>
+          </div>
+        </div>
         
         {/* Location */}
         {(event.location || event.matchedLocation) && (
@@ -280,17 +397,24 @@ function EventCard({ event }: { event: CalendarEvent }) {
 
         {/* Description preview */}
         {event.description && (
-          <p className="text-sm text-base-content/60 mt-1 line-clamp-2">
+          <p className="text-xs text-base-content/60 mt-1 line-clamp-2">
             {event.description}
           </p>
         )}
 
-        {/* Source calendar badge */}
-        {event.sourceCalendar && (
-          <span className="badge badge-ghost badge-xs mt-2">
-            {event.sourceCalendar}
-          </span>
-        )}
+        {/* Badges */}
+        <div className="flex items-center gap-2 mt-2">
+          {event.sourceCalendar && (
+            <span className="badge badge-ghost badge-xs">
+              {event.sourceCalendar}
+            </span>
+          )}
+          {event.isHidden && (
+            <span className="badge badge-warning badge-xs">
+              Ausgeblendet
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )

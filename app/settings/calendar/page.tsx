@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { IconKey, IconPlus, IconTrash, IconCopy, IconCheck, IconRefresh, IconExternalLink } from '@tabler/icons-react'
+import { IconKey, IconPlus, IconTrash, IconCopy, IconCheck, IconRefresh, IconExternalLink, IconDownload } from '@tabler/icons-react'
 import Link from 'next/link'
 
 // =============================================================================
@@ -319,18 +319,88 @@ export default function CalendarSettingsPage() {
         <div className="card-body">
           <h2 className="card-title text-lg">Tasker-Einrichtung</h2>
           <div className="prose prose-sm max-w-none">
-            <ol className="list-decimal list-inside space-y-2 text-base-content/80">
-              <li>Installiere das <strong>AutoCalendar</strong>-Plugin für Tasker</li>
-              <li>Erstelle einen neuen Task mit <strong>AutoCalendar Query</strong></li>
-              <li>Füge ein <strong>HTTP Request</strong>-Action hinzu:
-                <ul className="list-disc list-inside ml-4 mt-1">
-                  <li>Method: <code>POST</code></li>
-                  <li>URL: Webhook-URL von oben</li>
-                  <li>Headers: <code>Authorization: Bearer &lt;token&gt;</code></li>
-                  <li>Body: JSON-Array der Kalender-Events</li>
-                </ul>
-              </li>
-              <li>Trigger den Task periodisch (z.B. alle 15 Min) oder bei Kalender-Änderungen</li>
+            <p className="text-base-content/80 mb-4">
+              Tasker hat eine eingebaute Funktion zum Lesen von Kalender-Events. 
+              Lade das vorkonfigurierte Tasker-Projekt herunter und importiere es.
+            </p>
+
+            <div className="not-prose mb-4">
+              <a 
+                href="/varia/CompACT_Diary.prj.xml" 
+                download="CompACT_Diary.prj.xml"
+                className="btn btn-primary btn-sm gap-2"
+              >
+                <IconDownload className="w-4 h-4" />
+                Tasker-Projekt herunterladen
+              </a>
+            </div>
+
+            <h3 className="text-base font-semibold mt-4 mb-2">Schritt 1: Projekt importieren</h3>
+            <ol className="list-decimal list-inside space-y-1 text-base-content/80">
+              <li>Öffne <strong>Tasker</strong> auf deinem Android-Gerät</li>
+              <li>Tippe auf das <strong>Haus-Symbol</strong> (oben links)</li>
+              <li>Wähle <strong>Projekt importieren</strong></li>
+              <li>Navigiere zur heruntergeladenen <code>CompACT_Diary.prj.xml</code></li>
+              <li>Das Projekt &quot;CompACT Diary&quot; erscheint mit dem Task &quot;CalendarCompACTDiary&quot;</li>
+            </ol>
+
+            <h3 className="text-base font-semibold mt-4 mb-2">Schritt 2: Variablen konfigurieren</h3>
+            <p className="text-base-content/80 mb-2">
+              Öffne den Task und passe die Variablen in den &quot;Variable Set&quot;-Aktionen an:
+            </p>
+            
+            <div className="not-prose overflow-x-auto">
+              <table className="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Variable</th>
+                    <th>Beschreibung</th>
+                    <th>Beispielwert</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>%cd_webhooktoken</code></td>
+                    <td>Dein Authentifizierungs-Token (von oben)</td>
+                    <td><code>abc123...</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>%cd_webhookurl</code></td>
+                    <td>Die Webhook-URL deiner Installation</td>
+                    <td><code>{webhookUrl}</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>%cd_calendarname</code></td>
+                    <td>Name des zu synchronisierenden Kalenders</td>
+                    <td><code>ZHAW-Outlook</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>%cd_pastdays</code></td>
+                    <td>Anzahl Tage in der Vergangenheit</td>
+                    <td><code>10</code></td>
+                  </tr>
+                  <tr>
+                    <td><code>%cd_futuredays</code></td>
+                    <td>Anzahl Tage in der Zukunft</td>
+                    <td><code>10</code></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3 className="text-base font-semibold mt-4 mb-2">Schritt 3: Trigger einrichten</h3>
+            <p className="text-base-content/80">
+              Das Projekt enthält bereits einen Profil-Trigger für täglich um 18:00 Uhr. 
+              Du kannst weitere Profile hinzufügen (z.B. morgens, mittags) oder den 
+              Task manuell ausführen.
+            </p>
+
+            <h3 className="text-base font-semibold mt-4 mb-2">Schritt 4: Testen</h3>
+            <ol className="list-decimal list-inside space-y-1 text-base-content/80">
+              <li>Führe den Task manuell aus (Play-Button)</li>
+              <li>Prüfe die Benachrichtigung &quot;Kalender Sync beendet&quot;</li>
+              <li>Öffne die <strong>Kalender-Seite</strong> in CompACT Diary</li>
+              <li>Die Events sollten nun sichtbar sein</li>
             </ol>
           </div>
         </div>

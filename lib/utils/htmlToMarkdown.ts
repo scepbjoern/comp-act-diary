@@ -10,8 +10,20 @@ import TurndownService from 'turndown'
 // CONSTANTS
 // =============================================================================
 
-const MAX_DESCRIPTION_LENGTH = 5000
+const MAX_DESCRIPTION_LENGTH = 20000
 const ELLIPSIS = '...'
+
+// Teams meeting invitation patterns to filter out (after Markdown conversion)
+const TEAMS_MEETING_PATTERNS = [
+  /Microsoft Teams/i,
+  /teams\.microsoft\.com/i,
+  /Besprechungs-ID/i,
+  /Meeting ID/i,
+  /Jetzt an der Besprechung teilnehmen/i,
+  /Join the meeting now/i,
+  /Benötigen Sie Hilfe\?/i,
+  /Need help\?/i,
+]
 
 // =============================================================================
 // TURNDOWN CONFIGURATION
@@ -150,22 +162,73 @@ export function isEmptyHtmlContent(html: string): boolean {
 }
 
 /**
- * Convert HTML to Markdown and truncate if necessary.
- * Convenience function combining htmlToMarkdown and truncateWithEllipsis.
+ * Check if Markdown content is primarily a Teams meeting invitation.
+ * These typically contain only meeting join links and IDs with no useful content.
+ * Should be called AFTER HTML→Markdown conversion.
+ * 
+ * @param markdown - Markdown content to check
+ * @returns true if content appears to be only a Teams meeting invitation
+ */
+export function isTeamsMeetingOnly(markdown: string): boolean {
+  if (!markdown || typeof markdown !== 'string') {
+    return false
+  }
+
+  const trimmed = markdown.trim()
+  
+  // Check if multiple Teams patterns match
+  const matchCount = TEAMS_MEETING_PATTERNS.filter(pattern => pattern.test(trimmed)).length
+  
+  // If 2+ patterns match and content is relatively short, it's likely just a meeting invite
+  // Also check if content is mostly underscores (separator lines) and links
+  const underscoreRatio = (trimmed.match(/_/g) || []).length / trimmed.length
+  const hasTeamsKeywords = matchCount >= 2
+  const isShort = trimmed.length < 3000
+  const hasManyUnderscores = underscoreRatio > 0.1
+  
+  if (hasTeamsKeywords && isShort && (hasManyUnderscores || matchCount >= 3)) {
+    return true
+  }
+  
+  return false
+}
+
+/**
+ * Remove $$ suffix from event titles.
+ * Some calendar systems add $$ as a marker suffix.
+ * 
+ * @param title - Event title
+ * @returns Title without $$ suffix
+ */
+export function cleanEventTitle(title: string): string {
+  if (!title || typeof title !== 'string') {
+    return title
+  }
+  return title.replace(/\$\$$/, '').trim()
+}
+
+/**
+ * Convert HTML to Markdown, filter Teams invitations, and truncate if necessary.
  * 
  * @param html - HTML string to convert
- * @param maxLength - Maximum length (default: 5000)
- * @returns Truncated Markdown string
+ * @param maxLength - Maximum length (default: 20000)
+ * @param filterTeams - Whether to filter out Teams meeting invitations (default: true)
+ * @returns Truncated Markdown string or null if filtered out
  */
 export function convertAndTruncate(
   html: string,
-  maxLength: number = MAX_DESCRIPTION_LENGTH
-): string {
-  if (isEmptyHtmlContent(html)) {
-    return ''
-  }
-
+  maxLength: number = MAX_DESCRIPTION_LENGTH,
+  filterTeams: boolean = true
+): string | null {
+  // Convert HTML to Markdown first
   const markdown = htmlToMarkdown(html)
+  
+  // Check if it's a Teams meeting invitation (after conversion)
+  if (filterTeams && isTeamsMeetingOnly(markdown)) {
+    return null
+  }
+  
+  // Truncate if needed
   return truncateWithEllipsis(markdown, maxLength)
 }
 

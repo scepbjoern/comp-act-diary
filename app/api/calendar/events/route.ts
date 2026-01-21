@@ -67,12 +67,15 @@ export async function GET(req: NextRequest) {
       )
     }
 
+    // Check if hidden events should be included
+    const includeHidden = searchParams.get('includeHidden') === 'true'
+
     // Query events
     let events
     if (date) {
-      events = await getEventsForDay(user.id, date)
+      events = await getEventsForDay(user.id, date, includeHidden)
     } else {
-      events = await getEventsForRange(user.id, startDate!, endDate!)
+      events = await getEventsForRange(user.id, startDate!, endDate!, includeHidden)
     }
 
     return NextResponse.json({ events })
