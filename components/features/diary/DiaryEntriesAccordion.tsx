@@ -1,5 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 import { MicrophoneButton } from '@/components/features/transcription/MicrophoneButton'
@@ -146,14 +147,17 @@ export function DiaryEntriesAccordion({
   const [shareModalNoteId, setShareModalNoteId] = useState<string | null>(null)
   const [loadingStates, setLoadingStates] = useState<Record<string, 'content' | 'analysis' | 'summary' | 'pipeline' | null>>({})
   const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const highlightEntryId = searchParams.get('entry')
   
   const { generateContent, generateAnalysis, generateSummary, runPipeline } = useJournalAI()
 
-  // Scroll to and highlight entry when URL hash matches entry-{id}
+  // Scroll to and highlight entry when URL hash or query param matches entry-{id}
   useEffect(() => {
     const hash = window.location.hash
-    if (hash && hash.startsWith('#entry-')) {
-      const entryId = hash.replace('#entry-', '')
+    const hashEntryId = hash && hash.startsWith('#entry-') ? hash.replace('#entry-', '') : null
+    const entryId = highlightEntryId || hashEntryId
+    if (entryId) {
       // Delay to ensure DOM is ready
       const timeoutId = setTimeout(() => {
         const element = document.getElementById(`entry-${entryId}`)
@@ -166,7 +170,7 @@ export function DiaryEntriesAccordion({
       }, 300)
       return () => clearTimeout(timeoutId)
     }
-  }, [notes.length]) // Re-run when notes are loaded
+  }, [highlightEntryId, notes.length]) // Re-run when notes are loaded
 
   const fmtHMLocal = (iso?: string) => {
     if (!iso) return ''

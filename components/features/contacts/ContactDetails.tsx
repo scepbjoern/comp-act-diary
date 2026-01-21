@@ -56,7 +56,14 @@ interface Contact {
     source?: string
     aiConfidence?: number | null
     isFavorite?: boolean
-    journalEntry?: { id: string; title?: string | null; occurredAt?: string | null } | null
+    journalEntry?: {
+      id: string
+      title?: string | null
+      occurredAt?: string | null
+      capturedAt?: string | null
+      createdAt?: string | null
+      timeBox?: { localDate?: string | null } | null
+    } | null
   }>
 }
 
@@ -190,6 +197,21 @@ export default function ContactDetails({ contact }: ContactDetailsProps) {
       }
     } catch (error) {
       console.error('Error toggling task favorite:', error)
+    }
+  }
+
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm('Möchtest du diese Aufgabe wirklich löschen?')) return
+
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        router.refresh()
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error)
     }
   }
 
@@ -538,6 +560,9 @@ export default function ContactDetails({ contact }: ContactDetailsProps) {
                       id: task.journalEntry.id,
                       title: task.journalEntry.title,
                       occurredAt: task.journalEntry.occurredAt,
+                      capturedAt: task.journalEntry.capturedAt,
+                      createdAt: task.journalEntry.createdAt,
+                      timeBox: task.journalEntry.timeBox,
                     } : null,
                   }
                   return (
@@ -547,6 +572,7 @@ export default function ContactDetails({ contact }: ContactDetailsProps) {
                       onComplete={(id) => handleToggleTask(id, 'PENDING')}
                       onReopen={(id) => handleToggleTask(id, 'COMPLETED')}
                       onEdit={(id) => setEditingTaskId(id)}
+                      onDelete={handleDeleteTask}
                       onToggleFavorite={handleToggleTaskFavorite}
                       onUpdateDueDate={handleUpdateTaskDueDate}
                       showJournalLink={true}

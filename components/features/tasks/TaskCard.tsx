@@ -22,6 +22,7 @@ import {
   IconStarFilled,
   IconPencil,
   IconCalendarPlus,
+  IconTrash,
 } from '@tabler/icons-react'
 import { format, isPast, isToday, isTomorrow } from 'date-fns'
 import { de } from 'date-fns/locale'
@@ -55,7 +56,14 @@ export interface TaskCardData {
   aiConfidence?: number | null
   isFavorite?: boolean
   contact?: { id: string; name: string; slug: string } | null
-  journalEntry?: { id: string; title?: string | null; occurredAt?: Date | string | null } | null
+  journalEntry?: {
+    id: string
+    title?: string | null
+    occurredAt?: Date | string | null
+    capturedAt?: Date | string | null
+    createdAt?: Date | string | null
+    timeBox?: { localDate?: string | null } | null
+  } | null
 }
 
 interface TaskCardProps {
@@ -63,6 +71,7 @@ interface TaskCardProps {
   onComplete?: (taskId: string) => void
   onReopen?: (taskId: string) => void
   onEdit?: (taskId: string) => void
+  onDelete?: (taskId: string) => void
   onToggleFavorite?: (taskId: string, isFavorite: boolean) => void
   onUpdateDueDate?: (taskId: string, dueDate: string | null) => void
   compact?: boolean
@@ -135,6 +144,21 @@ function getDateDisplay(dueDate: Date | string | null | undefined): {
   return { text, className, isOverdue }
 }
 
+function getJournalEntryDate(
+  entry: TaskCardData['journalEntry']
+): string | null {
+  if (!entry) return null
+
+  if (entry.timeBox?.localDate) {
+    return entry.timeBox.localDate
+  }
+
+  const fallbackDate = entry.occurredAt ?? entry.capturedAt ?? entry.createdAt
+  if (!fallbackDate) return null
+
+  return format(new Date(fallbackDate), 'yyyy-MM-dd')
+}
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -144,6 +168,7 @@ function TaskCardComponent({
   onComplete,
   onReopen,
   onEdit,
+  onDelete,
   onToggleFavorite,
   onUpdateDueDate,
   compact = false,
@@ -152,6 +177,7 @@ function TaskCardComponent({
   const [showDatePicker, setShowDatePicker] = useState(false)
   const isCompleted = task.status === 'COMPLETED'
   const dateInfo = getDateDisplay(task.dueDate)
+  const journalEntryDate = getJournalEntryDate(task.journalEntry)
 
   const handleToggle = () => {
     if (isCompleted) {
@@ -176,6 +202,11 @@ function TaskCardComponent({
       onUpdateDueDate?.(task.id, format(date, 'yyyy-MM-dd'))
     }
     setShowDatePicker(false)
+  }
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onDelete?.(task.id)
   }
 
   return (
@@ -232,10 +263,10 @@ function TaskCardComponent({
           </p>
           
           {/* Action Buttons */}
-          {!isCompleted && !compact && (
+          {(!compact || onDelete) && (
             <div className="flex items-center gap-1 flex-shrink-0">
               {/* Quick Date Picker */}
-              {onUpdateDueDate && (
+              {!compact && !isCompleted && onUpdateDueDate && (
                 <div className="relative">
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowDatePicker(!showDatePicker) }}
@@ -260,7 +291,7 @@ function TaskCardComponent({
               )}
               
               {/* Edit Button */}
-              {onEdit && (
+              {!compact && !isCompleted && onEdit && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onEdit(task.id) }}
                   className="btn btn-ghost btn-xs btn-circle"
@@ -269,9 +300,20 @@ function TaskCardComponent({
                   <IconPencil size={14} />
                 </button>
               )}
+
+              {/* Delete Button */}
+              {onDelete && (
+                <button
+                  onClick={handleDeleteClick}
+                  className="btn btn-ghost btn-xs btn-circle text-error"
+                  title="Löschen"
+                >
+                  <IconTrash size={14} />
+                </button>
+              )}
               
               {/* Priority Icon */}
-              {getPriorityIcon(task.priority)}
+              {!compact && !isCompleted && getPriorityIcon(task.priority)}
             </div>
           )}
         </div>
@@ -323,9 +365,9 @@ function TaskCardComponent({
             )}
 
             {/* Journal Entry Link */}
-            {showJournalLink && task.journalEntry && (
+            {showJournalLink && task.journalEntry && journalEntryDate && (
               <Link
-                href={`/day/${task.journalEntry.occurredAt ? format(new Date(task.journalEntry.occurredAt), 'yyyy-MM-dd') : ''}#entry-${task.journalEntry.id}`}
+                href={`/?date=${journalEntryDate}&entry=${task.journalEntry.id}`}
                 className="flex items-center gap-1 text-secondary hover:underline"
                 onClick={(e) => e.stopPropagation()}
               >

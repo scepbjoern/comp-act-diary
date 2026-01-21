@@ -157,7 +157,18 @@ export async function getContact(
       interactions: { orderBy: { occurredAt: 'desc' } },
       tasks: { 
         orderBy: { dueDate: 'asc' },
-        include: { journalEntry: { select: { id: true, title: true, occurredAt: true } } }
+        include: {
+          journalEntry: {
+            select: {
+              id: true,
+              title: true,
+              occurredAt: true,
+              capturedAt: true,
+              createdAt: true,
+              timeBox: { select: { localDate: true } },
+            },
+          },
+        },
       },
       location: true,
     },

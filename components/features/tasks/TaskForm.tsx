@@ -158,25 +158,32 @@ export default function TaskForm({
 
     setLoading(true)
     try {
-      const endpoint = selectedContactId
-        ? `/api/contacts/${selectedContactId}/tasks`
-        : '/api/tasks'
+      const endpoint = journalEntryId
+        ? `/api/journal-entries/${journalEntryId}/tasks`
+        : selectedContactId
+          ? `/api/contacts/${selectedContactId}/tasks`
+          : '/api/tasks'
       
       const method = isEditing ? 'PUT' : 'POST'
       const url = isEditing ? `/api/tasks/${initialData?.id}` : endpoint
 
+      const payload: Record<string, unknown> = {
+        title: title.trim(),
+        description: description.trim() || null,
+        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+        taskType,
+        priority,
+        contactId: selectedContactId || null,
+      }
+
+      if (journalEntryId) {
+        payload.journalEntryId = journalEntryId
+      }
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || null,
-          dueDate: dueDate ? new Date(dueDate).toISOString() : null,
-          taskType,
-          priority,
-          contactId: selectedContactId || null,
-          journalEntryId: journalEntryId || null,
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (res.ok) {
@@ -196,7 +203,7 @@ export default function TaskForm({
   }
 
   return (
-    <div className="modal modal-open z-50">
+    <div className="modal modal-open z-[1200]">
       <div className="modal-box max-w-md">
         <button
           className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"

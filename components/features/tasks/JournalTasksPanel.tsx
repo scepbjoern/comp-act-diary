@@ -79,6 +79,24 @@ export default function JournalTasksPanel({
     [onTasksChange]
   )
 
+  const handleDelete = useCallback(
+    async (taskId: string) => {
+      if (!confirm('Möchtest du diese Aufgabe wirklich löschen?')) return
+
+      try {
+        const res = await fetch(`/api/tasks/${taskId}`, {
+          method: 'DELETE',
+        })
+        if (res.ok) {
+          onTasksChange?.()
+        }
+      } catch (error) {
+        console.error('Error deleting task:', error)
+      }
+    },
+    [onTasksChange]
+  )
+
   // Handle task reopening
   const handleReopen = useCallback(
     async (taskId: string) => {
@@ -229,6 +247,7 @@ export default function JournalTasksPanel({
                     onComplete={handleComplete}
                     onReopen={handleReopen}
                     onEdit={handleEdit}
+                    onDelete={handleDelete}
                     onToggleFavorite={handleToggleFavorite}
                     onUpdateDueDate={handleUpdateDueDate}
                     showJournalLink={false}
@@ -250,6 +269,7 @@ export default function JournalTasksPanel({
                       task={task}
                       onComplete={handleComplete}
                       onReopen={handleReopen}
+                      onDelete={handleDelete}
                       compact
                       showJournalLink={false}
                     />

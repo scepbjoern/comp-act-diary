@@ -17,7 +17,19 @@ export type TaskWithContact = Prisma.TaskGetPayload<{
 }>
 
 export type TaskWithRelations = Prisma.TaskGetPayload<{
-  include: { contact: true; journalEntry: { select: { id: true; title: true; occurredAt: true } } }
+  include: {
+    contact: true
+    journalEntry: {
+      select: {
+        id: true
+        title: true
+        occurredAt: true
+        capturedAt: true
+        createdAt: true
+        timeBox: { select: { localDate: true } }
+      }
+    }
+  }
 }>
 
 /** Task suggestion from AI extraction */
@@ -34,7 +46,16 @@ export interface TaskSuggestion {
 // Default include for full task relations
 const taskInclude = {
   contact: true,
-  journalEntry: { select: { id: true, title: true, occurredAt: true } },
+  journalEntry: {
+    select: {
+      id: true,
+      title: true,
+      occurredAt: true,
+      capturedAt: true,
+      createdAt: true,
+      timeBox: { select: { localDate: true } },
+    },
+  },
 } as const
 
 // =============================================================================

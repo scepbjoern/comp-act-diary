@@ -260,6 +260,21 @@ export default function TasksPage() {
     }
   }, [fetchTasks])
 
+  const handleDelete = useCallback(async (taskId: string) => {
+    if (!confirm('Möchtest du diese Aufgabe wirklich löschen?')) return
+
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        await fetchTasks()
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error)
+    }
+  }, [fetchTasks])
+
   const handleReopen = useCallback(async (taskId: string) => {
     try {
       const res = await fetch(`/api/tasks/${taskId}`, {
@@ -373,6 +388,7 @@ export default function TasksPage() {
                         onComplete={handleComplete}
                         onReopen={handleReopen}
                         onEdit={handleEdit}
+                        onDelete={handleDelete}
                         onToggleFavorite={handleToggleFavorite}
                         onUpdateDueDate={handleUpdateDueDate}
                       />
