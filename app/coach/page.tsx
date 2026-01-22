@@ -228,7 +228,12 @@ export default function CoachPage() {
   return (
     <div className="min-h-screen bg-background text-foreground p-4">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">🌱 ACT Coach</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">🌱 ACT Coach</h1>
+          <a href="/help/act-entwicklung/coach" className="btn btn-ghost btn-sm" title="Hilfe zum ACT Coach">
+            <TablerIcon name="help" size={16} />
+          </a>
+        </div>
 
         {/* Mode Selection and Settings */}
         <div className="mb-6 flex items-center gap-2">

@@ -105,7 +105,7 @@ export function usePasscodeLock(): UsePasscodeLockReturn {
       }
     }
     
-    loadSettings()
+    void loadSettings()
   }, [])
 
   // Update last activity timestamp

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { renderTextWithMentions } from '@/lib/mentions'
+import { renderTextWithMentions } from '@/lib/utils/mentions'
 
 describe('renderTextWithMentions', () => {
   it('should replace full contact name with link', () => {

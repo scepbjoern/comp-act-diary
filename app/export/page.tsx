@@ -30,12 +30,17 @@ export default function ExportPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">
-        <span className="inline-flex items-center gap-1">
-          <TablerIcon name="share" />
-          <span>Export</span>
-        </span>
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">
+          <span className="inline-flex items-center gap-1">
+            <TablerIcon name="share" />
+            <span>Export</span>
+          </span>
+        </h1>
+        <a href="/help/auswertungen/export" className="btn btn-ghost btn-sm" title="Hilfe zum Export">
+          <TablerIcon name="help" size={16} />
+        </a>
+      </div>
 
       <div className="card p-4 space-y-4 max-w-xl">
         <div className="text-sm text-gray-400">

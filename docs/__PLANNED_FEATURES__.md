@@ -1,5 +1,19 @@
 # Planned Features
+
+## Windsurf-related
+**Skills und Workflows**: Sich einarbeiten in https://docs.windsurf.com/windsurf/cascade/skills und https://agentskills.io/home und https://docs.windsurf.com/windsurf/cascade/workflows und überlegen, wann skills und wann workflows
+**Agents**: Sich einarbeiten in https://docs.windsurf.com/windsurf/cascade/agents-md
+
+## MCP
+**Playwright oder Puppeteer**: Könnte spannend sein.
+**Supabase**: Aber nur für CAS
+**Filesystem und Fetch**: Weniger für dieses Projekt, sondern um den Computer zu kontrollieren und Webseiten zu scrapen.
+**PostgreSQL**: Spannend, damit selbständig Daten abgefragt werden können bei Fehlerdiagnose.
+
+
 ## Varia
+**.env**: an .env.example anpassen, damit alle Beschreibungen enthalten sind. Zudem folgende Aussage prüfen: "MISTRAL_API_KEY und MAPBOX_ACCESS_TOKEN werden aktuell im Code nicht verwendet (Suche ergab keine Treffer)"
+
 ### Verlinkungen auf andere Ereignisse
 **On This Day - Rediscover memories from previous years on the same date**: für jeden Tag, wenn man gerade in einem aktuellen Tag ist, immer in der Datenbank geschaut wird, ob es vom Vorjahr und vom Vormonat Tagebucheinträge gibt von diesem einen Tag. Und falls ja, wird dieser Eintrag, aber auch diejenigen der Vorjahre, immer kurz angezeigt, so das Wichtigste zusammengefasst. Dies soll erlauben, dass man mit der Zeit ein bisschen das Bewusstsein schärft, so im Sinne von Carpe Diem, dass man sieht auch, dass vor einem Jahr vielleicht es besser war oder auch schlechter war. Und beides kann ja ermuntern und zur Reflexion beitragen. -> Bei journiv entspricht dies: "On This Day — Rediscover memories from previous years on the same date"
 

@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Convert messages to the format expected by the AI SDK
-    const modelMessages = convertToModelMessages(messages)
+    const modelMessages = await convertToModelMessages(messages)
 
     // Ensure we have at least one user message
     if (modelMessages.length === 0) {

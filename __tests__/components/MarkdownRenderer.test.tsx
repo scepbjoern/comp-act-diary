@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest'
-import { renderToString } from 'react-dom/server'
 
 describe('MarkdownRenderer integration', () => {
   it('should process mentions with alternative names in rendered markdown', async () => {

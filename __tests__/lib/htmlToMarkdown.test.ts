@@ -110,10 +110,10 @@ describe('truncateWithEllipsis', () => {
     expect(truncateWithEllipsis('')).toBe('')
   })
 
-  it('should use default max length of 5000', () => {
+  it('should use default max length of 20000', () => {
     const longText = 'a'.repeat(6000)
     const result = truncateWithEllipsis(longText)
-    expect(result.length).toBeLessThanOrEqual(5000)
+    expect(result.length).toBeLessThanOrEqual(20000)
   })
 })
 
@@ -151,6 +151,10 @@ describe('convertAndTruncate', () => {
   it('should convert HTML and truncate if needed', () => {
     const longHtml = '<p>' + 'Word '.repeat(2000) + '</p>'
     const result = convertAndTruncate(longHtml, 100)
+    expect(result).not.toBeNull()
+    if (!result) {
+      throw new Error('Expected non-null result')
+    }
     expect(result.length).toBeLessThanOrEqual(100)
     expect(result).toContain('...')
   })

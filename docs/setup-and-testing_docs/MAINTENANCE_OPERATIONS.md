@@ -86,7 +86,7 @@ npm install
 
 ```powershell
 # Alle Dateien prüfen
-npm run lint
+npm run lint -- --cache oder nur npm run lint (kann etwas länger dauern)
 
 # Mit Auto-Fix
 npx eslint --fix .
@@ -353,7 +353,7 @@ git commit -m "fix: correct date formatting in analytics"
 
 # Nach Push auf main:
 # 1. release-please erstellt/aktualisiert Release-PR
-# 2. Review und Merge des Release-PR
+# 2. Review und Merge des Release-PR (Merge auf github.com durchführen, nicht in Windsurf)
 # 3. Automatisch: Tag, GitHub Release, CHANGELOG-Update
 ```
 

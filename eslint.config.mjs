@@ -2,19 +2,26 @@
 import { FlatCompat } from '@eslint/eslintrc'
 import js from '@eslint/js'
 import typescriptEslint from 'typescript-eslint'
-import path from 'path'
-import { fileURLToPath } from 'url'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
 
 const compat = new FlatCompat({
-  baseDirectory: __dirname,
+  baseDirectory: import.meta.dirname,
   recommendedConfig: js.configs.recommended,
-  allConfig: js.configs.all,
 })
 
 export default [
+  {
+    ignores: [
+      '.next/**',
+      'out/**',
+      'dist/**',
+      'build/**',
+      'coverage/**',
+      'public/sw.js',
+      '**/*.config.js',
+      '**/*.config.mjs',
+      'node_modules/**'
+    ]
+  },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   ...typescriptEslint.configs.recommended,
 
@@ -23,7 +30,6 @@ export default [
     languageOptions: {
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: __dirname,
       },
     },
     rules: {
@@ -68,6 +74,23 @@ export default [
     files: ['app/layout.tsx'],
     rules: {
       '@next/next/no-page-custom-font': 'off',
+    },
+  },
+
+  // Generated Next types file: allow triple-slash reference
+  {
+    files: ['next-env.d.ts'],
+    rules: {
+      '@typescript-eslint/triple-slash-reference': 'off',
+    },
+  },
+
+  // Scripts/seed files: allow console and fire-and-forget promises
+  {
+    files: ['scripts/**/*.{ts,tsx}', 'prisma/seed.ts'],
+    rules: {
+      'no-console': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
     },
   },
 ]

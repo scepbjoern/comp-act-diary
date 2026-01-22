@@ -3,7 +3,7 @@
  * Uses mocks to avoid real Mistral API calls
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   isSupportedOcrType,
   isImageType,
@@ -13,7 +13,7 @@ import {
   OCR_CONFIG,
   SUPPORTED_IMAGE_TYPES,
   SUPPORTED_PDF_TYPE,
-} from '@/lib/ocr'
+} from '@/lib/media/ocr'
 
 // Mock the Mistral SDK
 vi.mock('@mistralai/mistralai', () => ({
@@ -59,7 +59,7 @@ describe('OCR Service - Type Checks', () => {
 
   describe('isImageType', () => {
     it('should return true for image types', () => {
-      SUPPORTED_IMAGE_TYPES.forEach((type) => {
+      SUPPORTED_IMAGE_TYPES.forEach((type: string) => {
         expect(isImageType(type)).toBe(true)
       })
     })

@@ -42,7 +42,7 @@ export function useDaySummary(
       }
     }
 
-    fetchSummary()
+    void fetchSummary()
   }, [dayId])
 
   const generateSummary = useCallback(async (force = false): Promise<Summary | null> => {

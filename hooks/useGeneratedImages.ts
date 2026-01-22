@@ -88,7 +88,7 @@ export function useGeneratedImages(
   }, [entityId])
 
   useEffect(() => {
-    fetchImages()
+    void fetchImages()
   }, [fetchImages])
 
   const generateImage = useCallback(

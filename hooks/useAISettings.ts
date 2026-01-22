@@ -59,7 +59,7 @@ export function useAISettings(): UseAISettingsReturn {
   }, [])
 
   useEffect(() => {
-    fetchSettings()
+    void fetchSettings()
   }, [fetchSettings])
 
   const getSettingsForType = useCallback((typeCode: string): JournalEntryTypeAISettings => {

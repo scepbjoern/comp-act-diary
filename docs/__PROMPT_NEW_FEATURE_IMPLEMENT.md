@@ -30,6 +30,11 @@ Gehe hierzu schrittweise vor:
 ## Dokumentation anpassen
 1. Falls sich etwas gegenüber dem Konzept geändert hat, aktualisiere das Konzept.
 2. Falls Du bei der Implementation das [Datenbankschema](../prisma/schema.prisma) verändert hast, aktualisiere die [Data Model Architecture-Dokumentation](data-model-architecture.md).
+3. **Hilfe-System aktualisieren:**
+   - Füge ein neues Topic in [helpStructure.ts](../lib/help/helpStructure.ts) hinzu (falls eine neue Funktion)
+   - Erstelle Content in der passenden Kategorie-Datei unter [lib/help/content/](../lib/help/content/)
+   - Füge einen kontextuellen Help-Link zur Feature-Seite hinzu (TablerIcon `help`)
+   - Siehe [Dokumentations-Guidelines](coding-guidelines/09-documentation.md) für Details
 
 ## Zusammenfassung
 1. Sobald alles erfolgreich getestet und ausgeführt wurde, kannst Du als letztes eine Zusammenfassung des gesamten Implementierungsplans erstellen.

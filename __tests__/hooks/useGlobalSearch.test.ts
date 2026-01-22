@@ -3,7 +3,7 @@
  * Tests state management and debouncing behavior.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useGlobalSearch } from '@/hooks/useGlobalSearch';
 
 // Mock fetch
@@ -168,11 +168,11 @@ describe('useGlobalSearch', () => {
     
     await act(async () => {
       vi.advanceTimersByTime(400);
+      await vi.runAllTimersAsync();
+      await Promise.resolve();
     });
-    
-    await waitFor(() => {
-      expect(result.current.error).toBe('Network error');
-    });
+
+    expect(result.current.error).toBe('Network error');
     expect(result.current.isLoading).toBe(false);
   });
 });

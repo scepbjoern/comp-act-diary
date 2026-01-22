@@ -128,7 +128,7 @@ export function useGlobalSearch(): UseGlobalSearchReturn {
     }
 
     debounceRef.current = setTimeout(() => {
-      executeSearch(query, filters);
+      void executeSearch(query, filters);
     }, DEBOUNCE_MS);
   }, [executeSearch]);
 

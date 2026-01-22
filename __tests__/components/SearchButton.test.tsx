@@ -4,7 +4,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { SearchButton } from '@/components/SearchButton';
+import { SearchButton } from '@/components/features/search/SearchButton';
 
 describe('SearchButton', () => {
   it('should render search icon button', () => {

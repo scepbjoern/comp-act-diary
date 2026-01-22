@@ -37,7 +37,6 @@ async function backfillTimeBoxEntities() {
 
             if (!existingEntity) {
               // Create Entity
-              // @ts-ignore - TIMEBOX might not be fully typed if client isn't regenerated yet
               await prisma.entity.create({
                 data: {
                   id: tb.id,

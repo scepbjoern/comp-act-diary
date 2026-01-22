@@ -216,12 +216,17 @@ export default function ReflectionsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">
-        <span className="inline-flex items-center gap-1">
-          <TablerIcon name="rate_review" />
-          <span>Reflexion</span>
-        </span>
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">
+          <span className="inline-flex items-center gap-1">
+            <TablerIcon name="rate_review" />
+            <span>Reflexion</span>
+          </span>
+        </h1>
+        <a href="/help/tagebuch/reflexionen" className="btn btn-ghost btn-sm" title="Hilfe zu Reflexionen">
+          <TablerIcon name="help" size={16} />
+        </a>
+      </div>
       {/* New reflection form - hidden in read mode */}
       {!readMode && (
       <div className="card p-4 space-y-3">

@@ -14,6 +14,7 @@ Diese Dokumentation beschreibt die verbindlichen Coding-Standards und Best Pract
 6. **[Formulare & Validierung](./06-forms-validation.md)** - React Hook Form, Zod
 7. **[UI & Styling](./07-ui-styling.md)** - Tailwind, daisyUI, Icons
 8. **[Error Handling & Logging](./08-error-handling-logging.md)** - Fehlerbehandlung, Pino
+9. **[Dokumentation](./09-documentation.md)** - Hilfe-System, Konzepte, Workflow
 
 ---
 
@@ -52,6 +53,11 @@ Diese Dokumentation beschreibt die verbindlichen Coding-Standards und Best Pract
 - Validierung client- UND serverseitig
 - Fehler direkt am Feld anzeigen
 
+### Dokumentation
+- **Hilfe-System** bei jedem neuen Feature aktualisieren
+- **Kontextuelle Help-Links** in Feature-Seiten einbauen
+- **Konzept-Dokumente** vor Implementation erstellen
+
 ---
 
-**Letzte Aktualisierung:** 2026-01-19
+**Letzte Aktualisierung:** 2026-01-22
