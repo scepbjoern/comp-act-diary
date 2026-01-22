@@ -183,7 +183,7 @@ export class ImageGenerationService {
       requestParams.steps = params.steps
     }
 
-    const response = await together.images.create(requestParams)
+    const response = await together.images.generate(requestParams)
 
     const imageData = response.data?.[0]
     if (!imageData || !('b64_json' in imageData) || !imageData.b64_json) {

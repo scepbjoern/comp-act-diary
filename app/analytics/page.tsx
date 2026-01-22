@@ -129,7 +129,7 @@ function SparkArea({ data, color, yDomain, height = 80 }: { data: { date: string
           <YAxis hide domain={yDomain} />
           <Tooltip
             formatter={(v: unknown) => (v == null ? '—' : String(v))}
-            labelFormatter={(l: string) => formatDayLabel(l)}
+            labelFormatter={(l) => formatDayLabel(String(l))}
           />
           <Area type="monotone" dataKey="value" stroke={color} fill={`url(#${gid})`} connectNulls dot={false} strokeWidth={2} />
         </AreaChart>
@@ -301,7 +301,7 @@ function PhaseView() {
                   <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                   <XAxis dataKey="date" tickFormatter={formatDayLabel} minTickGap={24} />
                   <YAxis domain={[1,10]} />
-                  <Tooltip labelFormatter={formatDayLabel} />
+                  <Tooltip labelFormatter={(l) => formatDayLabel(String(l))} />
                   <Line type="monotone" dataKey="value" stroke="#22c55e" dot={false} />
                 </LineChart>
               </ResponsiveContainer>
@@ -313,7 +313,7 @@ function PhaseView() {
                   <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                   <XAxis dataKey="date" tickFormatter={formatDayLabel} minTickGap={24} />
                   <YAxis domain={[1,7]} />
-                  <Tooltip labelFormatter={formatDayLabel} />
+                  <Tooltip labelFormatter={(l) => formatDayLabel(String(l))} />
                   <Line type="monotone" dataKey="value" stroke="#0ea5e9" dot={false} />
                 </LineChart>
               </ResponsiveContainer>
@@ -325,7 +325,7 @@ function PhaseView() {
                   <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                   <XAxis dataKey="date" tickFormatter={formatDayLabel} minTickGap={24} />
                   <YAxis domain={[0,1]} />
-                  <Tooltip labelFormatter={formatDayLabel} />
+                  <Tooltip labelFormatter={(l) => formatDayLabel(String(l))} />
                   <Line type="monotone" dataKey="value" stroke="#a855f7" dot={false} />
                 </LineChart>
               </ResponsiveContainer>
@@ -400,7 +400,7 @@ function OverallView() {
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                 <XAxis dataKey="date" tickFormatter={formatDayLabel} minTickGap={28} />
                 <YAxis domain={[1,10]} />
-                <Tooltip labelFormatter={formatDayLabel} />
+                <Tooltip labelFormatter={(l) => formatDayLabel(String(l))} />
                 <Line type="monotone" dataKey="value" stroke="#22c55e" dot={false} />
               </LineChart>
             </ResponsiveContainer>
@@ -412,7 +412,7 @@ function OverallView() {
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                 <XAxis dataKey="date" tickFormatter={formatDayLabel} minTickGap={28} />
                 <YAxis domain={[1,7]} />
-                <Tooltip labelFormatter={formatDayLabel} />
+                <Tooltip labelFormatter={(l) => formatDayLabel(String(l))} />
                 <Line type="monotone" dataKey="value" stroke="#0ea5e9" dot={false} />
               </LineChart>
             </ResponsiveContainer>
@@ -424,7 +424,7 @@ function OverallView() {
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                 <XAxis dataKey="date" tickFormatter={formatDayLabel} minTickGap={28} />
                 <YAxis domain={[0,1]} />
-                <Tooltip labelFormatter={formatDayLabel} />
+                <Tooltip labelFormatter={(l) => formatDayLabel(String(l))} />
                 <Line type="monotone" dataKey="value" stroke="#a855f7" dot={false} />
               </LineChart>
             </ResponsiveContainer>
