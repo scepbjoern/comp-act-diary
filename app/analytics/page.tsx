@@ -476,12 +476,17 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">
-        <span className="inline-flex items-center gap-1">
-          <TablerIcon name="bar_chart" />
-          <span>Auswertungen</span>
-        </span>
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">
+          <span className="inline-flex items-center gap-1">
+            <TablerIcon name="bar_chart" />
+            <span>Auswertungen</span>
+          </span>
+        </h1>
+        <a href="/help/auswertungen" className="btn btn-ghost btn-sm" title="Hilfe zu Auswertungen">
+          <TablerIcon name="help" size={16} />
+        </a>
+      </div>
       <div className="card p-4">
         <div className="flex gap-2 mb-4">
           <button className={`pill ${tab==='weekly' ? 'active' : ''}`} onClick={() => setTab('weekly')}>Woche</button>

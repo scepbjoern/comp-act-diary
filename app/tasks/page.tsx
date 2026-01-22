@@ -7,6 +7,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { IconChecklist, IconPlus, IconChevronDown, IconChevronUp } from '@tabler/icons-react'
+import { TablerIcon } from '@/components/ui/TablerIcon'
 import { isPast, isToday, isTomorrow, addDays, startOfDay } from 'date-fns'
 import TaskCard, { type TaskCardData } from '@/components/features/tasks/TaskCard'
 import TaskFilters, { type TaskFilterValues } from '@/components/features/tasks/TaskFilters'
@@ -334,6 +335,9 @@ export default function TasksPage() {
         <div className="flex items-center gap-3">
           <IconChecklist size={28} className="text-primary" />
           <h1 className="text-2xl font-bold">Aufgaben</h1>
+          <a href="/help/aufgaben" className="btn btn-ghost btn-xs" title="Hilfe zu Aufgaben">
+            <TablerIcon name="help" size={14} />
+          </a>
         </div>
         <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>
           <IconPlus size={18} />
