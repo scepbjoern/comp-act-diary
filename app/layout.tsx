@@ -6,7 +6,6 @@ import { getPrisma } from '@/lib/core/prisma'
 import { PasscodeLockProvider } from '@/components/features/security/PasscodeLockProvider'
 import { ReadModeProvider } from '@/hooks/useReadMode'
 import { HeaderClient } from '@/components/layout/HeaderClient'
-import pkg from '../package.json'
 
 export const metadata = {
   title: 'CompACT Diary',
@@ -72,7 +71,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const themeCookie = cookieStore.get('theme')?.value || ''
   const t = (themeCookie || '').toLowerCase()
   const theme: 'dark' | 'bright' = (t === 'bright' || t === 'light') ? 'bright' : 'dark'
-  const version = (pkg as unknown as { version?: string }).version ?? '0.0.0'
+  const version = process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0'
 
   
   const themeColorDark = '#0f172a'
