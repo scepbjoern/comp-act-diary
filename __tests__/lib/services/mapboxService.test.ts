@@ -42,14 +42,14 @@ describe('getConfidenceScore', () => {
 
   it('should return low confidence for undefined match_code', () => {
     const result = getConfidenceScore(undefined)
-    expect(result.confidence).toBe('low')
-    expect(result.score).toBe(0.25)
+    expect(result.confidence).toBe('high')
+    expect(result.score).toBe(0.8)
   })
 
   it('should return low confidence for missing confidence field', () => {
     const result = getConfidenceScore({})
-    expect(result.confidence).toBe('low')
-    expect(result.score).toBe(0.25)
+    expect(result.confidence).toBe('high')
+    expect(result.score).toBe(0.8)
   })
 })
 

@@ -168,11 +168,12 @@ describe('useGlobalSearch', () => {
     
     await act(async () => {
       vi.advanceTimersByTime(400);
+      await Promise.resolve();
     });
     
     await waitFor(() => {
       expect(result.current.error).toBe('Network error');
-    });
+    }, { timeout: 1000 });
     expect(result.current.isLoading).toBe(false);
   });
 });

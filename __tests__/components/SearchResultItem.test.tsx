@@ -4,14 +4,19 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { SearchResultItem } from '@/components/SearchResultItem';
+import { SearchResultItem } from '@/components/features/search/SearchResultItem';
 import type { SearchResultItem as SearchResultItemType } from '@/types/search';
 
-// Mock next/link
-vi.mock('next/link', () => ({
-  default: ({ children, href, onClick }: { children: React.ReactNode; href: string; onClick?: () => void }) => (
-    <a href={href} onClick={onClick}>{children}</a>
-  ),
+const { push, refresh } = vi.hoisted(() => ({
+  push: vi.fn(),
+  refresh: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push,
+    refresh,
+  }),
 }));
 
 describe('SearchResultItem', () => {
@@ -44,21 +49,17 @@ describe('SearchResultItem', () => {
     expect(screen.getByText('13.12.2024')).toBeInTheDocument();
   });
 
-  it('should have correct link URL', () => {
-    render(<SearchResultItem item={mockItem} />);
-    
-    const link = screen.getByRole('link');
-    expect(link).toHaveAttribute('href', '/?date=2024-12-13&entry=test-123');
-  });
-
   it('should call onClick when clicked', () => {
     const onClick = vi.fn();
     render(<SearchResultItem item={mockItem} onClick={onClick} />);
-    
-    const link = screen.getByRole('link');
-    fireEvent.click(link);
-    
+    const title = screen.getByText('Test Entry');
+    const content = title.closest('div');
+    const container = content?.parentElement;
+    expect(container).toBeTruthy();
+    fireEvent.click(container!);
     expect(onClick).toHaveBeenCalledTimes(1);
+    expect(push).toHaveBeenCalledWith('/?date=2024-12-13&entry=test-123');
+    expect(refresh).toHaveBeenCalled();
   });
 
   it('should render without date if not provided', () => {
