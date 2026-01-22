@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react'
 
 type Habit = { id: string; title: string; userId?: string | null; icon?: string | null }
-type HabitTick = { habitId: string; checked: boolean }
 
 export function useHabitManagement(
   dayId: string | null,

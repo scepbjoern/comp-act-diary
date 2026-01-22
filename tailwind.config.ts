@@ -1,4 +1,6 @@
 import type { Config } from 'tailwindcss'
+import typography from '@tailwindcss/typography'
+import daisyui from 'daisyui'
 
 const config: Config = {
   darkMode: 'class',
@@ -50,10 +52,7 @@ const config: Config = {
       borderColor: ['dark'],
     },
   },
-  plugins: [
-    require('@tailwindcss/typography'),
-    require('daisyui'),
-  ],
+  plugins: [typography, daisyui],
   daisyui: {
     themes: [
       {

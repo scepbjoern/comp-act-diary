@@ -229,7 +229,7 @@ export default function TasksPage() {
   useEffect(() => {
     const allGroupIds = taskGroups.map(g => g.id)
     setExpandedGroups(new Set(allGroupIds))
-  }, [filters.groupBy, taskGroups.length])
+  }, [filters.groupBy, taskGroups])
 
   // Toggle group expansion
   const toggleGroup = (groupId: string) => {

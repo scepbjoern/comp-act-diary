@@ -351,7 +351,7 @@ export function useDiaryManagement(
     if (newDiaryAudioFileId) {
       const isReferenced = notes.some(note => note.audioFileId === newDiaryAudioFileId)
       if (!isReferenced) {
-        cleanupAudioFile(newDiaryAudioFileId)
+        void cleanupAudioFile(newDiaryAudioFileId)
       }
     }
     

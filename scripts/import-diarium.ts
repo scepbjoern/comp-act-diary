@@ -12,7 +12,6 @@
 
 import { PrismaClient, TimeBoxKind, TaxonomyKind, TaxonomyOrigin, TaggingSource, MeasurementSource, Prisma } from '@prisma/client'
 import * as fs from 'fs'
-import * as path from 'path'
 
 const prisma = new PrismaClient()
 
@@ -93,7 +92,7 @@ function getLocalDate(isoDate: string): string {
 /**
  * Berechnet Start- und End-Zeitpunkt für einen Tag
  */
-function getDayBounds(localDate: string, timezone: string = 'Europe/Zurich'): { startAt: Date, endAt: Date } {
+function getDayBounds(localDate: string, _timezone: string = 'Europe/Zurich'): { startAt: Date, endAt: Date } {
   // Für Einfachheit: Verwende UTC-Zeiten basierend auf dem Datum
   const startAt = new Date(`${localDate}T00:00:00.000Z`)
   const endAt = new Date(`${localDate}T23:59:59.999Z`)
@@ -182,7 +181,7 @@ async function importDiarium(jsonPath: string, dryRun: boolean = false) {
   console.log(`   User: ${user.username} (${user.id})`)
   
   // Hole den "daily_note" JournalEntryType
-  let diaryType = await prisma.journalEntryType.findFirst({
+  const diaryType = await prisma.journalEntryType.findFirst({
     where: { code: 'daily_note' }
   })
   if (!diaryType) {

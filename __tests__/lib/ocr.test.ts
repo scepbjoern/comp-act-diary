@@ -3,7 +3,7 @@
  * Uses mocks to avoid real Mistral API calls
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   isSupportedOcrType,
   isImageType,

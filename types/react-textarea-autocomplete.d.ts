@@ -1,5 +1,5 @@
 declare module '@webscopeio/react-textarea-autocomplete' {
-  import { Component, CSSProperties, ReactNode } from 'react'
+  import { Component, CSSProperties } from 'react'
 
   export interface TriggerType<T> {
     dataProvider: (token: string) => Promise<T[]> | T[]

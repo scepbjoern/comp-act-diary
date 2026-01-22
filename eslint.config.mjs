@@ -22,6 +22,7 @@ export default [
       'dist/**',
       'build/**',
       'coverage/**',
+      'public/sw.js',
       '**/*.config.js',
       '**/*.config.mjs',
       'node_modules/**'
@@ -80,6 +81,23 @@ export default [
     files: ['app/layout.tsx'],
     rules: {
       '@next/next/no-page-custom-font': 'off',
+    },
+  },
+
+  // Generated Next types file: allow triple-slash reference
+  {
+    files: ['next-env.d.ts'],
+    rules: {
+      '@typescript-eslint/triple-slash-reference': 'off',
+    },
+  },
+
+  // Scripts/seed files: allow console and fire-and-forget promises
+  {
+    files: ['scripts/**/*.{ts,tsx}', 'prisma/seed.ts'],
+    rules: {
+      'no-console': 'off',
+      '@typescript-eslint/no-floating-promises': 'off',
     },
   },
 ]

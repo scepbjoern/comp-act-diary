@@ -6,7 +6,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { LLMModel, LLMProvider } from '@/lib/config/llmModels'
+import { LLMProvider } from '@/lib/config/llmModels'
 
 export interface LlmModelData {
   id: string
@@ -57,7 +57,7 @@ export function useLlmModels(): UseLlmModelsReturn {
   }, [])
 
   useEffect(() => {
-    fetchModels()
+    void fetchModels()
   }, [fetchModels])
 
   const addModel = useCallback(async (model: Omit<LlmModelData, 'id' | 'sortOrder'>): Promise<boolean> => {
