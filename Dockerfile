@@ -147,9 +147,9 @@ COPY --from=build --chown=node:node /app/node_modules/.bin/prisma ./node_modules
 COPY --from=build --chown=node:node /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build --chown=node:node /app/node_modules/prisma ./node_modules/prisma
 
-# Remove any existing esbuild to avoid version conflicts with tsx
+# Remove ALL esbuild instances (from standalone and copied node_modules) to avoid version conflicts
 # Then install tsx and typescript for runtime scripts
-RUN rm -rf /app/node_modules/esbuild /app/node_modules/*/esbuild 2>/dev/null || true \
+RUN find /app -type d -name "esbuild" -exec rm -rf {} + 2>/dev/null || true \
  && npm install tsx@4.19.2 typescript@5.5.4 --no-save \
  && chown -R node:node /app/node_modules
 
