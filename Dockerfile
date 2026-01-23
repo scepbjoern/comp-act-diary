@@ -142,12 +142,42 @@ COPY --from=build --chown=node:node /app/prisma ./prisma
 COPY --from=build --chown=node:node /app/scripts ./scripts
 COPY --from=build --chown=node:node /app/deploy/entrypoint.sh ./entrypoint.sh
 
-# Copy Prisma CLI and dependencies for migrations (not included in standalone)
+# Copy Prisma CLI and all dependencies for migrations (not included in standalone)
 # Note: tsx/typescript are NOT needed in production - only used for development seeding
 # entrypoint.sh uses prisma CLI directly and psql for FTS setup
-# IMPORTANT: Copy full prisma package first (includes WASM files), then create .bin symlink
+#
+# Prisma dependency tree:
+#   prisma → @prisma/engines, @prisma/config
+#   @prisma/config → c12, deepmerge-ts, effect, empathic
+#   @prisma/engines → @prisma/engines-version, @prisma/debug, @prisma/fetch-engine, @prisma/get-platform
+#   c12 → several sub-dependencies (confbox, dotenv, etc.)
 COPY --from=build --chown=node:node /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build --chown=node:node /app/node_modules/prisma ./node_modules/prisma
+
+# Copy direct dependencies of @prisma/config
+COPY --from=build --chown=node:node /app/node_modules/c12 ./node_modules/c12
+COPY --from=build --chown=node:node /app/node_modules/deepmerge-ts ./node_modules/deepmerge-ts
+COPY --from=build --chown=node:node /app/node_modules/effect ./node_modules/effect
+COPY --from=build --chown=node:node /app/node_modules/empathic ./node_modules/empathic
+
+# Copy c12 dependencies (and their transitive deps)
+COPY --from=build --chown=node:node /app/node_modules/confbox ./node_modules/confbox
+COPY --from=build --chown=node:node /app/node_modules/dotenv ./node_modules/dotenv
+COPY --from=build --chown=node:node /app/node_modules/defu ./node_modules/defu
+COPY --from=build --chown=node:node /app/node_modules/ohash ./node_modules/ohash
+COPY --from=build --chown=node:node /app/node_modules/pathe ./node_modules/pathe
+COPY --from=build --chown=node:node /app/node_modules/pkg-types ./node_modules/pkg-types
+COPY --from=build --chown=node:node /app/node_modules/mlly ./node_modules/mlly
+COPY --from=build --chown=node:node /app/node_modules/jiti ./node_modules/jiti
+
+# Copy mlly transitive dependencies
+COPY --from=build --chown=node:node /app/node_modules/acorn ./node_modules/acorn
+COPY --from=build --chown=node:node /app/node_modules/ufo ./node_modules/ufo
+
+# Copy effect transitive dependencies
+COPY --from=build --chown=node:node /app/node_modules/@standard-schema ./node_modules/@standard-schema
+COPY --from=build --chown=node:node /app/node_modules/fast-check ./node_modules/fast-check
+COPY --from=build --chown=node:node /app/node_modules/pure-rand ./node_modules/pure-rand
 
 # Create .bin directory and symlink for prisma CLI
 RUN mkdir -p ./node_modules/.bin \
