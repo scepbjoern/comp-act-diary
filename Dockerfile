@@ -147,9 +147,10 @@ COPY --from=build --chown=node:node /app/node_modules/.bin/prisma ./node_modules
 COPY --from=build --chown=node:node /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build --chown=node:node /app/node_modules/prisma ./node_modules/prisma
 
-# Install Prisma directly in Alpine to ensure all runtime files (WASM, engines) are available
-# Run as root, then fix ownership of only the new files
-RUN npm install prisma@6.19.0 tsx@4.19.2 typescript@5.5.4 --no-save \
+# Remove any existing esbuild to avoid version conflicts with tsx
+# Then install tsx and typescript for runtime scripts
+RUN rm -rf /app/node_modules/esbuild /app/node_modules/*/esbuild 2>/dev/null || true \
+ && npm install tsx@4.19.2 typescript@5.5.4 --no-save \
  && chown -R node:node /app/node_modules
 
 # Ensure entrypoint is executable and create writable uploads directory
