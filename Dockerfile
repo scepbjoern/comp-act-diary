@@ -161,14 +161,28 @@ COPY --from=build --chown=node:node /app/node_modules/effect ./node_modules/effe
 COPY --from=build --chown=node:node /app/node_modules/empathic ./node_modules/empathic
 
 # Copy c12 dependencies (and their transitive deps)
+COPY --from=build --chown=node:node /app/node_modules/chokidar ./node_modules/chokidar
 COPY --from=build --chown=node:node /app/node_modules/confbox ./node_modules/confbox
-COPY --from=build --chown=node:node /app/node_modules/dotenv ./node_modules/dotenv
 COPY --from=build --chown=node:node /app/node_modules/defu ./node_modules/defu
+COPY --from=build --chown=node:node /app/node_modules/dotenv ./node_modules/dotenv
+COPY --from=build --chown=node:node /app/node_modules/exsolve ./node_modules/exsolve
+COPY --from=build --chown=node:node /app/node_modules/giget ./node_modules/giget
+COPY --from=build --chown=node:node /app/node_modules/jiti ./node_modules/jiti
 COPY --from=build --chown=node:node /app/node_modules/ohash ./node_modules/ohash
 COPY --from=build --chown=node:node /app/node_modules/pathe ./node_modules/pathe
+COPY --from=build --chown=node:node /app/node_modules/perfect-debounce ./node_modules/perfect-debounce
 COPY --from=build --chown=node:node /app/node_modules/pkg-types ./node_modules/pkg-types
+COPY --from=build --chown=node:node /app/node_modules/rc9 ./node_modules/rc9
 COPY --from=build --chown=node:node /app/node_modules/mlly ./node_modules/mlly
-COPY --from=build --chown=node:node /app/node_modules/jiti ./node_modules/jiti
+
+# Copy transitive dependencies of c12 deps
+COPY --from=build --chown=node:node /app/node_modules/readdirp ./node_modules/readdirp
+COPY --from=build --chown=node:node /app/node_modules/citty ./node_modules/citty
+COPY --from=build --chown=node:node /app/node_modules/consola ./node_modules/consola
+COPY --from=build --chown=node:node /app/node_modules/node-fetch-native ./node_modules/node-fetch-native
+COPY --from=build --chown=node:node /app/node_modules/nypm ./node_modules/nypm
+COPY --from=build --chown=node:node /app/node_modules/destr ./node_modules/destr
+COPY --from=build --chown=node:node /app/node_modules/tinyexec ./node_modules/tinyexec
 
 # Copy mlly transitive dependencies
 COPY --from=build --chown=node:node /app/node_modules/acorn ./node_modules/acorn
