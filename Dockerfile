@@ -143,15 +143,11 @@ COPY --from=build --chown=node:node /app/scripts ./scripts
 COPY --from=build --chown=node:node /app/deploy/entrypoint.sh ./entrypoint.sh
 
 # Copy Prisma CLI and dependencies for migrations (not included in standalone)
+# Note: tsx/typescript are NOT needed in production - only used for development seeding
+# entrypoint.sh uses prisma CLI directly and psql for FTS setup
 COPY --from=build --chown=node:node /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 COPY --from=build --chown=node:node /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build --chown=node:node /app/node_modules/prisma ./node_modules/prisma
-
-# Remove ALL esbuild instances (from standalone and copied node_modules) to avoid version conflicts
-# Then install tsx and typescript for runtime scripts
-RUN find /app -type d -name "esbuild" -exec rm -rf {} + 2>/dev/null || true \
- && npm install tsx@4.19.2 typescript@5.5.4 --no-save \
- && chown -R node:node /app/node_modules
 
 # Ensure entrypoint is executable and create writable uploads directory
 RUN chmod +x ./entrypoint.sh \
