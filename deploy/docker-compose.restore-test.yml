@@ -1,0 +1,55 @@
+# docker-compose.restore-test.yml
+# Temporärer Stack für DB-Restore-Verifikation
+# Nutzt temporäre Volumes, die mit "docker compose down -v" gelöscht werden
+#
+# NICHT verwechseln mit der permanenten TEST/DEMO-Umgebung!
+# Für permanente TEST-Umgebung siehe: docker-compose.demo.yml
+
+version: "3.9"
+
+services:
+  restore-test-db:
+    image: postgres:16-alpine
+    container_name: compact-diary-restore-test-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      # Temporäres Volume statt Bind-Mount
+      - restore-test-db-data:/var/lib/postgresql/data
+      # Backup-Verzeichnis read-only einbinden
+      - ${DB_BACKUP_PATH}:/backups:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - restore-test-network
+
+  restore-test-app:
+    container_name: compact-diary-restore-test-app
+    image: deploy-app:latest
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@restore-test-db:5432/${POSTGRES_DB}?schema=public
+      SYNC_SCHEMA: "false"
+    ports:
+      - "3099:3000"
+    depends_on:
+      restore-test-db:
+        condition: service_healthy
+    volumes:
+      - restore-test-uploads:/app/uploads
+    networks:
+      - restore-test-network
+
+volumes:
+  restore-test-db-data:
+    # Temporäres Volume - wird mit docker compose down -v gelöscht
+  restore-test-uploads:
+
+networks:
+  restore-test-network:
+    name: compact-diary-restore-test-network

@@ -6,6 +6,31 @@ Tägliche Befehle, Update-Strategien und Troubleshooting für den CompACT Diary 
 
 ---
 
+## Umgebungen (PROD vs. TEST/DEMO)
+
+Auf demselben LXC-Container laufen zwei unabhängige Umgebungen:
+
+| Umgebung | URL | Interner Port | Stack-Verzeichnis | Compose-Datei |
+|----------|-----|---------------|-------------------|---------------|
+| **PROD** | `https://compactdiary.melbjo.win` | `65321` | `/opt/stacks/comp-act-diary` | `docker-compose.yml` |
+| **TEST/DEMO** | `https://test-compactdiary.melbjo.win` | `65322` | `/opt/stacks/comp-act-diary-test` | `docker-compose.yml` |
+
+**Cloudflare-Konfiguration:**
+- PROD: `compactdiary.melbjo.win` → `http://192.168.188.170:65321`
+- TEST: `test-compactdiary.melbjo.win` → `http://192.168.188.170:65322`
+
+**Container-Namen:**
+
+| Service | PROD | TEST |
+|---------|------|------|
+| App | `compact-diary-app` | `compact-diary-test-app` |
+| Datenbank | `compact-diary-db` | `compact-diary-test-db` |
+| Backup | `compact-diary-db-backup` | `compact-diary-test-db-backup` |
+
+> **Wichtig:** Bei allen Befehlen in diesem Guide wird immer zuerst die PROD-Variante gezeigt, dann die TEST-Variante. Achte darauf, dass du im richtigen Verzeichnis arbeitest!
+
+---
+
 ## Zusammenspiel der Dateien (Kurzübersicht)
 
 ```
@@ -25,6 +50,7 @@ entrypoint.sh       → WAS beim Start passiert (DB-Wait, Schema-Sync)
 
 ## Inhaltsverzeichnis
 
+0. [Initiale Einrichtung TEST-Umgebung](#0-initiale-einrichtung-test-umgebung)
 1. [Grundlegende Befehle](#1-grundlegende-befehle)
 2. [Deployment-Varianten](#2-deployment-varianten)
 3. [Logs und Debugging](#3-logs-und-debugging)
@@ -35,31 +61,172 @@ entrypoint.sh       → WAS beim Start passiert (DB-Wait, Schema-Sync)
 
 ---
 
+## 0. Initiale Einrichtung TEST-Umgebung
+
+Diese Anleitung beschreibt die einmalige Einrichtung der permanenten TEST/DEMO-Umgebung auf demselben LXC wie PROD. Gilt sinngemäss analog für PROD-Umgebung
+
+### 0.1 Cloudflare DNS konfigurieren
+
+In Cloudflare einen neuen DNS-Record anlegen:
+- **Type:** A (oder CNAME)
+- **Name:** `test-compactdiary`
+- **Target:** `192.168.188.170`
+- **Proxy:** Aktiviert (orange Wolke)
+
+Dann in Cloudflare Tunnel oder Origin Rules den Port `65322` konfigurieren:
+- `test-compactdiary.melbjo.win` → `http://192.168.188.170:65322`
+
+### 0.2 Verzeichnisstruktur auf dem Server erstellen
+
+```bash
+# Verzeichnis für TEST-Stack erstellen
+sudo mkdir -p /opt/stacks/comp-act-diary-test
+cd /opt/stacks/comp-act-diary-test
+
+# Repository klonen (oder separaten Branch)
+sudo git clone https://github.com/DEIN_USER/comp-act-diary.git .
+# Alternative: gleichen Branch wie PROD nutzen
+# sudo git clone --branch main https://github.com/DEIN_USER/comp-act-diary.git .
+
+# Berechtigungen setzen
+sudo chown -R $(id -u):$(id -g) /opt/stacks/comp-act-diary-test
+```
+
+### 0.3 Docker Compose für TEST konfigurieren
+
+```bash
+cd /opt/stacks/comp-act-diary-test/deploy
+
+# docker-compose.demo.yml als docker-compose.yml verwenden
+cp docker-compose.demo.yml docker-compose.yml
+
+# Oder: PROD-Compose kopieren und anpassen (manuelle Änderungen nötig)
+# cp /opt/stacks/comp-act-diary/deploy/docker-compose.yml .
+```
+
+### 0.4 .env-Datei für TEST erstellen
+
+```bash
+cd /opt/stacks/comp-act-diary-test/deploy
+
+# .env von PROD als Vorlage kopieren
+cp /opt/stacks/comp-act-diary/deploy/.env .env
+
+# Wichtige Anpassungen in .env vornehmen:
+nano .env
+```
+
+**Zwingend anzupassende Werte in `.env`:**
+
+```bash
+# Port (TEST auf 65322, PROD auf 65321)
+APP_PORT=65322
+
+# Separate Pfade für DB-Daten (WICHTIG: nicht gleich wie PROD!)
+DB_DATA_PATH=/dockerdata-fast/postgres-data/comp-act-diary-test
+
+# Separate Pfade für Uploads
+PUBLIC_UPLOADS_PATH=/opt/comp-act-diary-test/uploads
+
+# Separate Pfade für Backups
+DB_BACKUP_PATH=/dockerdata-slow/db_dumps/diary/comp-act-diary-test_db_dump
+```
+
+### 0.5 Verzeichnisse für TEST-Daten erstellen
+
+```bash
+# DB-Datenverzeichnis
+sudo mkdir -p /dockerdata-fast/postgres-data/comp-act-diary-test
+sudo chown 999:999 /dockerdata-fast/postgres-data/comp-act-diary-test
+
+# Upload-Verzeichnis
+sudo mkdir -p /opt/comp-act-diary-test/uploads
+sudo chown $(id -u):$(id -g) /opt/comp-act-diary-test/uploads
+
+# Backup-Verzeichnis
+sudo mkdir -p /dockerdata-slow/db_dumps/diary/comp-act-diary-test_db_dump
+sudo chown $(id -u):$(id -g) /dockerdata-slow/db_dumps/diary/comp-act-diary-test_db_dump
+```
+
+### 0.6 TEST-Stack starten
+
+```bash
+cd /opt/stacks/comp-act-diary-test/deploy
+
+# Erstes Build und Start (mit Schema-Sync für leere DB)
+SYNC_SCHEMA=true docker compose up -d --build
+
+# Logs prüfen
+docker compose logs -f app
+```
+
+### 0.7 Verifizierung
+
+```bash
+# Container-Status prüfen
+docker ps --filter "name=compact-diary-test"
+
+# Beide Umgebungen sollten laufen:
+# - compact-diary-app        (PROD, Port 65321)
+# - compact-diary-test-app   (TEST, Port 65322)
+
+# Im Browser testen
+curl -I http://localhost:65322
+# Oder: https://test-compactdiary.melbjo.win
+```
+
+### 0.8 Optional: PROD-Daten in TEST importieren
+
+Wenn du mit echten Daten testen möchtest:
+
+```bash
+# Neuestes PROD-Backup finden
+LATEST=$(ls -t /dockerdata-slow/db_dumps/diary/comp-act-diary_db_dump/*.dump | head -1)
+echo "Importiere: $LATEST"
+
+# TEST-App stoppen, DB resetten, Backup einspielen
+cd /opt/stacks/comp-act-diary-test/deploy
+docker compose stop app
+docker compose exec db psql -U compactdiary -c "DROP DATABASE IF EXISTS \"comp-act-diary\""
+docker compose exec db psql -U compactdiary -c "CREATE DATABASE \"comp-act-diary\""
+docker compose exec -T db pg_restore -U compactdiary -d comp-act-diary < "$LATEST"
+docker compose up -d app
+```
+
+---
+
 ## 1. Grundlegende Befehle
 
 ### Arbeitsverzeichnis
 
 ```bash
+# PROD
 cd /opt/stacks/comp-act-diary/deploy
+
+# TEST
+cd /opt/stacks/comp-act-diary-test/deploy
 ```
 
 ### Status prüfen
 
 ```bash
-# Alle Container des Stacks
+# Alle Container des Stacks (im jeweiligen Verzeichnis)
 docker compose ps
 
 # Detaillierter Status
 docker compose ps -a
 
-# Ressourcenverbrauch
+# Ressourcenverbrauch (zeigt alle Container)
 docker stats --no-stream
+
+# Beide Umgebungen gleichzeitig prüfen
+docker ps --filter "name=compact-diary"
 ```
 
 ### Container steuern
 
 ```bash
-# Alle starten
+# Alle starten (im jeweiligen Verzeichnis)
 docker compose up -d
 
 # Alle stoppen (Daten bleiben erhalten)
@@ -73,12 +240,7 @@ docker compose restart app
 docker compose restart db
 ```
 
-**Container-Namen:**
-- App: `compact-diary-app`
-- Datenbank: `compact-diary-db`
-- Backup: `compact-diary-db-backup`
-
-Diese Namen sind in `docker-compose.yml` mit `container_name` fest definiert.
+**Container-Namen:** Siehe Tabelle oben unter "Umgebungen (PROD vs. TEST/DEMO)".
 
 ---
 
@@ -89,19 +251,15 @@ Diese Namen sind in `docker-compose.yml` mit `container_name` fest definiert.
 Nutzt Docker Build-Cache maximal. Nur geänderte Layer werden neu gebaut.
 
 ```bash
+# PROD
 cd /opt/stacks/comp-act-diary
-
-# Code aktualisieren
 git pull origin main
+cd deploy && docker compose up -d --build app
 
-# Nur App-Container neu bauen und starten
-cd deploy
-# Variante 1: Zwei Schritte (mehr Kontrolle)
-docker compose build app
-docker compose up -d app  # --force-recreate nicht nötig!
-
-# Variante 2: Ein Befehl (schneller)
-docker compose up -d --build app
+# TEST
+cd /opt/stacks/comp-act-diary-test
+git pull origin main  # oder: git pull origin develop
+cd deploy && docker compose up -d --build app
 
 # Optional: Alte Images direkt aufräumen
 docker image prune -f
@@ -123,14 +281,19 @@ docker image prune -f
 Ignoriert Build-Cache komplett, baut alles von Grund auf neu.
 
 ```bash
+# PROD
 cd /opt/stacks/comp-act-diary
 git pull origin main
-
 cd deploy
-# Ohne Prisma-Änderungen:
 docker compose build --no-cache app && docker compose up -d --force-recreate app
 
-# Mit Prisma-Änderungen:
+# TEST
+cd /opt/stacks/comp-act-diary-test
+git pull origin main  # oder: git pull origin develop
+cd deploy
+docker compose build --no-cache app && docker compose up -d --force-recreate app
+
+# Mit Prisma-Änderungen (PROD oder TEST):
 docker compose build --no-cache app && SYNC_SCHEMA=true docker compose up -d --force-recreate app
 
 # Optional: Nach Rebuild gründlich aufräumen
@@ -151,14 +314,18 @@ docker builder prune -f
 ### 2.3 Schema-Migration (bei Prisma-Änderungen)
 
 ```bash
+# PROD
 cd /opt/stacks/comp-act-diary
 git pull origin main
-
 cd deploy
-# Einmalig mit SYNC_SCHEMA=true
 SYNC_SCHEMA=true docker compose up -d --build --force-recreate app
+docker compose logs -f app
 
-# Danach prüfen
+# TEST
+cd /opt/stacks/comp-act-diary-test
+git pull origin main
+cd deploy
+SYNC_SCHEMA=true docker compose up -d --build --force-recreate app
 docker compose logs -f app
 ```
 
@@ -177,14 +344,16 @@ docker compose logs -f app
 Schnellste Option - nutzt bestehendes Image.
 
 ```bash
+# PROD
 cd /opt/stacks/comp-act-diary/deploy
-
-# Nur App neustarten
 docker compose restart app
 
-# Oder: Stop + Start (etwas sauberer)
-docker compose stop app
-docker compose up -d app
+# TEST
+cd /opt/stacks/comp-act-diary-test/deploy
+docker compose restart app
+
+# Oder: Stop + Start (etwas sauberer, im jeweiligen Verzeichnis)
+docker compose stop app && docker compose up -d app
 ```
 
 **Dauer:** ~5-10 Sekunden  
@@ -201,13 +370,13 @@ docker compose up -d --force-recreate app
 ### 2.5 Kompletter Stack-Neustart
 
 ```bash
+# PROD
 cd /opt/stacks/comp-act-diary/deploy
+docker compose down && docker compose up -d
 
-# Alles stoppen (Container werden entfernt, Volumes bleiben!)
-docker compose down
-
-# Alles neu starten
-docker compose up -d
+# TEST
+cd /opt/stacks/comp-act-diary-test/deploy
+docker compose down && docker compose up -d
 ```
 
 **Dauer:** ~30 Sekunden - 2 Minuten  
@@ -247,6 +416,8 @@ docker compose up -d
 ### Logs anzeigen
 
 ```bash
+# Im jeweiligen Verzeichnis (PROD oder TEST):
+
 # Alle Container, letzte 100 Zeilen
 docker compose logs --tail 100
 
@@ -259,9 +430,6 @@ docker compose logs -f app
 # Nur DB-Logs
 docker compose logs -f db
 
-# Nur Backup-Logs
-docker compose logs -f backup_db
-
 # Mit Zeitstempel
 docker compose logs -f --timestamps app
 ```
@@ -272,11 +440,11 @@ docker compose logs -f --timestamps app
 # Live-Events
 docker events
 
-# Letzte Stunde
-docker events --since="1h"
+# Gefiltert nach Container (PROD)
+docker events --filter="container=compact-diary-app"
 
-# Gefiltert nach Container
-docker events --filter="container=comp-act-diary-app-1"
+# Gefiltert nach Container (TEST)
+docker events --filter="container=compact-diary-test-app"
 
 # Nur Fehler-Events
 docker events --filter="event=die" --filter="event=kill"
@@ -285,30 +453,22 @@ docker events --filter="event=die" --filter="event=kill"
 ### Container-Details inspizieren
 
 ```bash
-# Vollständige Container-Info
-docker inspect comp-act-diary-app-1
+# PROD
+docker inspect compact-diary-app
+docker inspect compact-diary-app --format='{{json .Mounts}}' | jq
 
-# Nur Mounts
-docker inspect comp-act-diary-app-1 --format='{{json .Mounts}}' | jq
-
-# Nur Umgebungsvariablen
-docker inspect comp-act-diary-app-1 --format='{{range .Config.Env}}{{println .}}{{end}}'
-
-# Nur Netzwerk
-docker inspect comp-act-diary-app-1 --format='{{json .NetworkSettings.Networks}}' | jq
+# TEST
+docker inspect compact-diary-test-app
+docker inspect compact-diary-test-app --format='{{json .Mounts}}' | jq
 ```
 
 ### In Container-Shell
 
 ```bash
-# App-Container (sh, da Alpine-basiert)
-docker compose exec app sh
-
-# DB-Container
-docker compose exec db bash
-
-# Als Root
-docker compose exec -u root app sh
+# Im jeweiligen Verzeichnis (PROD oder TEST):
+docker compose exec app sh      # App-Container (sh, da Alpine-basiert)
+docker compose exec db bash     # DB-Container
+docker compose exec -u root app sh  # Als Root
 ```
 
 ---
@@ -318,14 +478,18 @@ docker compose exec -u root app sh
 ### Prisma Studio (Web-UI für DB)
 
 ```bash
-# Temporär starten (Port 5555)
-docker compose exec app npx prisma studio
+# PROD (Port 5555)
+cd /opt/stacks/comp-act-diary/deploy
+docker compose exec app npx prisma studio --port 5555
 
-# Oder mit anderem Port
+# TEST (Port 5556, um Konflikte zu vermeiden)
+cd /opt/stacks/comp-act-diary-test/deploy
 docker compose exec app npx prisma studio --port 5556
 ```
 
-Dann im Browser: `http://DEINE_LXC_IP:5555`
+Dann im Browser:
+- PROD: `http://192.168.188.170:5555`
+- TEST: `http://192.168.188.170:5556`
 
 **Hinweis:** Studio bindet standardmässig an `0.0.0.0`, also von aussen erreichbar. Nur temporär nutzen!
 
@@ -348,6 +512,8 @@ docker compose exec app npx prisma db pull --print
 ### Direkte SQL-Abfragen
 
 ```bash
+# Im jeweiligen Verzeichnis (PROD oder TEST):
+
 # Interaktive psql-Session
 docker compose exec db psql -U compactdiary -d comp-act-diary
 
@@ -367,73 +533,86 @@ docker compose exec db psql -U compactdiary -d comp-act-diary -c "\dt"
 Der `backup_db` Container erstellt automatisch Backups:
 - **Intervall:** Alle 8 Stunden (konfigurierbar via `BACKUP_FREQUENCY`)
 - **Aufbewahrung:** 3 neueste (konfigurierbar via `BACKUP_NUM_KEEP`)
-- **Speicherort:** `${DB_BACKUP_PATH}` (z.B. `/dockerdata-slow/db_dumps/diary/comp-act-diary_db_dump/`)
+- **Speicherort:**
+  - PROD: `/dockerdata-slow/db_dumps/diary/comp-act-diary_db_dump/`
+  - TEST: `/dockerdata-slow/db_dumps/diary/comp-act-diary-test_db_dump/`
 
 ### Backup-Status prüfen
 
 ```bash
-# Backup-Container-Logs
+# PROD
+cd /opt/stacks/comp-act-diary/deploy
 docker compose logs backup_db
-
-# Vorhandene Backups auflisten
 ls -lah /dockerdata-slow/db_dumps/diary/comp-act-diary_db_dump/
 
-# Neuestes Backup
-ls -t /dockerdata-slow/db_dumps/diary/comp-act-diary_db_dump/*.dump | head -1
+# TEST
+cd /opt/stacks/comp-act-diary-test/deploy
+docker compose logs backup_db
+ls -lah /dockerdata-slow/db_dumps/diary/comp-act-diary-test_db_dump/
 ```
 
 ### Manuelles Backup
 
 ```bash
-# Ad-hoc Backup erstellen
-docker compose exec db pg_dump -U compactdiary -d comp-act-diary -Fc \
-  -f /tmp/manual_backup.dump
+# PROD
+cd /opt/stacks/comp-act-diary/deploy
+docker compose exec db pg_dump -U compactdiary -d comp-act-diary -Fc -f /tmp/manual_backup.dump
+docker cp compact-diary-db:/tmp/manual_backup.dump ./manual_backup_prod.dump
 
-# Aus Container kopieren
-docker cp compact-diary-db:/tmp/manual_backup.dump ./manual_backup.dump
+# TEST
+cd /opt/stacks/comp-act-diary-test/deploy
+docker compose exec db pg_dump -U compactdiary -d comp-act-diary -Fc -f /tmp/manual_backup.dump
+docker cp compact-diary-test-db:/tmp/manual_backup.dump ./manual_backup_test.dump
 ```
 
 ### Restore
 
 ```bash
-# 1. App stoppen (DB weiterlaufen lassen)
+# PROD
+cd /opt/stacks/comp-act-diary/deploy
 docker compose stop app
-
-# 2. Bestehende DB löschen und neu erstellen
 docker compose exec db psql -U compactdiary -c "DROP DATABASE \"comp-act-diary\""
 docker compose exec db psql -U compactdiary -c "CREATE DATABASE \"comp-act-diary\""
-
-# 3. Neuestes Backup finden und einspielen
 LATEST=$(ls -t /dockerdata-slow/db_dumps/diary/comp-act-diary_db_dump/*.dump | head -1)
 echo "Restore von: $LATEST"
 docker compose exec -T db pg_restore -U compactdiary -d comp-act-diary < "$LATEST"
+docker compose up -d app
 
-# 4. App wieder starten
+# TEST
+cd /opt/stacks/comp-act-diary-test/deploy
+docker compose stop app
+docker compose exec db psql -U compactdiary -c "DROP DATABASE \"comp-act-diary\""
+docker compose exec db psql -U compactdiary -c "CREATE DATABASE \"comp-act-diary\""
+LATEST=$(ls -t /dockerdata-slow/db_dumps/diary/comp-act-diary-test_db_dump/*.dump | head -1)
+echo "Restore von: $LATEST"
+docker compose exec -T db pg_restore -U compactdiary -d comp-act-diary < "$LATEST"
 docker compose up -d app
 ```
 
-### Backup-Verifikation mit temporärem Test-Stack
+### DB-Restore-Verifikation (temporärer Stack)
 
 Um sicherzustellen, dass ein Backup wirklich funktioniert, kannst du einen komplett separaten Stack hochfahren, das Backup einspielen und testen. Dieser Stack nutzt ein temporäres Docker-Volume (kein Bind-Mount) und kann danach spurlos gelöscht werden.
 
-#### 1. Test-Compose-Datei erstellen
+> **Hinweis:** Dies ist NICHT die permanente TEST/DEMO-Umgebung! Für die permanente TEST-Umgebung siehe Abschnitt "Initiale Einrichtung TEST-Umgebung" weiter oben.
+
+#### 1. Restore-Test-Compose-Datei erstellen
 
 ```bash
-# Im deploy-Verzeichnis eine Test-Datei erstellen
-cat > /opt/stacks/comp-act-diary/deploy/docker-compose.test.yml << 'EOF'
+# Im deploy-Verzeichnis eine Restore-Test-Datei erstellen
+cat > /opt/stacks/comp-act-diary/deploy/docker-compose.restore-test.yml << 'EOF'
 version: "3.9"
 
 services:
-  test-db:
+  restore-test-db:
     image: postgres:16-alpine
-    container_name: compact-diary-test-db
+    container_name: compact-diary-restore-test-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       # Temporäres Volume statt Bind-Mount
-      - test-db-data:/var/lib/postgresql/data
+      - restore-test-db-data:/var/lib/postgresql/data
       # Backup-Verzeichnis read-only einbinden
       - ${DB_BACKUP_PATH}:/backups:ro
     healthcheck:
@@ -442,73 +621,73 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - test-network
+      - restore-test-network
 
-  test-app:
-    container_name: compact-diary-test-app
+  restore-test-app:
+    container_name: compact-diary-restore-test-app
     image: deploy-app:latest
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@test-db:5432/${POSTGRES_DB}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@restore-test-db:5432/${POSTGRES_DB}?schema=public
       SYNC_SCHEMA: "false"
     ports:
       - "3099:3000"
     depends_on:
-      test-db:
+      restore-test-db:
         condition: service_healthy
     volumes:
-      - test-uploads:/app/uploads
+      - restore-test-uploads:/app/uploads
     networks:
-      - test-network
+      - restore-test-network
 
 volumes:
-  test-db-data:
+  restore-test-db-data:
     # Temporäres Volume - wird mit docker compose down -v gelöscht
-  test-uploads:
+  restore-test-uploads:
 
 networks:
-  test-network:
-    name: compact-diary-test-network
+  restore-test-network:
+    name: compact-diary-restore-test-network
 EOF
 ```
 
-#### 2. Test-Stack starten
+#### 2. Restore-Test-Stack starten
 
 ```bash
 cd /opt/stacks/comp-act-diary/deploy
 
-# Test-Stack hochfahren (nutzt .env für Credentials)
-docker compose -f docker-compose.test.yml up -d
+# Restore-Test-Stack hochfahren (nutzt .env für Credentials)
+docker compose -f docker-compose.restore-test.yml up -d
 
 # Warten bis DB ready
-docker compose -f docker-compose.test.yml logs -f test-db
+docker compose -f docker-compose.restore-test.yml logs -f restore-test-db
 # (Ctrl+C wenn "database system is ready to accept connections")
 
 # Status prüfen
-docker compose -f docker-compose.test.yml ps
+docker compose -f docker-compose.restore-test.yml ps
 ```
 
 #### 3. Backup einspielen (automatisch neuestes)
 
 ```bash
 # Verfügbare Backups im Container anzeigen
-docker compose -f docker-compose.test.yml exec test-db ls -la /backups/
+docker compose -f docker-compose.restore-test.yml exec restore-test-db ls -la /backups/
 
 # Neuestes Backup automatisch finden und einspielen
-LATEST_BACKUP=$(docker compose -f docker-compose.test.yml exec test-db \
+LATEST_BACKUP=$(docker compose -f docker-compose.restore-test.yml exec restore-test-db \
   sh -c "ls -t /backups/*.dump 2>/dev/null | head -1")
 echo "Neuestes Backup: $LATEST_BACKUP"
 
 # Backup wiederherstellen (automatisch mit neuestem)
-docker compose -f docker-compose.test.yml exec test-db \
+docker compose -f docker-compose.restore-test.yml exec restore-test-db \
   sh -c "pg_restore -U postgres -d comp-act-diary --no-owner \$(ls -t /backups/*.dump | head -1)"
 ```
 
-#### 4. Test-App prüfen
+#### 4. Restore-Test-App prüfen
 
 ```bash
 # App-Logs prüfen
-docker compose -f docker-compose.test.yml logs -f test-app
+docker compose -f docker-compose.restore-test.yml logs -f restore-test-app
 
 # Im Browser öffnen
 # http://192.168.188.170:3099
@@ -517,47 +696,47 @@ docker compose -f docker-compose.test.yml logs -f test-app
 curl -I http://localhost:3099
 ```
 
-#### 5. Test-Stack komplett löschen
+#### 5. Restore-Test-Stack komplett löschen
 
 ```bash
 cd /opt/stacks/comp-act-diary/deploy
 
 # Container UND Volumes löschen (-v ist wichtig!)
-docker compose -f docker-compose.test.yml down -v
+docker compose -f docker-compose.restore-test.yml down -v
 
 # Prüfen dass alles weg ist
-docker compose -f docker-compose.test.yml ps
-docker volume ls | grep test
+docker compose -f docker-compose.restore-test.yml ps
+docker volume ls | grep restore-test
 
-# Optional: Test-Compose-Datei löschen
-rm docker-compose.test.yml
+# Optional: Restore-Test-Compose-Datei löschen
+rm docker-compose.restore-test.yml
 ```
 
-#### Zusammenfassung Test-Workflow
+#### Zusammenfassung Restore-Test-Workflow
 
 ```bash
-# Komplett-Skript für schnellen Test
+# Komplett-Skript für schnellen Restore-Test
 cd /opt/stacks/comp-act-diary/deploy
 
 # 1. Hochfahren
-docker compose -f docker-compose.test.yml up -d
+docker compose -f docker-compose.restore-test.yml up -d
 sleep 10  # Warten auf DB
 
 # 2. Neuestes Backup automatisch einspielen
-docker compose -f docker-compose.test.yml exec test-db \
+docker compose -f docker-compose.restore-test.yml exec restore-test-db \
   sh -c "pg_restore -U postgres -d comp-act-diary --no-owner \$(ls -t /backups/*.dump | head -1)"
 
 # 3. Testen (Browser: http://<IP>:3099)
-docker compose -f docker-compose.test.yml logs test-app
+docker compose -f docker-compose.restore-test.yml logs restore-test-app
 
 # 4. Aufräumen
-docker compose -f docker-compose.test.yml down -v
+docker compose -f docker-compose.restore-test.yml down -v
 ```
 
 **Wichtig:**
-- Der Test-Stack läuft auf **Port 3099** (nicht 3000), um Konflikte zu vermeiden
+- Der Restore-Test-Stack läuft auf **Port 3099** (nicht 3000), um Konflikte zu vermeiden
 - Das `-v` bei `down -v` ist essentiell - ohne wird das Volume nicht gelöscht!
-- Die Test-Compose-Datei kann im Repo bleiben oder jedes Mal neu erstellt werden
+- Die Restore-Test-Compose-Datei kann im Repo bleiben oder jedes Mal neu erstellt werden
 
 ---
 
@@ -566,7 +745,11 @@ docker compose -f docker-compose.test.yml down -v
 ### .env-Datei bearbeiten
 
 ```bash
+# PROD
 nano /opt/stacks/comp-act-diary/deploy/.env
+
+# TEST
+nano /opt/stacks/comp-act-diary-test/deploy/.env
 ```
 
 ### Einmalig Variable überschreiben
@@ -715,31 +898,29 @@ docker compose build app 2>&1 | tee build.log
 ### Häufigste Befehle
 
 ```bash
-# Status
-docker compose ps
+# === PROD ===
+cd /opt/stacks/comp-act-diary/deploy
+docker compose ps                    # Status
+docker compose logs -f app           # Logs
+docker compose restart app           # Neustart
 
-# Logs
-docker compose logs -f app
+# Update PROD
+cd /opt/stacks/comp-act-diary && git pull origin main && cd deploy && docker compose up -d --build app
 
-# Neustart
-docker compose restart app
+# === TEST ===
+cd /opt/stacks/comp-act-diary-test/deploy
+docker compose ps                    # Status
+docker compose logs -f app           # Logs
+docker compose restart app           # Neustart
 
-# Update (Standard)
-git pull && docker compose up -d --build app
-
-# Update (mit Schema-Sync)
-git pull && SYNC_SCHEMA=true docker compose up -d --build --force-recreate app
-
-# Shell
-docker compose exec app sh
-
-# Prisma Studio
-docker compose exec app npx prisma studio
+# Update TEST
+cd /opt/stacks/comp-act-diary-test && git pull origin main && cd deploy && docker compose up -d --build app
 ```
 
 ### Nützliche Aliase (für ~/.bashrc)
 
 ```bash
+# Allgemeine Docker-Aliase
 alias dcp='docker compose ps'
 alias dcl='docker compose logs -f'
 alias dcr='docker compose restart'
@@ -747,8 +928,13 @@ alias dce='docker compose exec'
 alias dcu='docker compose up -d'
 alias dcd='docker compose down'
 
-# CompACT-spezifisch
+# CompACT PROD
 alias cad='cd /opt/stacks/comp-act-diary/deploy'
 alias cadlogs='docker compose -f /opt/stacks/comp-act-diary/deploy/docker-compose.yml logs -f app'
-alias cadupdate='cd /opt/stacks/comp-act-diary && git pull && cd deploy && docker compose up -d --build app'
+alias cadupdate='cd /opt/stacks/comp-act-diary && git pull origin main && cd deploy && docker compose up -d --build app'
+
+# CompACT TEST
+alias cadt='cd /opt/stacks/comp-act-diary-test/deploy'
+alias cadtlogs='docker compose -f /opt/stacks/comp-act-diary-test/deploy/docker-compose.yml logs -f app'
+alias cadtupdate='cd /opt/stacks/comp-act-diary-test && git pull origin main && cd deploy && docker compose up -d --build app'
 ```

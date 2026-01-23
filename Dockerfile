@@ -145,9 +145,14 @@ COPY --from=build --chown=node:node /app/deploy/entrypoint.sh ./entrypoint.sh
 # Copy Prisma CLI and dependencies for migrations (not included in standalone)
 # Note: tsx/typescript are NOT needed in production - only used for development seeding
 # entrypoint.sh uses prisma CLI directly and psql for FTS setup
-COPY --from=build --chown=node:node /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+# IMPORTANT: Copy full prisma package first (includes WASM files), then create .bin symlink
 COPY --from=build --chown=node:node /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build --chown=node:node /app/node_modules/prisma ./node_modules/prisma
+
+# Create .bin directory and symlink for prisma CLI
+RUN mkdir -p ./node_modules/.bin \
+ && ln -sf ../prisma/build/index.js ./node_modules/.bin/prisma \
+ && chown -h node:node ./node_modules/.bin/prisma
 
 # Ensure entrypoint is executable and create writable uploads directory
 RUN chmod +x ./entrypoint.sh \
