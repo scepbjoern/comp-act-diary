@@ -197,6 +197,23 @@ model JournalEntry {
 
 ---
 
+## Testdaten bei Schema-Änderungen
+
+Bei Änderungen am Prisma-Schema müssen auch die Testdaten angepasst werden:
+
+| Datei | Zweck |
+|-------|-------|
+| `prisma/seed.ts` | Initiales Seeding nach DB-Reset (`npx prisma db seed`) |
+| `lib/services/testDataService.ts` | UI-basierte Testdaten-Generierung (Einstellungen → Daten) |
+
+**Checkliste:**
+1. Neue Pflichtfelder → In `PREDEFINED_*` Arrays und KI-Prompts ergänzen
+2. Neue Entitäten → Neue Kategorie im `testDataService.ts` hinzufügen
+3. Geänderte Enums → Import und Verwendung in beiden Dateien prüfen
+4. Neue Relationen → Entity-Erstellung und Verknüpfungen anpassen
+
+---
+
 ## Siehe auch
 
 - **[Datenmodell-Architektur](../data-model-architecture.md)** - Detaillierte Schema-Dokumentation

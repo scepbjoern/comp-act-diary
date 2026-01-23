@@ -10,6 +10,7 @@ import { AIConfigSection } from '@/components/features/ai/AIConfigSection'
 import { ImageGenerationSettings } from '@/components/features/ai/ImageGenerationSettings'
 import { PasscodeSettings } from '@/components/features/security/PasscodeSettings'
 import { SharingDefaultsSection } from '@/components/features/settings/SharingDefaultsSection'
+import { TestDataGenerator } from '@/components/features/settings/TestDataGenerator'
 import { useLlmModels } from '@/hooks/useLlmModels'
 import { type ImageGenerationSettings as ImageGenSettings } from '@/lib/config/imageModels'
 import { DEFAULT_IMAGE_GENERATION_SETTINGS } from '@/lib/config/defaultImagePrompt'
@@ -1079,6 +1080,19 @@ export default function SettingsPage() {
                 <a href="/settings/calendar" className="btn btn-primary btn-sm">
                   Kalender-Einstellungen öffnen
                 </a>
+              </div>
+            </details>
+
+            {/* Accordion: Testdaten-Generator */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="test-pipe" size={18} />
+                  Testdaten generieren
+                </span>
+              </summary>
+              <div className="collapse-content pt-2">
+                <TestDataGenerator />
               </div>
             </details>
           </div>

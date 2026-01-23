@@ -33,6 +33,7 @@ Gehe hierzu schrittweise vor:
 - Allenfalls neue Dependencies in package.json
 - Dateistruktur (also alle neuen oder zu verändernden Dateien inkl. kurzer Erläuterung ihrer Funktion)
 - Implementierungsplan mit einer Abfolge von Schritten, deren Titel jeweils mit "Schritt X (LLM/Mensch): Y" aufgeführt ist, wobei X die Nummer des Schritts ist, LLM/Mensch zum Ausdruck bringt, wer zuständig ist (soviel wie möglich durch das LLM implementieren lassen) und Y die Bezeichnung des Schritts ist. Schreibe hier noch keinen Code, sondern schreibe konkrete Anforderungen/Ziele/Tipps pro Funktionalität, die dann bei der Implementation gebaut werden soll.
+- Testdaten-Anpassungen (falls das Datenmodell geändert wird, beschreibe welche Anpassungen an `lib/services/testDataService.ts` und `prisma/seed.ts` erforderlich sind, um die neuen Felder/Entitäten in den Testdaten abzubilden)
 - Automatisiertes Testing (was kann das LLM selbstständig testen)
 - Manuelles Testing (was muss der Mensch wie testen)
 

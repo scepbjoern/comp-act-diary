@@ -99,6 +99,9 @@ import {
   IconSchool,
   IconCode,
   IconMessageCircle,
+  IconCalendarMonth,
+  IconTestPipe,
+  IconCircleX,
 } from '@tabler/icons-react'
 
 // Mapping from old Material Icon names to Tabler Icons
@@ -117,6 +120,7 @@ const iconMap: Record<string, typeof IconSettings> = {
   save: IconDeviceFloppy,
   'device-floppy': IconDeviceFloppy,
   add_link: IconLink,
+  link: IconLink,
   upload_file: IconUpload,
   upload: IconUpload,
   'cloud-upload': IconCloudUpload,
@@ -148,6 +152,9 @@ const iconMap: Record<string, typeof IconSettings> = {
   'player-stop-filled': IconPlayerStopFilled,
   
   // UI Elements
+  'calendar_month': IconCalendarMonth,
+  'test-pipe': IconTestPipe,
+  'circle-x': IconCircleX,
   close: IconX,
   expand_more: IconChevronDown,
   expand_less: IconChevronUp,

@@ -701,4 +701,40 @@ enum JournalEntryAccessRole { // NEU
 
 ---
 
+## 8. Testdaten-Generierung
+
+### Übersicht
+
+Testdaten können auf zwei Wegen generiert werden:
+
+| Methode | Verwendung | Ort |
+|---------|-----------|-----|
+| **prisma db seed** | Lokale Entwicklung, CI/CD nach DB-Reset | `prisma/seed.ts` |
+| **UI-Testdaten-Generator** | In laufender App für angemeldeten User | Einstellungen → Daten → Testdaten |
+
+### UI-Testdaten-Generator
+
+Der integrierte Generator (`lib/services/testDataService.ts`) unterstützt:
+
+- **Vordefinierte Testdaten**: Schweizer Beispieldaten aus `seed.ts` extrahiert
+- **KI-generierte Testdaten**: Flexible Generierung mit anpassbaren Prompts
+
+**Wichtig bei Datenmodell-Änderungen:**
+- Bei Änderungen an Entitäten (z.B. neue Pflichtfelder) müssen auch die vordefinierten Testdaten im `testDataService.ts` angepasst werden
+- KI-Prompts in `AI_PROMPTS` sollten das neue Schema reflektieren
+- Gleiches gilt für `prisma/seed.ts`
+
+### Unterstützte Kategorien
+
+| Kategorie | Entität | Beschreibung |
+|-----------|---------|--------------|
+| contacts | Contact | Schweizer Beispiel-Kontakte |
+| tasks | Task | Verschiedene Aufgabentypen |
+| journal_entries | JournalEntry + TimeBox | Tagesnotizen mit Stimmung/Energie |
+| habits | Habit | Gesundheits-Gewohnheiten |
+| locations | Location | Zürcher Orte |
+| measurements | Measurement + MetricDefinition | Symptom-Messwerte |
+
+---
+
 *Dieses Dokument ist die autoritative Referenz für das Datenmodell. Bei Fragen oder Änderungen bitte dieses Dokument aktualisieren.*
