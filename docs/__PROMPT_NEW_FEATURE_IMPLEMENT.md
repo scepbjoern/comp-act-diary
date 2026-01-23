@@ -22,10 +22,11 @@ Gehe hierzu schrittweise vor:
 4. Das ist aber der einzige Grund, wieso Du aufhören solltest, zu implementieren. Höre NIE auf, nur weil Du denkst, es sei zu viel auf einmal.
 
 ## npm run build und npm run dev und npm run test
-1. Führe immer wieder mal, spätestens aber nach Abarbeiten Deiner Implementation `npm run build` aus, um das Projekt zu bauen, bis weder Fehler noch Warnungen mehr auftreten. Das heisst, auch alle Linting Errors und Warnings müssen behoben werden. Im Zweifelsfall rufe auch npm run lint separat auf.
-2. Führe `npm run dev` aus, um das Projekt im Entwicklungsmodus zu starten, bis weder Fehler noch Warnungen mehr auftreten.
-3. Führe `npm run test -- --run` und `npx vitest --run --reporter=verbose 2>&1 | Out-String -Width 1000` aus, um die Tests auszuführen, bis weder Fehler noch Warnungen mehr auftreten.
-4. Schliesse die Implementation nicht ab, solange es noch Build- oder Testfehler gibt.
+1. Führe immer wieder mal, spätestens aber nach Abarbeiten Deiner Implementation `npm run build` aus, um das Projekt zu bauen, bis weder Fehler noch Warnungen mehr auftreten.
+2. Führe dann npm run lint aus und behebe allfällige Linting Errors UND Warnings. Erst wenn alle behoben sind, bin ich zufrieden.
+3. Führe `npm run dev` aus, um das Projekt im Entwicklungsmodus zu starten, bis weder Fehler noch Warnungen mehr auftreten.
+4. Führe `npm run test -- --run` und `npx vitest --run --reporter=verbose 2>&1 | Out-String -Width 1000` aus, um die Tests auszuführen, bis weder Fehler noch Warnungen mehr auftreten.
+5. Schliesse die Implementation nicht ab, solange es noch Build- oder Testfehler gibt.
 
 ## Dokumentation anpassen
 1. Falls sich etwas gegenüber dem Konzept geändert hat, aktualisiere das Konzept.

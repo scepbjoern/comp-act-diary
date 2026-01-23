@@ -11,8 +11,9 @@ const nextConfig = {
   output: 'standalone',
   
   eslint: {
-    // We use flat config; tell Next not to attempt its plugin detection
-    ignoreDuringBuilds: false, // keep lint in CI
+    // Skip linting during production build to avoid OOM in Docker (exit code 137)
+    // Run `npm run lint` separately in CI/CD or locally before deployment
+    ignoreDuringBuilds: true,
   },
   reactStrictMode: true,
   
