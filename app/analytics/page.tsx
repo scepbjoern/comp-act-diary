@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 import {
   ResponsiveContainer,
@@ -483,9 +484,9 @@ export default function AnalyticsPage() {
             <span>Auswertungen</span>
           </span>
         </h1>
-        <a href="/help/auswertungen" className="btn btn-ghost btn-sm" title="Hilfe zu Auswertungen">
+        <Link href="/help/auswertungen" className="btn btn-ghost btn-sm" title="Hilfe zu Auswertungen">
           <TablerIcon name="help" size={16} />
-        </a>
+        </Link>
       </div>
       <div className="card p-4">
         <div className="flex gap-2 mb-4">

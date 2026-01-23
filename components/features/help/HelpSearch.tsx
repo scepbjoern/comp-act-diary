@@ -88,7 +88,7 @@ export function HelpSearch() {
 
       {isOpen && query.length >= 2 && results.length === 0 && (
         <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-base-200 border border-base-300 rounded-lg shadow-lg p-4 text-center text-sm text-base-content/60">
-          Keine Ergebnisse für "{query}"
+          Keine Ergebnisse für &quot;{query}&quot;
         </div>
       )}
     </div>

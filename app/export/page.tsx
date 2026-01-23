@@ -1,5 +1,6 @@
 "use client"
 import React, { useState } from 'react'
+import Link from 'next/link'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 
 export default function ExportPage() {
@@ -37,9 +38,9 @@ export default function ExportPage() {
             <span>Export</span>
           </span>
         </h1>
-        <a href="/help/auswertungen/export" className="btn btn-ghost btn-sm" title="Hilfe zum Export">
+        <Link href="/help/auswertungen/export" className="btn btn-ghost btn-sm" title="Hilfe zum Export">
           <TablerIcon name="help" size={16} />
-        </a>
+        </Link>
       </div>
 
       <div className="card p-4 space-y-4 max-w-xl">

@@ -1,6 +1,7 @@
 // eslint.config.mjs
 import { FlatCompat } from '@eslint/eslintrc'
 import js from '@eslint/js'
+import nextPlugin from '@next/eslint-plugin-next'
 import typescriptEslint from 'typescript-eslint'
 
 const compat = new FlatCompat({
@@ -17,16 +18,28 @@ export default [
       'build/**',
       'coverage/**',
       'public/sw.js',
-      '**/*.config.js',
-      '**/*.config.mjs',
       'node_modules/**'
     ]
   },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   ...typescriptEslint.configs.recommended,
 
+  // Next.js plugin detection for flat config setups
+  {
+    files: ['**/*.{js,jsx,ts,tsx,mjs,cjs}'],
+    plugins: {
+      '@next/next': nextPlugin,
+    },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+    },
+  },
+
   // Global rule adjustments
   {
+    plugins: {
+      '@next/next': nextPlugin,
+    },
     languageOptions: {
       parserOptions: {
         projectService: true,

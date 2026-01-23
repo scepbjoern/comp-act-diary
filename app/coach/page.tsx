@@ -1,5 +1,6 @@
 "use client"
 import React, { useCallback } from 'react'
+import Link from 'next/link'
 
 /**
  * Coach Page - ACT Coach Chat Interface
@@ -230,9 +231,9 @@ export default function CoachPage() {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">🌱 ACT Coach</h1>
-          <a href="/help/act-entwicklung/coach" className="btn btn-ghost btn-sm" title="Hilfe zum ACT Coach">
+          <Link href="/help/act-entwicklung/coach" className="btn btn-ghost btn-sm" title="Hilfe zum ACT Coach">
             <TablerIcon name="help" size={16} />
-          </a>
+          </Link>
         </div>
 
         {/* Mode Selection and Settings */}

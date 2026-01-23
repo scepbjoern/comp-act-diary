@@ -1,6 +1,7 @@
 "use client"
 import React, { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 import { CameraPicker } from '@/components/features/media/CameraPicker'
 import { MicrophoneButton } from '@/components/features/transcription/MicrophoneButton'
@@ -223,9 +224,9 @@ export default function ReflectionsPage() {
             <span>Reflexion</span>
           </span>
         </h1>
-        <a href="/help/tagebuch/reflexionen" className="btn btn-ghost btn-sm" title="Hilfe zu Reflexionen">
+        <Link href="/help/tagebuch/reflexionen" className="btn btn-ghost btn-sm" title="Hilfe zu Reflexionen">
           <TablerIcon name="help" size={16} />
-        </a>
+        </Link>
       </div>
       {/* New reflection form - hidden in read mode */}
       {!readMode && (

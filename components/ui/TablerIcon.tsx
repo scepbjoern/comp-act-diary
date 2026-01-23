@@ -94,7 +94,6 @@ import {
   IconWand,
   IconSpeakerphone,
   IconFileDescription,
-  IconAdjustmentsHorizontal,
   IconArrowLeft,
   IconArrowRight,
   IconSchool,
