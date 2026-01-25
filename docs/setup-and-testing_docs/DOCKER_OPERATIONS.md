@@ -66,6 +66,13 @@ entrypoint.sh       → WAS beim Start passiert (DB-Wait, Schema-Sync)
 Diese Anleitung beschreibt die einmalige Einrichtung der permanenten TEST/DEMO-Umgebung auf demselben LXC wie PROD. Gilt sinngemäss analog für PROD-Umgebung
 
 ### 0.1 Cloudflare DNS konfigurieren
+Manuelle Ergänzung: Statt untenstehendes Vorgehen -> Zero Trust -> Networks -> Connectors -> melbjo-home-tunnel -> Published application routes -> Add a ... und dann analog compactdiary.melbjo.win konfigurieren.
+
+Dann Access Controls -> Applications -> Dann analog CompactDiary einrichten. Aufpassen, dass auch separat für die folgenden Routen eine separate Applikation mit ByPass Policy eingerichtet ist:
+test-compactdiary.melbjo.win/manifest.webmanifest
+test-compactdiary.melbjo.win/icons/*
+test-compactdiary.melbjo.win/sw.js
+test-compactdiary.melbjo.win/api/*/webhook
 
 In Cloudflare einen neuen DNS-Record anlegen:
 - **Type:** A (oder CNAME)
@@ -84,9 +91,9 @@ sudo mkdir -p /opt/stacks/comp-act-diary-test
 cd /opt/stacks/comp-act-diary-test
 
 # Repository klonen (oder separaten Branch)
-sudo git clone https://github.com/DEIN_USER/comp-act-diary.git .
+sudo git clone https://github.com/scepbjoern/comp-act-diary.git .
 # Alternative: gleichen Branch wie PROD nutzen
-# sudo git clone --branch main https://github.com/DEIN_USER/comp-act-diary.git .
+# sudo git clone --branch main https://github.com/scepbjoern/comp-act-diary.git .
 
 # Berechtigungen setzen
 sudo chown -R $(id -u):$(id -g) /opt/stacks/comp-act-diary-test
@@ -124,12 +131,16 @@ APP_PORT=65322
 
 # Separate Pfade für DB-Daten (WICHTIG: nicht gleich wie PROD!)
 DB_DATA_PATH=/dockerdata-fast/postgres-data/comp-act-diary-test
+-> /dockerdata-fast/data/diary/comp-act-diary-test_data/db
 
 # Separate Pfade für Uploads
-PUBLIC_UPLOADS_PATH=/opt/comp-act-diary-test/uploads
+PUBLIC_UPLOADS_PATH=/dockerdata-fast/data/diary/comp-act-diary-test_data/uploads
 
-# Separate Pfade für Backups
-DB_BACKUP_PATH=/dockerdata-slow/db_dumps/diary/comp-act-diary-test_db_dump
+# Separate Pfade für Backups -> Respektive braucht es sowieso keine Backups, da nicht in Container vorhanden
+DB_BACKUP_PATH löschen
+
+# Google-Redirect URI
+GOOGLE_REDIRECT_URI=https://test-compactdiary.melbjo.win/api/sync/google-contacts/callback
 ```
 
 ### 0.5 Verzeichnisse für TEST-Daten erstellen
