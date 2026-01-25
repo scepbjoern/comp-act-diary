@@ -129,6 +129,9 @@ nano .env
 # Port (TEST auf 65322, PROD auf 65321)
 APP_PORT=65322
 
+# Docker Compose Projektname (verhindert Konflikte mit PROD)
+COMPOSE_PROJECT_NAME=comp-act-diary-test
+
 # Separate Pfade für DB-Daten (WICHTIG: nicht gleich wie PROD!)
 DB_DATA_PATH=/dockerdata-fast/postgres-data/comp-act-diary-test
 -> /dockerdata-fast/data/diary/comp-act-diary-test_data/db
@@ -144,19 +147,15 @@ GOOGLE_REDIRECT_URI=https://test-compactdiary.melbjo.win/api/sync/google-contact
 ```
 
 ### 0.5 Verzeichnisse für TEST-Daten erstellen
+Wird im Host-System erstellt in Shell
 
 ```bash
-# DB-Datenverzeichnis
-sudo mkdir -p /dockerdata-fast/postgres-data/comp-act-diary-test
-sudo chown 999:999 /dockerdata-fast/postgres-data/comp-act-diary-test
-
-# Upload-Verzeichnis
-sudo mkdir -p /opt/comp-act-diary-test/uploads
-sudo chown $(id -u):$(id -g) /opt/comp-act-diary-test/uploads
-
-# Backup-Verzeichnis
-sudo mkdir -p /dockerdata-slow/db_dumps/diary/comp-act-diary-test_db_dump
-sudo chown $(id -u):$(id -g) /dockerdata-slow/db_dumps/diary/comp-act-diary-test_db_dump
+cd /rpool/data/dpfa-docker-our-data/data/diary/
+mkdir comp-act-diary-test_data
+cd comp-act-diary-test_data
+mkdir db uploads
+chown -R u-docker-od-diary:gr-docker-od-diary /rpool/data/dpfa-docker-our-data/data/diary/comp-act-diary-test_data
+chmod -R 2770 /rpool/data/dpfa-docker-our-data/data/diary/comp-act-diary-test_data
 ```
 
 ### 0.6 TEST-Stack starten

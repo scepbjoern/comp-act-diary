@@ -35,6 +35,8 @@
     - https://findpenguins.com/
     - https://www.polarsteps.com/de/
 
+**Instagram & WhatsApp Status**: Möglichkeit, einzelne Post direkt auf Instagram oder WhatsApp Status zu setzen
+
 ## Offene Punkte aus Datenmodell
 Im Datenmodell sind ja viele Teile wie zum Beispiel die ACT-Unterstützung schon angelegt => hier weiter fahren, daraus Features ableiten und implementieren
 
@@ -51,6 +53,7 @@ Im Datenmodell sind ja viele Teile wie zum Beispiel die ACT-Unterstützung schon
 **Mood-System**: Aus https://journiv.com/docs inspirieren lassen für "Intuitive Mood Logging — Track your emotional journey with timestamps and notes" und "Mood Analytics — Beautiful visualizations of your mood patterns over time". Und **Color Themes**: bei mindsera.com für das ganze Tagebuch, bei mir wäre es aber spannender als Teil der einzelnen Einträge basierend auf der KI-Einschätzung zu Mood
 
 **Prompt-Typen**: Aus https://journiv.com/docs inspirieren lassen für "Daily Prompts — Get thoughtful writing prompts to inspire reflection and self-discovery", "Prompt Categories — Filter prompts by category, difficulty, and theme". Sowie Prompts Guide Library von https://www.reflection.app/journal-prompts-guides-library. Und auch von reflection.app inspirieren lassen für "Questions to Go Deeper: Get personalized questions to help you go deeper while writing." sowie **Journaling templates based on mental models & frameworks**: Ikigai, Energy Audit, Anti-Goals, Regret Minimization, ... aus https://www.mindsera.com/
+Auch Traumtagebuch als Journal-Type
 
 ## Coach-Features / Psychologische Analysen
 **Identify Patterns**: Learn from the patterns in the experiences that bring you joy and those that challenge you. -> https://www.reflection.app
