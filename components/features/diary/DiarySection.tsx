@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 import { MicrophoneButton } from '@/components/features/transcription/MicrophoneButton'
 import AudioUploadButton from '@/components/features/media/AudioUploadButton'
 import OCRUploadButton from '@/components/features/ocr/OCRUploadButton'
 import { OriginalTranscriptSection } from '@/components/features/transcription/OriginalTextButton'
-import { IconSparkles } from '@tabler/icons-react'
+import { IconSparkles, IconX } from '@tabler/icons-react'
 import { RichTextEditor } from '@/components/features/editor/RichTextEditor'
 import { SaveIndicator } from '@/components/ui/SaveIndicator'
 import dynamic from 'next/dynamic'
@@ -269,52 +270,69 @@ export function DiarySection({
             <span className="text-xs text-gray-400">
               Audio bereit {isRetranscribing && '(transkribiere...)'}
             </span>
-            <div className="relative">
-              <button
-                className="btn btn-ghost btn-xs text-gray-300 hover:text-gray-100"
-                onClick={onShowRetranscribeOptionsToggle}
-                disabled={isRetranscribing}
-                title="Audio mit anderem Modell erneut transkribieren"
-              >
-                {isRetranscribing ? '⏳' : '🔄'} Neu transkribieren
-              </button>
-              
-              {showRetranscribeOptions && (
-                <div className="absolute top-full left-0 mt-1 bg-surface border border-slate-700 rounded shadow-lg z-50 p-2 min-w-[200px]">
-                  <div className="text-xs text-gray-400 mb-2">Modell auswählen:</div>
-                  
-                  <div className="text-xs text-gray-500 font-medium mb-1">Whisper:</div>
+            <button
+              className="btn btn-ghost btn-xs text-gray-300 hover:text-gray-100"
+              onClick={onShowRetranscribeOptionsToggle}
+              disabled={isRetranscribing}
+              title="Audio mit anderem Modell erneut transkribieren"
+            >
+              {isRetranscribing ? '⏳' : '🔄'} Neu transkribieren
+            </button>
+            
+            {showRetranscribeOptions && createPortal(
+              <div className="modal modal-open">
+                <div className="modal-box max-w-xs">
                   <button
-                    className="btn btn-ghost btn-xs w-full justify-start text-left mb-1"
-                    onClick={() => onRetranscribeAudio('openai/whisper-large-v3')}
+                    className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+                    onClick={onShowRetranscribeOptionsToggle}
                   >
-                    openai/whisper-large-v3
+                    <IconX size={20} />
                   </button>
                   
-                  <div className="text-xs text-gray-500 font-medium mb-1 mt-2">Deepgram:</div>
-                  <button
-                    className="btn btn-ghost btn-xs w-full justify-start text-left mb-1"
-                    onClick={() => onRetranscribeAudio('deepgram/nova-3')}
-                  >
-                    deepgram/nova-3
-                  </button>
+                  <h3 className="font-bold text-lg mb-4">Modell auswählen</h3>
                   
-                  <div className="text-xs text-gray-500 font-medium mb-1 mt-2">GPT:</div>
-                  <button
-                    className="btn btn-ghost btn-xs w-full justify-start text-left mb-1"
-                    onClick={() => onRetranscribeAudio('gpt-4o-mini-transcribe')}
-                  >
-                    gpt-4o-mini-transcribe
-                  </button>
-                  <button
-                    className="btn btn-ghost btn-xs w-full justify-start text-left"
-                    onClick={() => onRetranscribeAudio('gpt-4o-transcribe')}
-                  >
-                    gpt-4o-transcribe
-                  </button>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-xs text-base-content/60 font-medium mb-1">Whisper:</div>
+                      <button
+                        className="btn btn-ghost btn-sm w-full justify-start text-left"
+                        onClick={() => onRetranscribeAudio('openai/whisper-large-v3')}
+                      >
+                        openai/whisper-large-v3
+                      </button>
+                    </div>
+                    
+                    <div>
+                      <div className="text-xs text-base-content/60 font-medium mb-1">Deepgram:</div>
+                      <button
+                        className="btn btn-ghost btn-sm w-full justify-start text-left"
+                        onClick={() => onRetranscribeAudio('deepgram/nova-3')}
+                      >
+                        deepgram/nova-3
+                      </button>
+                    </div>
+                    
+                    <div>
+                      <div className="text-xs text-base-content/60 font-medium mb-1">GPT:</div>
+                      <button
+                        className="btn btn-ghost btn-sm w-full justify-start text-left"
+                        onClick={() => onRetranscribeAudio('gpt-4o-mini-transcribe')}
+                      >
+                        gpt-4o-mini-transcribe
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm w-full justify-start text-left"
+                        onClick={() => onRetranscribeAudio('gpt-4o-transcribe')}
+                      >
+                        gpt-4o-transcribe
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
+                <div className="modal-backdrop" onClick={onShowRetranscribeOptionsToggle} />
+              </div>,
+              document.body
+            )}
           </div>
         )}
         

@@ -4,6 +4,7 @@
  */
 "use client"
 import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { IconClock, IconX } from '@tabler/icons-react'
 
 interface TimestampModalProps {
@@ -54,6 +55,11 @@ export function TimestampModal({
   const [occurredAt, setOccurredAt] = useState('')
   const [capturedAt, setCapturedAt] = useState('')
   const [saving, setSaving] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     if (isOpen) {
@@ -79,9 +85,9 @@ export function TimestampModal({
     }
   }
 
-  if (!isOpen) return null
+  if (!isOpen || !isMounted) return null
 
-  return (
+  return createPortal(
     <div className="modal modal-open">
       <div className="modal-box max-w-md">
         <div className="flex items-center justify-between mb-4">
@@ -163,6 +169,7 @@ export function TimestampModal({
         </div>
       </div>
       <div className="modal-backdrop" onClick={onClose} />
-    </div>
+    </div>,
+    document.body
   )
 }

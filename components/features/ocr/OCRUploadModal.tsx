@@ -6,6 +6,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 
 interface OCRUploadModalProps {
@@ -58,6 +59,12 @@ export default function OCRUploadModal({
   // OCR options
   const [includeImages, setIncludeImages] = useState(false)
   const [includeTableFormat, setIncludeTableFormat] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // SSR hydration safety
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Reset state when modal closes
   useEffect(() => {
@@ -252,11 +259,11 @@ export default function OCRUploadModal({
     return 'file'
   }
 
-  if (!isOpen) return null
+  if (!isOpen || !isMounted) return null
 
   const isProcessing = stage === 'uploading' || stage === 'extracting'
 
-  return (
+  return createPortal(
     <dialog className="modal modal-open">
       <div className="modal-box max-w-2xl">
         <button
@@ -451,6 +458,7 @@ export default function OCRUploadModal({
           close
         </button>
       </form>
-    </dialog>
+    </dialog>,
+    document.body
   )
 }

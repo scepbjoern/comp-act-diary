@@ -1,6 +1,8 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { TablerIcon } from '@/components/ui/TablerIcon'
+import { IconX } from '@tabler/icons-react'
 
 interface RetranscribeButtonProps {
   audioFileId: string | null
@@ -11,6 +13,12 @@ interface RetranscribeButtonProps {
 export function RetranscribeButton({ audioFileId, onRetranscribed, disabled = false }: RetranscribeButtonProps) {
   const [isRetranscribing, setIsRetranscribing] = useState(false)
   const [showModelSelector, setShowModelSelector] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  
+  // SSR hydration safety - Portal needs DOM
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
   
   const whisperModels = ['openai/whisper-large-v3']
   const deepgramModels = ['deepgram/nova-3']
@@ -57,7 +65,7 @@ export function RetranscribeButton({ audioFileId, onRetranscribed, disabled = fa
   }
   
   return (
-    <div className="relative">
+    <>
       <button
         className="btn btn-ghost btn-xs text-gray-300 hover:text-gray-100"
         onClick={() => setShowModelSelector(!showModelSelector)}
@@ -68,53 +76,66 @@ export function RetranscribeButton({ audioFileId, onRetranscribed, disabled = fa
         <span className="ml-1">{isRetranscribing ? '...' : 'Re-Transkribieren'}</span>
       </button>
       
-      {showModelSelector && (
-        <div className="absolute top-full right-0 mt-1 bg-surface border border-slate-700 rounded shadow-lg z-50 p-2 min-w-[200px]">
-          <div className="text-xs text-gray-400 mb-2">Modell auswählen:</div>
-          
-          <div className="space-y-1">
-            <div className="text-xs text-gray-500 font-medium mb-1">Whisper Modelle:</div>
-            {whisperModels.map(model => (
-              <button
-                key={model}
-                className="btn btn-ghost btn-xs w-full justify-start text-left"
-                onClick={() => handleRetranscribe(model)}
-                disabled={isRetranscribing}
-              >
-                {model}
-              </button>
-            ))}
+      {showModelSelector && isMounted && createPortal(
+        <div className="modal modal-open">
+          <div className="modal-box max-w-xs">
+            <button
+              className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+              onClick={() => setShowModelSelector(false)}
+            >
+              <IconX size={20} />
+            </button>
+            
+            <h3 className="font-bold text-lg mb-4">Modell auswählen</h3>
+            
+            <div className="space-y-3">
+              <div>
+                <div className="text-xs text-base-content/60 font-medium mb-1">Whisper:</div>
+                {whisperModels.map(model => (
+                  <button
+                    key={model}
+                    className="btn btn-ghost btn-sm w-full justify-start text-left"
+                    onClick={() => handleRetranscribe(model)}
+                    disabled={isRetranscribing}
+                  >
+                    {model}
+                  </button>
+                ))}
+              </div>
+              
+              <div>
+                <div className="text-xs text-base-content/60 font-medium mb-1">Deepgram:</div>
+                {deepgramModels.map(model => (
+                  <button
+                    key={model}
+                    className="btn btn-ghost btn-sm w-full justify-start text-left"
+                    onClick={() => handleRetranscribe(model)}
+                    disabled={isRetranscribing}
+                  >
+                    {model}
+                  </button>
+                ))}
+              </div>
+              
+              <div>
+                <div className="text-xs text-base-content/60 font-medium mb-1">GPT:</div>
+                {gptModels.map(model => (
+                  <button
+                    key={model}
+                    className="btn btn-ghost btn-sm w-full justify-start text-left"
+                    onClick={() => handleRetranscribe(model)}
+                    disabled={isRetranscribing}
+                  >
+                    {model}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-          
-          <div className="space-y-1 mt-2">
-            <div className="text-xs text-gray-500 font-medium mb-1">Deepgram Modelle:</div>
-            {deepgramModels.map(model => (
-              <button
-                key={model}
-                className="btn btn-ghost btn-xs w-full justify-start text-left"
-                onClick={() => handleRetranscribe(model)}
-                disabled={isRetranscribing}
-              >
-                {model}
-              </button>
-            ))}
-          </div>
-          
-          <div className="space-y-1 mt-2">
-            <div className="text-xs text-gray-500 font-medium mb-1">GPT Modelle:</div>
-            {gptModels.map(model => (
-              <button
-                key={model}
-                className="btn btn-ghost btn-xs w-full justify-start text-left"
-                onClick={() => handleRetranscribe(model)}
-                disabled={isRetranscribing}
-              >
-                {model}
-              </button>
-            ))}
-          </div>
-        </div>
+          <div className="modal-backdrop" onClick={() => setShowModelSelector(false)} />
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }

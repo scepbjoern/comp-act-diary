@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { IconX, IconUserPlus, IconSearch } from '@tabler/icons-react'
 
 interface Contact {
@@ -44,6 +45,12 @@ export default function RelationEditor({
   const [relationType, setRelationType] = useState('Freund')
   const [loading, setLoading] = useState(false)
   const [searching, setSearching] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // SSR hydration safety - Portal needs DOM
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     const searchContacts = async () => {
@@ -115,7 +122,9 @@ export default function RelationEditor({
     }
   }
 
-  return (
+  if (!isMounted) return null
+
+  return createPortal(
     <div className="modal modal-open">
       <div className="modal-box max-w-lg">
         <button
@@ -237,6 +246,7 @@ export default function RelationEditor({
         )}
       </div>
       <div className="modal-backdrop bg-black/50" onClick={onClose} />
-    </div>
+    </div>,
+    document.body
   )
 }

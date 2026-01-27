@@ -10,6 +10,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { IconX, IconMapPin, IconRefresh, IconCheck, IconGripVertical } from '@tabler/icons-react'
 import dynamic from 'next/dynamic'
 
@@ -61,9 +62,15 @@ export default function PointEditModal({
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<'move' | 'nearby' | 'manual'>('move')
   const [isDragging, setIsDragging] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const _mapRef = useRef<mapboxgl.Map | null>(null)
 
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
+
+  // SSR hydration safety
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
   
   // Load nearby POIs
   const loadNearbyPois = useCallback(async () => {
@@ -175,7 +182,9 @@ export default function PointEditModal({
     }
   }
 
-  return (
+  if (!isMounted) return null
+
+  return createPortal(
     <div className="modal modal-open">
       <div className="modal-box max-w-2xl">
         <button
@@ -387,6 +396,7 @@ export default function PointEditModal({
         )}
       </div>
       <div className="modal-backdrop bg-black/50" onClick={onClose} />
-    </div>
+    </div>,
+    document.body
   )
 }

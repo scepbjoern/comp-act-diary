@@ -1,6 +1,8 @@
 "use client"
 import React, { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { TablerIcon } from '@/components/ui/TablerIcon'
+import { IconX } from '@tabler/icons-react'
 import fixWebmDuration from 'fix-webm-duration'
 import { usePasscodeLock } from '@/hooks/usePasscodeLock'
 
@@ -50,6 +52,7 @@ export function MicrophoneButton(props: {
   const [state, setState] = useState<RecordingState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [showCfg, setShowCfg] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string>('')
   const [inputLevel, setInputLevel] = useState<number>(0)
 
@@ -68,6 +71,11 @@ export function MicrophoneButton(props: {
   const analyserRafRef = useRef<number | null>(null)
   const stateRef = useRef<RecordingState>('idle')
   const cancelRecordingRef = useRef(false)
+
+  // SSR hydration safety - Portal needs DOM
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Pause passcode timeout during recording
   useEffect(() => {
@@ -475,20 +483,32 @@ export function MicrophoneButton(props: {
         </select>
       )}
       
-      {compact && showCfg && (
-        <div className="absolute z-20 top-full mt-1 right-0 bg-surface border border-slate-800 rounded p-2 shadow">
-          <div className="text-xs mb-1 text-gray-400">Modell</div>
-          <select
-            className="bg-background border border-slate-700 rounded px-2 py-1 text-xs"
-            value={selectedModel}
-            onChange={e => {
-              setSelectedModel(e.target.value)
-              setShowCfg(false)
-            }}
-          >
-            {models.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
-        </div>
+      {compact && showCfg && isMounted && createPortal(
+        <div className="modal modal-open">
+          <div className="modal-box max-w-xs">
+            <button
+              className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+              onClick={() => setShowCfg(false)}
+            >
+              <IconX size={20} />
+            </button>
+            
+            <h3 className="font-bold text-lg mb-4">Transkriptionsmodell</h3>
+            
+            <select
+              className="select select-bordered w-full"
+              value={selectedModel}
+              onChange={e => {
+                setSelectedModel(e.target.value)
+                setShowCfg(false)
+              }}
+            >
+              {models.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          <div className="modal-backdrop" onClick={() => setShowCfg(false)} />
+        </div>,
+        document.body
       )}
       
       {/* Status message during upload */}

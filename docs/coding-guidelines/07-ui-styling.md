@@ -69,21 +69,106 @@ Tailwind CSS mit daisyUI für konsistentes Design.
 
 ### Modals
 
+Modals **müssen** mit `createPortal` in `document.body` gerendert werden, um z-index Stacking-Probleme zu vermeiden. Ohne Portal können Modals hinter anderen Elementen verschwinden, wenn sie innerhalb von Komponenten mit eigenem Stacking Context gerendert werden.
+
+#### Standard-Pattern für Modals
+
 ```tsx
-<dialog id="my_modal" className="modal">
-  <div className="modal-box">
-    <h3 className="font-bold text-lg">Titel</h3>
-    <p className="py-4">Inhalt</p>
-    <div className="modal-action">
-      <form method="dialog">
-        <button className="btn">Schliessen</button>
-      </form>
-    </div>
+'use client'
+
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { IconX } from '@tabler/icons-react'
+
+interface MyModalProps {
+  isOpen: boolean
+  onClose: () => void
+}
+
+export function MyModal({ isOpen, onClose }: MyModalProps) {
+  // SSR hydration safety - Portal needs DOM
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Return null if not open OR not mounted (SSR safety)
+  if (!isOpen || !isMounted) return null
+
+  return createPortal(
+    <dialog className="modal modal-open">
+      <div className="modal-box">
+        {/* Close button (top right) */}
+        <button
+          className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+          onClick={onClose}
+        >
+          <IconX size={20} />
+        </button>
+
+        <h3 className="font-bold text-lg">Titel</h3>
+        <p className="py-4">Inhalt</p>
+
+        <div className="modal-action">
+          <button className="btn" onClick={onClose}>
+            Schliessen
+          </button>
+          <button className="btn btn-primary" onClick={handleSave}>
+            Speichern
+          </button>
+        </div>
+      </div>
+      {/* Backdrop - closes modal on click */}
+      <div className="modal-backdrop" onClick={onClose} />
+    </dialog>,
+    document.body
+  )
+}
+```
+
+#### Wichtige Regeln
+
+1. **Immer `createPortal`** - Rendert das Modal direkt in `document.body`
+2. **`isMounted` State** - Verhindert SSR Hydration-Fehler
+3. **Beide Checks kombinieren**: `if (!isOpen || !isMounted) return null`
+4. **Backdrop mit onClick** - Ermöglicht Schliessen durch Klick ausserhalb
+
+#### Varianten
+
+```tsx
+{/* Mit <div> statt <dialog> */}
+<div className="modal modal-open">
+  <div className="modal-box">...</div>
+  <div className="modal-backdrop" onClick={onClose} />
+</div>
+
+{/* Grössere Modal-Box */}
+<div className="modal-box max-w-2xl">
+
+{/* Modal mit Scrolling */}
+<div className="modal-box max-h-[90vh] flex flex-col">
+  <h3>Header</h3>
+  <div className="flex-1 overflow-y-auto">
+    {/* Scrollbarer Inhalt */}
   </div>
-  <form method="dialog" className="modal-backdrop">
-    <button>close</button>
-  </form>
-</dialog>
+  <div className="modal-action">...</div>
+</div>
+```
+
+#### Fullscreen Overlays (Alternative)
+
+Für einfache Overlays wie Photo-Viewer kann auch ein custom `fixed` Layout verwendet werden:
+
+```tsx
+<div 
+  className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center" 
+  onClick={onClose}
+>
+  <div onClick={(e) => e.stopPropagation()}>
+    {/* Inhalt */}
+  </div>
+</div>
 ```
 
 ### Loading States

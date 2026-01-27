@@ -7,6 +7,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import {
   IconX,
   IconTrash,
@@ -53,6 +54,7 @@ export function ShareEntryModal({
   const [newRole, setNewRole] = useState<'VIEWER' | 'EDITOR'>('EDITOR')
   const [submitting, setSubmitting] = useState(false)
   const [defaultsLoaded, setDefaultsLoaded] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
 
   // Load sharing defaults from user settings
   const loadDefaults = useCallback(async () => {
@@ -98,6 +100,10 @@ export function ShareEntryModal({
       setLoading(false)
     }
   }, [entryId])
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     if (isOpen && entryId) {
@@ -183,9 +189,9 @@ export function ShareEntryModal({
     }
   }
 
-  if (!isOpen) return null
+  if (!isOpen || !isMounted) return null
 
-  return (
+  return createPortal(
     <dialog className="modal modal-open">
       <div className="modal-box max-w-lg">
         {/* Header */}
@@ -309,6 +315,7 @@ export function ShareEntryModal({
         </div>
       </div>
       <div className="modal-backdrop" onClick={onClose} />
-    </dialog>
+    </dialog>,
+    document.body
   )
 }

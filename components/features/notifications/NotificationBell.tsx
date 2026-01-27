@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { IconBell, IconCheck, IconArchive } from '@tabler/icons-react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { IconBell, IconCheck, IconArchive, IconX } from '@tabler/icons-react'
 import { formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -20,7 +21,7 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [isMounted, setIsMounted] = useState(false)
 
   const fetchNotifications = async () => {
     try {
@@ -35,21 +36,16 @@ export default function NotificationBell() {
     }
   }
 
+  // SSR hydration safety - Portal needs DOM
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   useEffect(() => {
     void fetchNotifications()
     // Poll for new notifications every minute
     const interval = setInterval(fetchNotifications, 60000)
     return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   const handleMarkRead = async (notificationId: string) => {
@@ -124,7 +120,7 @@ export default function NotificationBell() {
   }
 
   return (
-    <div className="relative" ref={ref}>
+    <>
       <button
         onClick={() => setOpen(!open)}
         className="btn btn-ghost btn-sm btn-circle relative"
@@ -138,21 +134,29 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {open && (
-        <div className="absolute right-0 mt-2 w-80 bg-base-100 border border-base-200 rounded-lg shadow-lg z-50">
-          <div className="flex items-center justify-between p-3 border-b border-base-200">
-            <h3 className="font-semibold">Benachrichtigungen</h3>
-            {unreadCount > 0 && (
-              <button
-                onClick={handleMarkAllRead}
-                disabled={loading}
-                className="btn btn-ghost btn-xs"
-              >
-                <IconCheck size={14} />
-                Alle gelesen
-              </button>
-            )}
-          </div>
+      {open && isMounted && createPortal(
+        <div className="modal modal-open">
+          <div className="modal-box max-w-sm">
+          <button
+              className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+              onClick={() => setOpen(false)}
+            >
+              <IconX size={20} />
+            </button>
+            
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg">Benachrichtigungen</h3>
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  disabled={loading}
+                  className="btn btn-ghost btn-xs"
+                >
+                  <IconCheck size={14} />
+                  Alle gelesen
+                </button>
+              )}
+            </div>
 
           <div className="max-h-96 overflow-y-auto">
             {notifications.length === 0 ? (
@@ -208,8 +212,11 @@ export default function NotificationBell() {
               ))
             )}
           </div>
-        </div>
+          </div>
+          <div className="modal-backdrop" onClick={() => setOpen(false)} />
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }

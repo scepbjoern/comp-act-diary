@@ -6,8 +6,8 @@
 
 'use client'
 
-import { memo } from 'react'
-import { useState } from 'react'
+import { memo, useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   IconCheck,
   IconCalendar,
@@ -23,6 +23,7 @@ import {
   IconPencil,
   IconCalendarPlus,
   IconTrash,
+  IconX,
 } from '@tabler/icons-react'
 import { format, isPast, isToday, isTomorrow } from 'date-fns'
 import { de } from 'date-fns/locale'
@@ -175,7 +176,13 @@ function TaskCardComponent({
   showJournalLink = true,
 }: TaskCardProps) {
   const [showDatePicker, setShowDatePicker] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   const isCompleted = task.status === 'COMPLETED'
+
+  // SSR hydration safety - Portal needs DOM
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
   const dateInfo = getDateDisplay(task.dueDate)
   const journalEntryDate = getJournalEntryDate(task.journalEntry)
 
@@ -267,7 +274,7 @@ function TaskCardComponent({
             <div className="flex items-center gap-1 flex-shrink-0">
               {/* Quick Date Picker */}
               {!compact && !isCompleted && onUpdateDueDate && (
-                <div className="relative">
+                <>
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowDatePicker(!showDatePicker) }}
                     className="btn btn-ghost btn-xs btn-circle"
@@ -275,19 +282,32 @@ function TaskCardComponent({
                   >
                     <IconCalendarPlus size={14} />
                   </button>
-                  {showDatePicker && (
-                    <div className="absolute right-0 top-full mt-1 z-50 bg-base-100 border border-base-300 rounded-lg shadow-lg p-2 min-w-[140px]">
-                      <div className="flex flex-col gap-1">
-                        <button onClick={(e) => handleQuickDate(e, 0)} className="btn btn-xs btn-ghost justify-start">Heute</button>
-                        <button onClick={(e) => handleQuickDate(e, 1)} className="btn btn-xs btn-ghost justify-start">Morgen</button>
-                        <button onClick={(e) => handleQuickDate(e, 7)} className="btn btn-xs btn-ghost justify-start">In 1 Woche</button>
-                        <button onClick={(e) => handleQuickDate(e, 30)} className="btn btn-xs btn-ghost justify-start">In 1 Monat</button>
-                        <div className="divider my-1"></div>
-                        <button onClick={(e) => handleQuickDate(e, null)} className="btn btn-xs btn-ghost justify-start text-base-content/60">Entfernen</button>
+                  {showDatePicker && isMounted && createPortal(
+                    <div className="modal modal-open">
+                      <div className="modal-box max-w-xs">
+                        <button
+                          className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+                          onClick={() => setShowDatePicker(false)}
+                        >
+                          <IconX size={20} />
+                        </button>
+                        
+                        <h3 className="font-bold text-lg mb-4">Fälligkeit ändern</h3>
+                        
+                        <div className="flex flex-col gap-2">
+                          <button onClick={(e) => handleQuickDate(e, 0)} className="btn btn-sm btn-ghost justify-start">Heute</button>
+                          <button onClick={(e) => handleQuickDate(e, 1)} className="btn btn-sm btn-ghost justify-start">Morgen</button>
+                          <button onClick={(e) => handleQuickDate(e, 7)} className="btn btn-sm btn-ghost justify-start">In 1 Woche</button>
+                          <button onClick={(e) => handleQuickDate(e, 30)} className="btn btn-sm btn-ghost justify-start">In 1 Monat</button>
+                          <div className="divider my-1"></div>
+                          <button onClick={(e) => handleQuickDate(e, null)} className="btn btn-sm btn-ghost justify-start text-base-content/60">Entfernen</button>
+                        </div>
                       </div>
-                    </div>
+                      <div className="modal-backdrop" onClick={() => setShowDatePicker(false)} />
+                    </div>,
+                    document.body
                   )}
-                </div>
+                </>
               )}
               
               {/* Edit Button */}

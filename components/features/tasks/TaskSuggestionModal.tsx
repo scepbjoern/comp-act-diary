@@ -8,6 +8,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import {
   IconSparkles,
   IconX,
@@ -105,6 +106,12 @@ export default function TaskSuggestionModal({
   const [saving, setSaving] = useState(false)
   const [contacts, setContacts] = useState<Contact[]>(propContacts || [])
   const [_loadingContacts, setLoadingContacts] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // SSR hydration safety
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Fetch contacts from API if not provided as prop
   useEffect(() => {
@@ -201,10 +208,10 @@ export default function TaskSuggestionModal({
 
   const selectedCount = editableSuggestions.filter((s) => s.selected).length
 
-  if (!isOpen) return null
+  if (!isOpen || !isMounted) return null
 
-  return (
-    <dialog className="modal modal-open z-50">
+  return createPortal(
+    <dialog className="modal modal-open">
       <div className="modal-box max-w-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
@@ -392,6 +399,7 @@ export default function TaskSuggestionModal({
       <form method="dialog" className="modal-backdrop">
         <button onClick={onClose}>close</button>
       </form>
-    </dialog>
+    </dialog>,
+    document.body
   )
 }
