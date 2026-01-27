@@ -212,6 +212,7 @@ export async function POST(req: NextRequest) {
 
       const result = {
         text: transcriptionResult.text,
+        model, // Return the model used for transcription
         audioFileId: mediaAsset.id, // Keep name for backward compatibility
         audioFilePath: relativeFilePath,
         keepAudio,

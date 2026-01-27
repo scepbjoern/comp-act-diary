@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ noteId:
 
   const entry = await prisma.journalEntry.findUnique({
     where: { id: noteId },
-    select: { id: true, userId: true, originalTranscript: true }
+    select: { id: true, userId: true, originalTranscript: true, originalTranscriptModel: true }
   })
   
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -27,7 +27,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ noteId:
 
   return NextResponse.json({ 
     noteId: entry.id,
-    originalTranscript: entry.originalTranscript 
+    originalTranscript: entry.originalTranscript,
+    originalTranscriptModel: entry.originalTranscriptModel 
   })
 }
 
@@ -56,15 +57,24 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ noteId:
   const originalTranscript = typeof body.originalTranscript === 'string' 
     ? body.originalTranscript 
     : null
+  
+  // Only update model if explicitly provided (e.g., from re-transcription)
+  const originalTranscriptModel = typeof body.originalTranscriptModel === 'string'
+    ? body.originalTranscriptModel
+    : undefined // undefined means don't change existing value
 
   await prisma.journalEntry.update({
     where: { id: noteId },
-    data: { originalTranscript }
+    data: { 
+      originalTranscript,
+      ...(originalTranscriptModel !== undefined && { originalTranscriptModel })
+    }
   })
 
   return NextResponse.json({ 
     ok: true,
     noteId,
-    originalTranscript 
+    originalTranscript,
+    originalTranscriptModel: originalTranscriptModel ?? null
   })
 }

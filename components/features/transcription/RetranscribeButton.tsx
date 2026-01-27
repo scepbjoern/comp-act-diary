@@ -6,7 +6,8 @@ import { IconX } from '@tabler/icons-react'
 
 interface RetranscribeButtonProps {
   audioFileId: string | null
-  onRetranscribed: (text: string) => void
+  /** Called when re-transcription completes with the new text and model used */
+  onRetranscribed: (text: string, model?: string) => void
   disabled?: boolean
 }
 
@@ -50,7 +51,7 @@ export function RetranscribeButton({ audioFileId, onRetranscribed, disabled = fa
       
       const data = await response.json()
       console.warn('Retranscription successful:', data)
-      onRetranscribed(data.text)
+      onRetranscribed(data.text, data.model || model)
       
     } catch (error) {
       console.error('Retranscription error:', error)

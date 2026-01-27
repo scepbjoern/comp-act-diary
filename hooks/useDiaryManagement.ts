@@ -9,6 +9,7 @@ type DayNote = {
   techTime?: string
   text: string
   originalTranscript?: string | null
+  originalTranscriptModel?: string | null
   audioFilePath?: string | null
   audioFileId?: string | null
   keepAudio?: boolean
@@ -41,6 +42,7 @@ export function useDiaryManagement(
   const [newDiaryTitle, setNewDiaryTitle] = useState('')
   const [newDiaryAudioFileId, setNewDiaryAudioFileId] = useState<string | null>(null)
   const [newDiaryOriginalTranscript, setNewDiaryOriginalTranscript] = useState<string | null>(null)
+  const [newDiaryOriginalTranscriptModel, setNewDiaryOriginalTranscriptModel] = useState<string | null>(null)
   const [newDiaryOcrAssetIds, setNewDiaryOcrAssetIds] = useState<string[]>([])
   const [newDiaryTime, setNewDiaryTime] = useState('')
   const [newDiaryCapturedDate, setNewDiaryCapturedDate] = useState('')
@@ -303,6 +305,7 @@ export function useDiaryManagement(
       const data = await response.json()
       setNewDiaryText(data.text)
       setNewDiaryOriginalTranscript(data.text)
+      setNewDiaryOriginalTranscriptModel(data.model || model)
       onToast(`Re-Transkription mit ${model} erfolgreich!`, 'success')
       return true
     } catch (error) {
@@ -315,10 +318,10 @@ export function useDiaryManagement(
   }, [newDiaryAudioFileId, onToast])
 
   // Handle retranscribe from existing note
-  const handleRetranscribe = useCallback(async (noteId: string, newText: string) => {
+  const handleRetranscribe = useCallback(async (noteId: string, newText: string, model?: string) => {
     setNotes(prev => prev.map(note => 
       note.id === noteId 
-        ? { ...note, text: newText, originalTranscript: newText }
+        ? { ...note, text: newText, originalTranscript: newText, originalTranscriptModel: model ?? note.originalTranscriptModel }
         : note
     ))
     onToast('Transkription aktualisiert', 'success')
@@ -358,6 +361,7 @@ export function useDiaryManagement(
     setNewDiaryText('')
     setNewDiaryAudioFileId(null)
     setNewDiaryOriginalTranscript(null)
+    setNewDiaryOriginalTranscriptModel(null)
     setNewDiaryOcrAssetIds([])
     setNewDiaryTime('')
     setNewDiaryCapturedDate('')
@@ -394,6 +398,7 @@ export function useDiaryManagement(
           audioFileId: newDiaryAudioFileId,
           keepAudio,
           originalTranscript: newDiaryOriginalTranscript,
+          originalTranscriptModel: newDiaryOriginalTranscriptModel,
           ocrAssetIds: newDiaryOcrAssetIds,
           occurredAt: occurredAtDate.toISOString(),
           capturedAt,
@@ -409,6 +414,7 @@ export function useDiaryManagement(
       setNewDiaryText('')
       setNewDiaryAudioFileId(null)
       setNewDiaryOriginalTranscript(null)
+      setNewDiaryOriginalTranscriptModel(null)
       setNewDiaryOcrAssetIds([])
       
       // Reset time to current time for next entry
@@ -435,7 +441,7 @@ export function useDiaryManagement(
     } finally {
       onSavingChange(false)
     }
-  }, [buildIsoFromDateTime, date, dayId, keepAudio, newDiaryAudioFileId, newDiaryCapturedDate, newDiaryCapturedTime, newDiaryOcrAssetIds, newDiaryOriginalTranscript, newDiaryText, newDiaryTime, newDiaryTitle, onSavingChange, onToast])
+  }, [buildIsoFromDateTime, date, dayId, keepAudio, newDiaryAudioFileId, newDiaryCapturedDate, newDiaryCapturedTime, newDiaryOcrAssetIds, newDiaryOriginalTranscript, newDiaryOriginalTranscriptModel, newDiaryText, newDiaryTime, newDiaryTitle, onSavingChange, onToast])
 
   return {
     // State
@@ -450,6 +456,7 @@ export function useDiaryManagement(
     newDiaryTitle,
     newDiaryAudioFileId,
     newDiaryOriginalTranscript,
+    newDiaryOriginalTranscriptModel,
     newDiaryOcrAssetIds,
     newDiaryTime,
     newDiaryCapturedDate,
@@ -470,6 +477,7 @@ export function useDiaryManagement(
     setNewDiaryTitle,
     setNewDiaryAudioFileId,
     setNewDiaryOriginalTranscript,
+    setNewDiaryOriginalTranscriptModel,
     setNewDiaryOcrAssetIds,
     setNewDiaryTime,
     setNewDiaryCapturedDate,

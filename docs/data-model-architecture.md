@@ -175,7 +175,7 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 |---------|---------------------|-------------|
 | **JournalEntryType** | id, userId?, code, name, icon, defaultTemplateId, sortOrder | 1:N zu JournalEntry, N:1 zu JournalTemplate |
 | **JournalTemplate** | id, userId?, name, prompts (Json), origin | 1:N zu JournalEntry, 1:N zu JournalEntryType |
-| **JournalEntry** | id (=Entity.id), userId, typeId, templateId?, timeBoxId, **locationId?**, title?, content, **originalTranscript?**, aiSummary?, **analysis?**, **contentUpdatedAt?**, isSensitive, **deletedAt?**, **occurredAt?**, **capturedAt?** | N:1 zu TimeBox, Type, Template, **Location**, 1:N zu JournalEntryAccess |
+| **JournalEntry** | id (=Entity.id), userId, typeId, templateId?, timeBoxId, **locationId?**, title?, content, **originalTranscript?**, **originalTranscriptModel?**, aiSummary?, **analysis?**, **contentUpdatedAt?**, isSensitive, **deletedAt?**, **occurredAt?**, **capturedAt?** | N:1 zu TimeBox, Type, Template, **Location**, 1:N zu JournalEntryAccess |
 | **JournalEntryAccess** | id, journalEntryId, userId, role (VIEWER/EDITOR), grantedByUserId? | N:1 zu JournalEntry, N:1 zu User |
 
 ### 3.4 ACT-Domäne

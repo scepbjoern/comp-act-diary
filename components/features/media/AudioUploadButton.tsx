@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from 'react'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 
 interface AudioUploadButtonProps {
-  onAudioUploaded: (result: { text: string; audioFileId: string; audioFilePath: string; keepAudio: boolean; capturedAt?: string }) => void
+  onAudioUploaded: (result: { text: string; audioFileId: string; audioFilePath: string; keepAudio: boolean; capturedAt?: string; model?: string }) => void
   date: string // ISO date string YYYY-MM-DD
   time: string // HH:MM time string
   keepAudio?: boolean
@@ -174,6 +174,7 @@ export default function AudioUploadButton({
         audioFilePath: result.audioFilePath,
         keepAudio: result.keepAudio,
         capturedAt,
+        model: result.model || selectedModel,
       })
 
       // Reset file input

@@ -14,6 +14,8 @@ export function OriginalTranscriptPanel(props: {
   noteId: string
   /** If already loaded, pass it here to avoid re-fetching */
   initialTranscript?: string | null
+  /** Model used for the initial transcript */
+  initialTranscriptModel?: string | null
   /** Audio file ID for re-transcription */
   audioFileId?: string | null
   /** Called when user wants to use original as the new content */
@@ -21,13 +23,14 @@ export function OriginalTranscriptPanel(props: {
   /** Called when original transcript is updated */
   onOriginalUpdated?: (newOriginal: string) => void
   /** Called when re-transcription completes */
-  onRetranscribe?: (noteId: string, newText: string) => void
+  onRetranscribe?: (noteId: string, newText: string, model?: string) => void
 }) {
-  const { noteId, initialTranscript, audioFileId, onRestoreToContent, onOriginalUpdated, onRetranscribe } = props
+  const { noteId, initialTranscript, initialTranscriptModel, audioFileId, onRestoreToContent, onOriginalUpdated, onRetranscribe } = props
   
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [transcript, setTranscript] = useState<string | null>(initialTranscript ?? null)
+  const [transcriptModel, setTranscriptModel] = useState<string | null>(initialTranscriptModel ?? null)
   // hasLoaded should only be true if we have an actual string, not null
   const [hasLoaded, setHasLoaded] = useState(typeof initialTranscript === 'string' && initialTranscript.length > 0)
   const [isEditing, setIsEditing] = useState(false)
@@ -47,6 +50,7 @@ export function OriginalTranscriptPanel(props: {
       if (res.ok) {
         const data = await res.json()
         setTranscript(data.originalTranscript)
+        setTranscriptModel(data.originalTranscriptModel ?? null)
         setHasLoaded(true)
       }
     } catch (err) {
@@ -126,6 +130,9 @@ export function OriginalTranscriptPanel(props: {
         />
         <TablerIcon name="file-text" size={16} />
         <span>Original-Transkript</span>
+        {transcriptModel && (
+          <span className="text-xs text-base-content/50 ml-2">({transcriptModel})</span>
+        )}
         {isLoading && (
           <span className="loading loading-spinner loading-xs ml-2"></span>
         )}
@@ -148,10 +155,11 @@ export function OriginalTranscriptPanel(props: {
               {audioFileId && onRetranscribe && (
                 <RetranscribeButton
                   audioFileId={audioFileId}
-                  onRetranscribed={(newText) => {
+                  onRetranscribed={(newText, model) => {
                     setTranscript(newText)
+                    setTranscriptModel(model ?? null)
                     setHasLoaded(true)
-                    onRetranscribe(noteId, newText)
+                    onRetranscribe(noteId, newText, model)
                   }}
                 />
               )}
@@ -225,11 +233,11 @@ export function OriginalTranscriptPanel(props: {
                 {audioFileId && onRetranscribe && (
                   <RetranscribeButton
                     audioFileId={audioFileId}
-                    onRetranscribed={(newText) => {
+                    onRetranscribed={(newText, model) => {
                       setTranscript(newText)
-                      onRetranscribe(noteId, newText)
-                    }}
-                  />
+                      setTranscriptModel(model ?? null)
+                      onRetranscribe(noteId, newText, model)
+                    }}/>
                 )}
               </div>
             </div>

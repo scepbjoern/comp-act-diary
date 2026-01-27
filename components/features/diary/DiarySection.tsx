@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 import { MicrophoneButton } from '@/components/features/transcription/MicrophoneButton'
@@ -29,6 +29,7 @@ interface DiarySectionProps {
   newDiaryCapturedDate: string
   newDiaryCapturedTime: string
   newDiaryAudioFileId: string | null
+  newDiaryOriginalTranscriptModel: string | null
   editorKey: number
   keepAudio: boolean
   showRetranscribeOptions: boolean
@@ -48,6 +49,7 @@ interface DiarySectionProps {
   onNewDiaryCapturedDateChange: (date: string) => void
   onNewDiaryCapturedTimeChange: (time: string) => void
   onNewDiaryAudioFileIdChange: (id: string | null) => void
+  onNewDiaryOriginalTranscriptModelChange: (model: string | null) => void
   onNewDiaryOcrAssetIdsChange?: (ids: string[]) => void
   onEditorKeyIncrement: () => void
   onKeepAudioChange: (keep: boolean) => void
@@ -86,6 +88,7 @@ export function DiarySection({
   newDiaryCapturedDate,
   newDiaryCapturedTime,
   newDiaryAudioFileId,
+  newDiaryOriginalTranscriptModel: _newDiaryOriginalTranscriptModel,
   editorKey,
   keepAudio,
   showRetranscribeOptions,
@@ -105,6 +108,7 @@ export function DiarySection({
   onNewDiaryCapturedDateChange,
   onNewDiaryCapturedTimeChange,
   onNewDiaryAudioFileIdChange,
+  onNewDiaryOriginalTranscriptModelChange,
   onNewDiaryOcrAssetIdsChange,
   onEditorKeyIncrement,
   onKeepAudioChange,
@@ -341,10 +345,13 @@ export function DiarySection({
             date={date}
             time={newDiaryTime}
             keepAudio={keepAudio}
-            onAudioData={({ text, audioFileId, capturedAt }: { text: string; audioFileId?: string | null; capturedAt?: string }) => {
+            onAudioData={({ text, audioFileId, capturedAt, model }: { text: string; audioFileId?: string | null; capturedAt?: string; model?: string }) => {
               onNewDiaryTextChange(newDiaryText ? (newDiaryText + '\n\n' + text) : text)
               if (audioFileId) {
                 onNewDiaryAudioFileIdChange(audioFileId)
+              }
+              if (model) {
+                onNewDiaryOriginalTranscriptModelChange(model)
               }
               if (capturedAt) {
                 const d = new Date(capturedAt)
@@ -368,10 +375,13 @@ export function DiarySection({
             date={date}
             time={newDiaryTime}
             keepAudio={keepAudio}
-            onAudioUploaded={({ text, audioFileId, capturedAt }: { text: string; audioFileId?: string | null; capturedAt?: string }) => {
+            onAudioUploaded={({ text, audioFileId, capturedAt, model }: { text: string; audioFileId?: string | null; capturedAt?: string; model?: string }) => {
               onNewDiaryTextChange(newDiaryText ? (newDiaryText + '\n\n' + text) : text)
               if (audioFileId) {
                 onNewDiaryAudioFileIdChange(audioFileId)
+              }
+              if (model) {
+                onNewDiaryOriginalTranscriptModelChange(model)
               }
               if (capturedAt) {
                 const d = new Date(capturedAt)

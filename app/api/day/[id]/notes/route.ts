@@ -38,6 +38,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   const title = body?.title ? String(body.title).trim() : null
   const audioFileId = body?.audioFileId ?? null
   const originalTranscript = body?.originalTranscript ? String(body.originalTranscript).trim() : null
+  const originalTranscriptModel = body?.originalTranscriptModel ? String(body.originalTranscriptModel).trim() : null
   const ocrAssetIds: string[] = Array.isArray(body?.ocrAssetIds) ? body.ocrAssetIds : []
   const occurredAt = body?.occurredAt ? new Date(body.occurredAt) : new Date()
   const capturedAt = body?.capturedAt ? new Date(body.capturedAt) : new Date()
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       title,
       content: text,
       originalTranscript,
+      originalTranscriptModel,
       occurredAt,
       capturedAt,
     },
@@ -232,6 +234,7 @@ async function loadNotesForTimeBox(timeBoxId: string, userId: string, dayId: str
       audioUploadedAtIso: audioAtt?.asset.createdAt?.toISOString() ?? null,
       text: j.content ?? '',
       originalTranscript: j.originalTranscript ?? null,
+      originalTranscriptModel: j.originalTranscriptModel ?? null,
       audioFilePath: audioAtt?.asset.filePath ?? null,
       audioFileId: audioAtt?.asset.id ?? null,
       keepAudio: true,

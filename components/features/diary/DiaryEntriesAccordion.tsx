@@ -68,6 +68,7 @@ type DayNote = {
   techTime?: string
   text: string
   originalTranscript?: string | null
+  originalTranscriptModel?: string | null
   aiSummary?: string | null
   analysis?: string | null
   contentUpdatedAt?: string | null
@@ -669,6 +670,7 @@ export function DiaryEntriesAccordion({
                   <OriginalTranscriptPanel
                     noteId={n.id}
                     initialTranscript={n.originalTranscript}
+                    initialTranscriptModel={n.originalTranscriptModel}
                     audioFileId={n.audioFileId}
                     onRestoreToContent={(text) => {
                       if (editingNoteId === n.id) {

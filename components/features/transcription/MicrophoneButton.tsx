@@ -16,7 +16,7 @@ type RecordingState = 'idle' | 'recording' | 'paused' | 'uploading'
  * - Calls onAudioData with transcribed text and optional audio file ID
  */
 export function MicrophoneButton(props: {
-  onAudioData?: (result: { text: string; audioFileId?: string | null; audioFilePath?: string | null; capturedAt?: string }) => void
+  onAudioData?: (result: { text: string; audioFileId?: string | null; audioFilePath?: string | null; capturedAt?: string; model?: string }) => void
   onText?: (text: string) => void
   title?: string
   className?: string
@@ -339,6 +339,7 @@ export function MicrophoneButton(props: {
             audioFileId: data.audioFileId,
             audioFilePath: data.audioFilePath,
             capturedAt: startTime.toISOString(),
+            model: data.model || selectedModel,
           })
         } else if (onText) {
           onText(data.text)
@@ -352,7 +353,7 @@ export function MicrophoneButton(props: {
         }
         const data = await res.json()
         if (onAudioData) {
-          onAudioData({ text: data.text, audioFileId: null, audioFilePath: null, capturedAt: startTime.toISOString() })
+          onAudioData({ text: data.text, audioFileId: null, audioFilePath: null, capturedAt: startTime.toISOString(), model: selectedModel })
         } else if (onText) {
           onText(data.text)
         }
