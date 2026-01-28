@@ -28,6 +28,7 @@ type Me = {
     weekStart: string
     summaryModel?: string
     summaryPrompt?: string
+    transcriptionModel?: string
     transcriptionPrompt?: string
     transcriptionGlossary?: string[]
     transcriptionModelLanguages?: Record<string, string>
@@ -149,6 +150,7 @@ export default function SettingsPage() {
         setAutosaveIntervalSec(u.settings?.autosaveIntervalSec ?? 5)
         setSummaryModel(u.settings?.summaryModel || 'openai/gpt-oss-120b')
         setSummaryPrompt(u.settings?.summaryPrompt || 'Erstelle eine Zusammenfassung aller unten stehender Tagebucheinträge mit Bullet Points in der Form "**Schlüsselbegriff**: Erläuterung in 1-3 Sätzen"')
+        setTranscriptionModel(u.settings?.transcriptionModel || 'openai/whisper-large-v3')
         setTranscriptionPrompt(u.settings?.transcriptionPrompt || '')
         setTranscriptionGlossary(u.settings?.transcriptionGlossary || [])
         setTranscriptionModelLanguages(u.settings?.transcriptionModelLanguages || {})
@@ -493,7 +495,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch('/api/me', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings: { transcriptionPrompt, transcriptionGlossary, transcriptionModelLanguages } })
+        body: JSON.stringify({ settings: { transcriptionModel, transcriptionPrompt, transcriptionGlossary, transcriptionModelLanguages } })
       })
       await res.json().catch(() => ({}))
     } finally {
@@ -502,15 +504,37 @@ export default function SettingsPage() {
   }
 
   async function saveImageGenSettings() {
+    startSaving()
     setImageGenSaving(true)
     try {
-      await fetch('/api/me', {
+      const res = await fetch('/api/me', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ settings: { imageGenerationSettings: imageGenSettings } })
       })
+      if (!res.ok) {
+        console.error('Failed to save image generation settings')
+        return
+      }
+      // Update local state with saved settings
+      const data = await res.json()
+      if (data.user?.settings?.imageGenerationSettings) {
+        const savedSettings = data.user.settings.imageGenerationSettings
+        setImageGenSettings(savedSettings)
+        // Also update the me state to reflect the saved settings
+        setMe(prev => prev ? {
+          ...prev,
+          settings: prev.settings ? {
+            ...prev.settings,
+            imageGenerationSettings: savedSettings
+          } : prev.settings
+        } : prev)
+      }
+    } catch (error) {
+      console.error('Error saving image generation settings:', error)
     } finally {
       setImageGenSaving(false)
+      doneSaving()
     }
   }
   
@@ -909,6 +933,10 @@ export default function SettingsPage() {
                   onSettingsChange={setImageGenSettings}
                   onSave={saveImageGenSettings}
                   saving={imageGenSaving}
+                  onSaveComplete={() => {
+                    // Reload settings from server to ensure consistency
+                    void load()
+                  }}
                 />
               </div>
             </details>

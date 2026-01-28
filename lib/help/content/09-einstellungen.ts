@@ -147,6 +147,7 @@ PATCH /api/me { settings: {...} }</code></pre>
       <ul>
         <li><strong>Theme:</strong> Dark oder Bright Mode</li>
         <li><strong>Autosave:</strong> Automatisches Speichern konfigurieren</li>
+        <li><strong>Komprimierung:</strong> Foto-Einstellungen für Uploads</li>
       </ul>
     `,
     instructions: `
@@ -158,18 +159,36 @@ PATCH /api/me { settings: {...} }</code></pre>
         <li>Klicke auf <strong>"Übernehmen"</strong></li>
       </ol>
       <h4>Autosave konfigurieren</h4>
+      <p>Diese Einstellung findest du unter <strong>Einstellungen → Erfassung → Autosave & Komprimierung</strong>.</p>
       <ol>
         <li>Aktiviere/Deaktiviere <strong>Autosave</strong></li>
         <li>Setze das <strong>Intervall</strong> (in Sekunden)</li>
         <li>Standard: 5 Sekunden</li>
       </ol>
+      <div class="alert alert-info">
+        <strong>Wo wird Autosave verwendet?</strong><br/>
+        Beim Schreiben von <strong>Tagebucheinträgen</strong> werden deine Änderungen automatisch nach dem eingestellten Intervall gespeichert – du musst nicht manuell speichern.
+      </div>
+      <h4>Foto-Komprimierung</h4>
+      <p>Unter <strong>Autosave & Komprimierung</strong> findest du auch die Foto-Einstellungen:</p>
+      <ul>
+        <li><strong>Format:</strong> WebP (empfohlen), JPEG oder PNG</li>
+        <li><strong>Qualität:</strong> 1-100% (Standard: 80%)</li>
+        <li><strong>Max. Breite/Höhe:</strong> Maximale Auflösung in Pixel</li>
+      </ul>
+      <div class="alert alert-info">
+        <strong>Wo wird Komprimierung verwendet?</strong><br/>
+        Diese Einstellungen werden beim <strong>Hochladen von Fotos</strong> zu Tagebucheinträgen angewendet. Bilder werden automatisch auf die eingestellte Grösse skaliert und im gewählten Format komprimiert, um Speicherplatz zu sparen.
+      </div>
     `,
     technical: `
       <h3>Technische Details</h3>
       <h4>Theme-Implementierung</h4>
       <p>Theme wird in Cookie und User-Settings gespeichert. CSS-Klassen <code>dark</code> / <code>bright</code> auf <code>&lt;html&gt;</code>.</p>
       <h4>Autosave</h4>
-      <p>Debounced Save mit konfigurierbarem Intervall. Speicherung bei Inaktivität oder Seitenwechsel.</p>
+      <p>Debounced Save mit konfigurierbarem Intervall. Speicherung bei Inaktivität oder Seitenwechsel. Wird im Tagebuch-Editor verwendet.</p>
+      <h4>Foto-Komprimierung</h4>
+      <p>Einstellungen werden in <code>localStorage</code> gespeichert und beim Foto-Upload in <code>useDiaryManagement.ts</code> angewendet. Server-seitige Verarbeitung über <code>/api/notes/[id]/photos</code>.</p>
     `,
   },
   'teilen': {

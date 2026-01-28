@@ -28,6 +28,7 @@ interface ImageGenerationSettingsProps {
   onSettingsChange: (settings: ImageGenSettings) => void
   onSave: () => Promise<void>
   saving: boolean
+  onSaveComplete?: () => void
 }
 
 // =============================================================================
@@ -39,14 +40,22 @@ export function ImageGenerationSettings({
   onSettingsChange,
   onSave,
   saving,
+  onSaveComplete,
 }: ImageGenerationSettingsProps) {
   const [localSettings, setLocalSettings] = useState<ImageGenSettings>(settings)
   const [hasChanges, setHasChanges] = useState(false)
+  const [initialSettings, setInitialSettings] = useState<ImageGenSettings>(settings)
 
+  // Only reset when settings are loaded from server (not when parent updates from our changes)
   useEffect(() => {
-    setLocalSettings(settings)
-    setHasChanges(false)
-  }, [settings])
+    // Compare with initial to detect server-side changes only
+    const settingsChanged = JSON.stringify(settings) !== JSON.stringify(initialSettings)
+    if (settingsChanged && !hasChanges) {
+      setLocalSettings(settings)
+      setInitialSettings(settings)
+      setHasChanges(false)
+    }
+  }, [settings, initialSettings, hasChanges])
 
   const handleChange = <K extends keyof ImageGenSettings>(
     key: K,
@@ -66,7 +75,9 @@ export function ImageGenerationSettings({
 
   const handleSave = async () => {
     await onSave()
+    setInitialSettings(localSettings)
     setHasChanges(false)
+    onSaveComplete?.()
   }
 
   return (

@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       id: user.id,
       username: user.username,
       displayName: user.displayName,
-      profileImageUrl: null,
+      profileImageUrl: user.profileImageUrl || null,
       settings: {
         theme: userSettings.theme || 'dark',
         timeFormat24h: userSettings.timeFormat24h ?? true,
@@ -35,9 +35,11 @@ export async function GET(req: NextRequest) {
         summaryPrompt: userSettings.summaryPrompt || DEFAULT_SUMMARY_PROMPT,
         customModels: userSettings.customModels || [],
         journalAISettings: userSettings.journalAISettings || {},
+        transcriptionModel: userSettings.transcriptionModel || 'openai/whisper-large-v3',
         transcriptionPrompt: userSettings.transcriptionPrompt || '',
         transcriptionGlossary: userSettings.transcriptionGlossary || [],
         transcriptionModelLanguages: userSettings.transcriptionModelLanguages || {},
+        imageGenerationSettings: userSettings.imageGenerationSettings || {},
         // Passcode settings
         passcodeEnabled: userSettings.passcodeEnabled ?? false,
         passcodeHash: userSettings.passcodeHash || null,
@@ -92,6 +94,9 @@ export async function PATCH(req: NextRequest) {
       }
       if (body.settings.journalAISettings && typeof body.settings.journalAISettings === 'object') {
         settingsPatch.journalAISettings = body.settings.journalAISettings
+      }
+      if (typeof body.settings.transcriptionModel === 'string' && body.settings.transcriptionModel.trim().length > 0) {
+        settingsPatch.transcriptionModel = body.settings.transcriptionModel.trim()
       }
       if (typeof body.settings.transcriptionPrompt === 'string') {
         settingsPatch.transcriptionPrompt = body.settings.transcriptionPrompt.trim()

@@ -296,14 +296,15 @@ cd /opt/stacks/comp-act-diary
 git pull origin main
 cd deploy
 docker compose build --no-cache app && docker compose up -d --force-recreate app
+# Mit Prisma-Änderungen
+docker compose build --no-cache app && SYNC_SCHEMA=true docker compose up -d --force-recreate app
 
 # TEST
 cd /opt/stacks/comp-act-diary-test
 git pull origin main  # oder: git pull origin develop
 cd deploy
 docker compose build --no-cache app && docker compose up -d --force-recreate app
-
-# Mit Prisma-Änderungen (PROD oder TEST):
+# Mit Prisma-Änderungen
 docker compose build --no-cache app && SYNC_SCHEMA=true docker compose up -d --force-recreate app
 
 # Optional: Nach Rebuild gründlich aufräumen
