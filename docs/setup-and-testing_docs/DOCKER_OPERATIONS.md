@@ -264,12 +264,14 @@ Nutzt Docker Build-Cache maximal. Nur geänderte Layer werden neu gebaut.
 # PROD
 cd /opt/stacks/comp-act-diary
 git pull origin main
-cd deploy && docker compose up -d --build app
+cd deploy
+docker compose up -d --build app
 
 # TEST
 cd /opt/stacks/comp-act-diary-test
 git pull origin main  # oder: git pull origin develop
-cd deploy && docker compose up -d --build app
+cd deploy
+docker compose up -d --build app
 
 # Optional: Alte Images direkt aufräumen
 docker image prune -f
