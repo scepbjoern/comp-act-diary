@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.0](https://github.com/scepbjoern/comp-act-diary/compare/v1.0.0...v1.1.0) (2026-01-28)
+
+
+### Features
+
+* add originalTranscriptModel field to track transcription model used ([44ce18c](https://github.com/scepbjoern/comp-act-diary/commit/44ce18c704d155a713983a2ef19666447ea3ae3c))
+
+
+### Bug Fixes
+
+* add complete Prisma CLI dependency tree to production Dockerfile ([b226bfa](https://github.com/scepbjoern/comp-act-diary/commit/b226bfa96843469cbab1ca1c6204af4be36f8175))
+* add missing c12 transitive dependencies to production Dockerfile ([525c2f9](https://github.com/scepbjoern/comp-act-diary/commit/525c2f9666a19e110c581235311585d9667dcfca))
+* add transcriptionModel field to user settings and improve image generation settings persistence ([4cba8e9](https://github.com/scepbjoern/comp-act-diary/commit/4cba8e9df6b7e8c314a919b18ab99a70cfc27ded))
+* improve Prisma CLI setup in Dockerfile and streamline test environment documentation ([113ba86](https://github.com/scepbjoern/comp-act-diary/commit/113ba865968824f7ac05207ad3cfcd10035646c0))
+
 ## 1.0.0 (2026-01-22)
 
 ### Features
