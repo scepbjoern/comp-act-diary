@@ -3,7 +3,7 @@
 > Konzept für konfigurierbare Eingabefelder pro JournalEntryType/JournalTemplate
 
 *Erstellt: Januar 2026*  
-*Aktualisiert: 28. Januar 2026 (v2 nach Feedback)*
+*Aktualisiert: 1. Februar 2026 (v3 – nach Multi-Audio-Implementation)*
 
 ---
 
@@ -31,7 +31,7 @@
 
 1. **Reflexionen** (`/reflections`) haben aktuell 4 hardcodierte Felder (changed, gratitude, vows, remarks), die beim Speichern zu einem Markdown-String im `content`-Feld zusammengeführt werden.
 
-2. **Diary-Einträge** haben nur ein Freitext-Feld (`content`), aber zusätzliche DB-Felder wie `analysis`, `aiSummary`, `originalTranscript`.
+2. **Diary-Einträge** haben nur ein Freitext-Feld (`content`), plus `analysis` und `aiSummary`. Transkripte werden auf `MediaAttachment.transcript` gespeichert (Multi-Audio-Support).
 
 3. **JournalTemplate** existiert im Datenmodell mit `prompts` (JSON), wird aber noch nicht verwendet.
 
@@ -307,10 +307,16 @@ model JournalEntry {
 
 ### 4.2 Migrationsstrategie
 
+> **Hinweis**: Multi-Audio-Infrastruktur ist bereits implementiert:
+> - `MediaAttachment.transcript`, `transcriptModel`, `fieldId` existieren
+> - `JournalEntry.originalTranscript` wurde entfernt (Schema-Migration abgeschlossen)
+
 1. **Neue Felder hinzufügen** via `prisma db push`:
-   - `JournalTemplate.aiConfig`
+   - `JournalTemplate.fields` (JSON)
+   - `JournalTemplate.aiConfig` (JSON)
+   - `JournalTemplate.typeId` (FK zu JournalEntryType)
    - `JournalEntryType.bgColorClass`
-   - Many-to-many `JournalEntryType.templates`
+   - `JournalEntryType.defaultTemplateId`
 
 2. **AI-Konfiguration migrieren**: Von `User.settings.journalAI[typeCode]` zu `JournalTemplate.aiConfig`
 
@@ -455,6 +461,11 @@ export async function segmentTranscriptByFields(
 
 ### 5.2 Audio-zu-Text Workflows
 
+> **Hinweis**: Multi-Audio-Support ist bereits implementiert (siehe `2026-01_Multiple_Audio_Per_Entry.md`).
+> - Transkripte werden auf `MediaAttachment.transcript` gespeichert (nicht mehr auf JournalEntry)
+> - `MediaAttachment.fieldId` ermöglicht Zuordnung zu Template-Feldern
+> - Bestehende APIs: `POST/PATCH/DELETE /api/journal-entries/[id]/audio`
+
 Je nach Template-Typ und Eingabemethode unterscheiden sich die Workflows:
 
 #### Workflow A: Normale Diary-Einträge (1-Feld-Template)
@@ -482,15 +493,14 @@ Je nach Template-Typ und Eingabemethode unterscheiden sich die Workflows:
 │ 🎤 Mikrofon │───►│ Transkript  │───►│ Unverbesserter Text wird in    │
 │ bei Feld X  │    │ (Whisper)   │    │ Feld X eingefügt               │
 └─────────────┘    └─────────────┘    └─────────────────────────────────┘
-                                                      │
-                                                      ▼
-                                      ┌─────────────────────────────────┐
-                                      │ "Verbessern" betrifft gesamten  │
-                                      │ Content (alle Felder)           │
-                                      └─────────────────────────────────┘
+                         │                            │
+                         ▼                            ▼
+                   MediaAttachment            "Verbessern" betrifft
+                   mit fieldId=X              gesamten Content
 ```
 
 - **Keine Segmentierung**: Text geht direkt ins angeklickte Feld
+- **fieldId**: `MediaAttachment.fieldId` wird auf die Feld-ID gesetzt (für spätere Zuordnung)
 - **Verbessern**: Optional, betrifft gesamten aggregierten Content
 
 #### Workflow C: Multi-Feld-Template + Audio-Upload
@@ -551,7 +561,16 @@ Gib nur den verbesserten Text zurück, ohne Erklärungen.
 | `/api/journal/[id]` | DELETE | Eintrag löschen |
 | `/api/journal-ai/segment-audio` | POST | Audio-Transkript auf Felder aufteilen |
 
-### 5.3 Bestehende Routen anpassen/entfernen
+### 5.4 Bereits implementierte Audio-APIs (aus Multi-Audio-Feature)
+
+| Route | Methode | Zweck |
+|-------|---------|-------|
+| `/api/journal-entries/[id]/audio` | POST | Audio zu bestehendem Entry hinzufügen |
+| `/api/journal-entries/[id]/audio` | PATCH | Attachment-Transcript aktualisieren |
+| `/api/journal-entries/[id]/audio` | DELETE | Spezifisches Audio löschen |
+| `/api/day/[id]/notes` | POST | Unterstützt `audioFileIds[]` + `audioTranscripts[]` |
+
+### 5.5 Bestehende Routen anpassen/entfernen
 
 | Route | Änderung |
 |-------|----------|
