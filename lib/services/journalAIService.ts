@@ -145,7 +145,7 @@ export class JournalAIService {
   }): Promise<GenerateResult> {
     const { journalEntryId, userId, text } = params
 
-    // Load journal entry to get originalTranscript and type
+    // Load journal entry
     const entry = await this.prisma.journalEntry.findUnique({
       where: { id: journalEntryId },
       include: { type: true },
@@ -159,17 +159,18 @@ export class JournalAIService {
       throw new Error('Unauthorized')
     }
 
-    const audioAttachment = await this.prisma.mediaAttachment.findFirst({
-      where: {
-        entityId: journalEntryId,
-        userId,
-        asset: { mimeType: { startsWith: 'audio/' } },
-      },
-      orderBy: { createdAt: 'asc' },
-      select: { transcript: true },
+    // Load media attachments separately
+    const mediaAttachments = await this.prisma.mediaAttachment.findMany({
+      where: { entityId: journalEntryId },
+      include: { asset: true },
     })
 
-    const inputText = text ?? audioAttachment?.transcript ?? entry.originalTranscript ?? entry.content
+    const firstAudioAttachment = mediaAttachments
+      .filter(att => att.asset?.mimeType?.startsWith('audio/'))
+      .find(att => att.transcript)
+    
+    const transcript = firstAudioAttachment?.transcript ?? entry.content
+    const inputText = text ?? transcript
     if (!inputText) {
       throw new Error('No text to process')
     }

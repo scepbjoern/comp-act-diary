@@ -130,20 +130,23 @@ export async function POST(req: NextRequest) {
         typeId: entryType.id,
         timeBoxId: timeBox.id,
         content: text,
-        originalTranscript: text,
       },
     })
 
     console.warn(`[OCR] Created JournalEntry: ${journalEntry.id}`)
 
     // Create MediaAttachments to link sources
-    for (const assetId of mediaAssetIds) {
+    // Store OCR text as transcript in first attachment for consistency with audio workflow
+    for (let i = 0; i < mediaAssetIds.length; i++) {
+      const assetId = mediaAssetIds[i]
       await prisma.mediaAttachment.create({
         data: {
           assetId,
           entityId: entity.id,
           userId: user.id,
           role: 'SOURCE',
+          transcript: i === 0 ? text : null,
+          transcriptModel: i === 0 ? 'mistral-ocr-latest' : null,
         },
       })
     }
@@ -177,7 +180,6 @@ export async function POST(req: NextRequest) {
       select: {
         id: true,
         content: true,
-        originalTranscript: true,
         aiSummary: true,
         analysis: true,
       },
@@ -188,7 +190,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       journalEntryId: journalEntry.id,
       content: updatedEntry?.content || text,
-      originalTranscript: updatedEntry?.originalTranscript,
       aiSummary: updatedEntry?.aiSummary,
       analysis: updatedEntry?.analysis,
       pipelineResult,

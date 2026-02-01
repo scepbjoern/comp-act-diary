@@ -28,8 +28,6 @@ export function useDiaryManagement(
   const [newDiaryTitle, setNewDiaryTitle] = useState('')
   // Support multiple audio files per new entry
   const [newDiaryAudioFileIds, setNewDiaryAudioFileIds] = useState<string[]>([])
-  const [newDiaryOriginalTranscript, setNewDiaryOriginalTranscript] = useState<string | null>(null)
-  const [newDiaryOriginalTranscriptModel, setNewDiaryOriginalTranscriptModel] = useState<string | null>(null)
   const [newDiaryAudioTranscripts, setNewDiaryAudioTranscripts] = useState<NewDiaryAudioTranscript[]>([])
   const [newDiaryOcrAssetIds, setNewDiaryOcrAssetIds] = useState<string[]>([])
   const [newDiaryTime, setNewDiaryTime] = useState('')
@@ -221,8 +219,6 @@ export function useDiaryManagement(
             audioFileId: primary?.assetId ?? null,
             audioCapturedAtIso: primary?.capturedAt ?? null,
             audioUploadedAtIso: primary?.createdAt ?? null,
-            originalTranscript: primary?.transcript ?? n.originalTranscript ?? null,
-            originalTranscriptModel: primary?.transcriptModel ?? n.originalTranscriptModel ?? null,
             keepAudio: updatedAttachments.length > 0,
           }
         }))
@@ -337,8 +333,6 @@ export function useDiaryManagement(
       
       const data = await response.json()
       setNewDiaryText(data.text)
-      setNewDiaryOriginalTranscript(data.text)
-      setNewDiaryOriginalTranscriptModel(data.model || model)
       addNewDiaryAudioTranscript(audioFileId, data.text, data.model || model)
       onToast(`Re-Transkription mit ${model} erfolgreich!`, 'success')
       return true
@@ -406,8 +400,8 @@ export function useDiaryManagement(
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
           body: JSON.stringify({
-            originalTranscript: newText,
-            originalTranscriptModel: model ?? null,
+            text: newText,
+            transcriptModel: model ?? null,
           }),
         })
 
@@ -417,11 +411,8 @@ export function useDiaryManagement(
           return
         }
 
-        setNotes(prev => prev.map(note =>
-          note.id === noteId
-            ? { ...note, originalTranscript: newText, originalTranscriptModel: model ?? note.originalTranscriptModel }
-            : note
-        ))
+        // Note: Transcript is stored in MediaAttachment, not on the note itself
+        // The UI will refresh after the API call completes
       }
 
       onToast('Transkription aktualisiert', 'success')
@@ -468,8 +459,6 @@ export function useDiaryManagement(
     
     setNewDiaryText('')
     setNewDiaryAudioFileIds([])
-    setNewDiaryOriginalTranscript(null)
-    setNewDiaryOriginalTranscriptModel(null)
     setNewDiaryAudioTranscripts([])
     setNewDiaryOcrAssetIds([])
     setNewDiaryTime('')
@@ -510,8 +499,6 @@ export function useDiaryManagement(
           // Legacy: first audio for backward compatibility
           audioFileId: newDiaryAudioFileIds[0] || null,
           keepAudio,
-          originalTranscript: newDiaryOriginalTranscript,
-          originalTranscriptModel: newDiaryOriginalTranscriptModel,
           ocrAssetIds: newDiaryOcrAssetIds,
           occurredAt: occurredAtDate.toISOString(),
           capturedAt,
@@ -526,8 +513,6 @@ export function useDiaryManagement(
       // Reset form WITHOUT cleanup (audio was saved successfully)
       setNewDiaryText('')
       setNewDiaryAudioFileIds([])
-      setNewDiaryOriginalTranscript(null)
-      setNewDiaryOriginalTranscriptModel(null)
       setNewDiaryAudioTranscripts([])
       setNewDiaryOcrAssetIds([])
       
@@ -555,7 +540,7 @@ export function useDiaryManagement(
     } finally {
       onSavingChange(false)
     }
-  }, [buildIsoFromDateTime, date, dayId, keepAudio, newDiaryAudioFileIds, newDiaryAudioTranscripts, newDiaryCapturedDate, newDiaryCapturedTime, newDiaryOcrAssetIds, newDiaryOriginalTranscript, newDiaryOriginalTranscriptModel, newDiaryText, newDiaryTime, newDiaryTitle, onSavingChange, onToast])
+  }, [buildIsoFromDateTime, date, dayId, keepAudio, newDiaryAudioFileIds, newDiaryAudioTranscripts, newDiaryCapturedDate, newDiaryCapturedTime, newDiaryOcrAssetIds, newDiaryText, newDiaryTime, newDiaryTitle, onSavingChange, onToast])
 
   return {
     // State
@@ -569,8 +554,6 @@ export function useDiaryManagement(
     newDiaryText,
     newDiaryTitle,
     newDiaryAudioFileIds,
-    newDiaryOriginalTranscript,
-    newDiaryOriginalTranscriptModel,
     newDiaryAudioTranscripts,
     newDiaryOcrAssetIds,
     newDiaryTime,
@@ -591,8 +574,6 @@ export function useDiaryManagement(
     setNewDiaryText,
     setNewDiaryTitle,
     setNewDiaryAudioFileIds,
-    setNewDiaryOriginalTranscript,
-    setNewDiaryOriginalTranscriptModel,
     setNewDiaryAudioTranscripts,
     setNewDiaryOcrAssetIds,
     setNewDiaryTime,

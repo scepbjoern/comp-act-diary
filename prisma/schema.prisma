@@ -560,10 +560,6 @@ model JournalEntry {
   title       String?
   /// Inhalt (Markdown) - bei Audio-Einträgen das verbesserte Transkript
   content     String
-  /// Original-Transkript (unbearbeitet, direkt von Speech-to-Text)
-  originalTranscript String?
-  /// Modell, das für das Original-Transkript verwendet wurde (z.B. "gpt-4o-transcribe")
-  originalTranscriptModel String?
   /// KI-generierte Zusammenfassung (optional)
   aiSummary   String?
   /// KI-generierte Analyse/Interpretation (z.B. ACT-Perspektive)

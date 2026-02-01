@@ -125,9 +125,9 @@ model MediaAttachment {
 
 ---
 
-## Migration (Ist-Zustand)
+## Migration (Abgeschlossen)
 
-### Schritt 1: Schema erweitern
+### Schritt 1: Schema erweitern ✅
 
 ```sql
 ALTER TABLE "MediaAttachment" 
@@ -136,28 +136,38 @@ ALTER TABLE "MediaAttachment"
   ADD COLUMN "fieldId" TEXT;
 ```
 
-### Schritt 2: Bestehende Daten migrieren
+### Schritt 2: Bestehende Daten migrieren ✅
 
-```typescript
-// Migration: JournalEntry.originalTranscript → MediaAttachment.transcript
-// Siehe: scripts/migrate-transcripts-to-attachments.ts
-// - migriert nur, wenn das erste Audio-Attachment noch KEIN Transcript hat
-// - lässt JournalEntry.originalTranscript für Legacy-Kompatibilität bestehen
-```
+**Status**: Migration auf Dev und Prod abgeschlossen (1. Februar 2026).
+- 2 Einträge migriert (hatten Attachments ohne Transcript)
+- 19 Einträge bereits migriert (Attachments hatten bereits Transcript durch neue Upload-Flows)
+- Script wurde nach erfolgreicher Migration entfernt
 
-### Schritt 3: Alte Felder deprecaten
+### Schritt 3: APIs angepasst ✅
+
+Alle schreibenden Operationen befüllen `originalTranscript`/`originalTranscriptModel` **nicht mehr aktiv**:
+- `POST /api/day/[id]/notes`: Transcripts nur auf MediaAttachment
+- `POST /api/ocr/process-entry`: OCR-Text als Attachment-Transcript gespeichert
+- `POST /api/diary/upload-audio`: Transcript wird beim Entry-Save an Attachment gebunden
+
+Lesende Operationen bevorzugen `MediaAttachment.transcript`, mit Fallback auf `JournalEntry.originalTranscript`:
+- `GET /api/notes/[noteId]/original-transcript`
+- `GET /api/day/[id]/notes`
+- `JournalAIService.generateContent`
+
+### Schritt 4: Legacy-Felder
 
 ```prisma
 model JournalEntry {
   // ...
-  /// @deprecated - Use MediaAttachment.transcript instead
+  /// Legacy-Feld: Wird nur noch als Fallback gelesen, nicht mehr geschrieben
   originalTranscript       String?
-  /// @deprecated - Use MediaAttachment.transcriptModel instead
+  /// Legacy-Feld: Wird nur noch als Fallback gelesen, nicht mehr geschrieben
   originalTranscriptModel  String?
 }
 ```
 
-**Hinweis**: Felder vorerst behalten für Rückwärtskompatibilität, später entfernen.
+**Entscheidung**: Felder bleiben im Schema für Backward Compatibility. Sie verursachen keine Probleme, wenn sie einfach nicht mehr befüllt werden. Alte Einträge funktionieren weiterhin.
 
 ---
 
@@ -255,12 +265,27 @@ return {
 
 ## Implementierungsstatus
 
-✅ **Vollständig implementiert:**
+✅ **Phase 1: Multi-Audio Infrastruktur (28. Januar 2026)**
 - Schema erweitert: `MediaAttachment.transcript`, `transcriptModel`, `fieldId`
-- Migration-Script: `scripts/migrate-transcripts-to-attachments.ts` (migriert nur fehlende Attachment-Transkripte)
 - API: `POST /api/journal-entries/[id]/audio` (Audio zu Entry hinzufügen)
-- API: `GET /api/journal-entries/[id]/audio` (Audio-Attachments auflisten)
-- API: `DELETE /api/journal-entries/[id]/audio?attachmentId=...` (Audio löschen)
-- UI: Multi-Audio-Anzeige in DiaryEntriesAccordion
-- Rückwärtskompatibilität: `JournalEntry.originalTranscript` bleibt erhalten (Legacy/Fallback, z. B. OCR)
-- New-Entry Flow: `audioFileIds` + `audioTranscripts` werden bei `POST /api/day/[id]/notes` verwendet
+- API: `PATCH /api/journal-entries/[id]/audio` (Attachment-Transcript aktualisieren)
+- API: `DELETE /api/journal-entries/[id]/audio?attachmentId=...` (spezifisches Audio löschen)
+- UI: Multi-Audio-Anzeige in `DiaryEntriesAccordion`
+- UI: "Übernehmen"-Button nur bei genau einem Audio
+- UI: "Re-Transkribieren" aktualisiert nur Attachment-Transcript, nicht Entry-Content
+- New-Entry Flow: `audioFileIds` + `audioTranscripts` bei `POST /api/day/[id]/notes`
+
+✅ **Phase 2: Legacy-Cleanup (1. Februar 2026)**
+- Migration abgeschlossen: 21 Einträge (2 migriert, 19 bereits im neuen Format)
+- Migrations-Script entfernt nach erfolgreicher Ausführung
+- Alle schreibenden APIs angepasst: setzen `originalTranscript` nicht mehr aktiv
+- Lesende APIs bevorzugen `MediaAttachment.transcript` mit Fallback auf `JournalEntry.originalTranscript`
+- OCR-Flow nutzt jetzt `MediaAttachment.transcript` statt `JournalEntry.originalTranscript`
+- Audio-Lösch-Funktion arbeitet auf Attachment-Ebene (UI + Hook + API)
+- Legacy-Felder verbleiben im Schema für Backward Compatibility (nur noch Fallback-Lesezugriff)
+
+---
+
+*Konzept v1 – 28. Januar 2026*  
+*Phase 1 implementiert: 28. Januar 2026*  
+*Phase 2 abgeschlossen: 1. Februar 2026*

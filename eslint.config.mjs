@@ -9,7 +9,7 @@ const compat = new FlatCompat({
   recommendedConfig: js.configs.recommended,
 })
 
-export default [
+const config = [
   {
     ignores: [
       '.next/**',
@@ -107,3 +107,5 @@ export default [
     },
   },
 ]
+
+export default config

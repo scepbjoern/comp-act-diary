@@ -36,7 +36,7 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer: _isServer }) => {
     // Together-AI hat eine optionale parquetjs-Dependency für File-Uploads
     // Da wir nur Chat/Audio nutzen, können wir diese ignorieren
     config.plugins.push(

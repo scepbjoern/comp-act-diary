@@ -29,7 +29,6 @@ interface DiarySectionProps {
   newDiaryCapturedDate: string
   newDiaryCapturedTime: string
   newDiaryAudioFileIds: string[]
-  newDiaryOriginalTranscriptModel: string | null
   editorKey: number
   keepAudio: boolean
   showRetranscribeOptions: boolean
@@ -50,7 +49,6 @@ interface DiarySectionProps {
   onNewDiaryCapturedTimeChange: (time: string) => void
   onAddNewDiaryAudioFileId: (id: string) => void
   onAddNewDiaryAudioTranscript: (assetId: string, transcript: string, transcriptModel: string | null) => void
-  onNewDiaryOriginalTranscriptModelChange: (model: string | null) => void
   onNewDiaryOcrAssetIdsChange?: (ids: string[]) => void
   onEditorKeyIncrement: () => void
   onKeepAudioChange: (keep: boolean) => void
@@ -79,7 +77,6 @@ interface DiarySectionProps {
     model?: string
   }) => Promise<void>
   onGenerateTitle: () => Promise<void>
-  onOriginalPreserved: (orig: string) => void
   onUpdateNoteContent: (noteId: string, newContent: string) => Promise<boolean>
   onRefreshNotes?: () => Promise<void>
   onSaveAndRunPipeline?: () => Promise<void>
@@ -95,7 +92,6 @@ export function DiarySection({
   newDiaryCapturedDate,
   newDiaryCapturedTime,
   newDiaryAudioFileIds,
-  newDiaryOriginalTranscriptModel: _newDiaryOriginalTranscriptModel,
   editorKey,
   keepAudio,
   showRetranscribeOptions,
@@ -116,7 +112,6 @@ export function DiarySection({
   onNewDiaryCapturedTimeChange,
   onAddNewDiaryAudioFileId,
   onAddNewDiaryAudioTranscript,
-  onNewDiaryOriginalTranscriptModelChange,
   onNewDiaryOcrAssetIdsChange,
   onEditorKeyIncrement,
   onKeepAudioChange,
@@ -139,7 +134,6 @@ export function DiarySection({
   onDeleteAudio,
   onHandleRetranscribe,
   onGenerateTitle,
-  onOriginalPreserved,
   onUpdateNoteContent,
   onRefreshNotes,
   onSaveAndRunPipeline,
@@ -179,11 +173,6 @@ export function DiarySection({
     
     setIsImproving(true)
     try {
-      // Preserve original transcript if not already preserved
-      if (originalDiaryText && !newDiaryText.includes('[Original')) {
-        onOriginalPreserved(originalDiaryText)
-      }
-      
       // Use the new Journal AI content generation API
       const response = await fetch('/api/journal-ai/generate-content', {
         method: 'POST',
@@ -354,14 +343,10 @@ export function DiarySection({
             time={newDiaryTime}
             keepAudio={keepAudio}
             onAudioData={({ text, audioFileId, capturedAt, model }: { text: string; audioFileId?: string | null; capturedAt?: string; model?: string }) => {
-              const isFirstAudio = newDiaryAudioFileIds.length === 0
               onNewDiaryTextChange(newDiaryText ? (newDiaryText + '\n\n' + text) : text)
               if (audioFileId) {
                 onAddNewDiaryAudioFileId(audioFileId)
                 onAddNewDiaryAudioTranscript(audioFileId, text, model || null)
-              }
-              if (isFirstAudio && model) {
-                onNewDiaryOriginalTranscriptModelChange(model)
               }
               if (capturedAt) {
                 const d = new Date(capturedAt)
@@ -372,10 +357,6 @@ export function DiarySection({
                 const mm = String(d.getMinutes()).padStart(2, '0')
                 onNewDiaryCapturedDateChange(`${y}-${m}-${day}`)
                 onNewDiaryCapturedTimeChange(`${hh}:${mm}`)
-              }
-              // Set original transcript only for the first audio (legacy)
-              if (isFirstAudio) {
-                onOriginalPreserved(text)
               }
               onEditorKeyIncrement()
             }}
@@ -388,14 +369,10 @@ export function DiarySection({
             time={newDiaryTime}
             keepAudio={keepAudio}
             onAudioUploaded={({ text, audioFileId, capturedAt, model }: { text: string; audioFileId?: string | null; capturedAt?: string; model?: string }) => {
-              const isFirstAudio = newDiaryAudioFileIds.length === 0
               onNewDiaryTextChange(newDiaryText ? (newDiaryText + '\n\n' + text) : text)
               if (audioFileId) {
                 onAddNewDiaryAudioFileId(audioFileId)
                 onAddNewDiaryAudioTranscript(audioFileId, text, model || null)
-              }
-              if (isFirstAudio && model) {
-                onNewDiaryOriginalTranscriptModelChange(model)
               }
               if (capturedAt) {
                 const d = new Date(capturedAt)
@@ -407,10 +384,6 @@ export function DiarySection({
                 onNewDiaryCapturedDateChange(`${y}-${m}-${day}`)
                 onNewDiaryCapturedTimeChange(`${hh}:${mm}`)
               }
-              // Set original transcript only for the first audio (legacy)
-              if (isFirstAudio) {
-                onOriginalPreserved(text)
-              }
               onEditorKeyIncrement()
             }}
             compact
@@ -421,8 +394,6 @@ export function DiarySection({
             time={newDiaryTime}
             onOcrComplete={({ text, mediaAssetIds, capturedAt }: { text: string; mediaAssetIds: string[]; capturedAt?: string }) => {
               onNewDiaryTextChange(newDiaryText ? (newDiaryText + '\n\n' + text) : text)
-              // Set original transcript for OCR text
-              onOriginalPreserved(text)
               if (capturedAt) {
                 const d = new Date(capturedAt)
                 const y = d.getFullYear()

@@ -175,7 +175,7 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 |---------|---------------------|-------------|
 | **JournalEntryType** | id, userId?, code, name, icon, defaultTemplateId, sortOrder | 1:N zu JournalEntry, N:1 zu JournalTemplate |
 | **JournalTemplate** | id, userId?, name, prompts (Json), origin | 1:N zu JournalEntry, 1:N zu JournalEntryType |
-| **JournalEntry** | id (=Entity.id), userId, typeId, templateId?, timeBoxId, **locationId?**, title?, content, **originalTranscript?**, **originalTranscriptModel?**, aiSummary?, **analysis?**, **contentUpdatedAt?**, isSensitive, **deletedAt?**, **occurredAt?**, **capturedAt?** | N:1 zu TimeBox, Type, Template, **Location**, 1:N zu JournalEntryAccess |
+| **JournalEntry** | id (=Entity.id), userId, typeId, templateId?, timeBoxId, **locationId?**, title?, content, aiSummary?, **analysis?**, **contentUpdatedAt?**, isSensitive, **deletedAt?**, **occurredAt?**, **capturedAt?** | N:1 zu TimeBox, Type, Template, **Location**, 1:N zu JournalEntryAccess |
 | **JournalEntryAccess** | id, journalEntryId, userId, role (VIEWER/EDITOR), grantedByUserId? | N:1 zu JournalEntry, N:1 zu User |
 
 ### 3.4 ACT-Domäne
@@ -219,6 +219,12 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 | **MediaAsset** | id (=Entity.id), userId, **filePath?**, thumbnailData (Bytes)?, mimeType, width?, height?, duration?, externalProvider?, externalId?, externalUrl?, thumbnailUrl?, capturedAt?, **ocrText?, ocrMetadata (Json)?, ocrStatus (Enum)?, ocrProcessedAt?** | 1:N zu MediaAttachment, **1:1 zu GeneratedImage** |
 | **MediaAttachment** | id, assetId, entityId (→Entity), userId, role (COVER/GALLERY/ATTACHMENT/**THUMBNAIL/SOURCE**), displayOrder, timeBoxId?, **transcript?**, **transcriptModel?**, **fieldId?** | N:1 zu MediaAsset, N:1 zu Entity |
 | **GeneratedImage** | id, userId, entityId (→Entity), assetId, model, prompt, aspectRatio, steps, displayOrder | N:1 zu Entity, N:1 zu MediaAsset |
+
+**Multi-Audio-Unterstützung:**
+- `MediaAttachment.transcript` speichert das Original-Transkript pro Audio-Datei
+- `MediaAttachment.transcriptModel` speichert das verwendete Transkriptionsmodell
+- `MediaAttachment.fieldId` ermöglicht Zuordnung zu Template-Feldern
+- Ein `JournalEntry` kann mehrere Audio-Attachments haben, jeweils mit eigenem Transkript
 
 ### 3.9 Messwerte
 

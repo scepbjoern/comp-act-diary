@@ -61,16 +61,6 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     }
   }
 
-  const firstAudioId = audioFileIds[0] ?? null
-  const firstAudioTranscript = firstAudioId ? audioTranscriptByAssetId.get(firstAudioId)?.transcript ?? null : null
-  const firstAudioTranscriptModel = firstAudioId ? audioTranscriptByAssetId.get(firstAudioId)?.transcriptModel ?? null : null
-
-  const originalTranscript = body?.originalTranscript
-    ? String(body.originalTranscript).trim()
-    : firstAudioTranscript
-  const originalTranscriptModel = body?.originalTranscriptModel
-    ? String(body.originalTranscriptModel).trim()
-    : firstAudioTranscriptModel
   const ocrAssetIds: string[] = Array.isArray(body?.ocrAssetIds) ? body.ocrAssetIds : []
   const occurredAt = body?.occurredAt ? new Date(body.occurredAt) : new Date()
   const capturedAt = body?.capturedAt ? new Date(body.capturedAt) : new Date()
@@ -98,8 +88,6 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
       timeBoxId: day.timeBoxId,
       title,
       content: text,
-      originalTranscript,
-      originalTranscriptModel,
       occurredAt,
       capturedAt,
     },
@@ -114,14 +102,9 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     }
   })
 
-  // Create MediaAttachments for all audio files
-  // First audio gets the originalTranscript for backward compatibility
+  // Create MediaAttachments for all audio files with transcripts
   for (let i = 0; i < audioFileIds.length; i++) {
     const assetId = audioFileIds[i]
-    // First audio attachment gets the transcript from the request (legacy support)
-    // Additional audios already have their transcripts stored on their MediaAttachment
-    // when they were created via /api/journal-entries/[id]/audio
-    const isFirst = i === 0
     const tr = audioTranscriptByAssetId.get(assetId) || null
     await prisma.mediaAttachment.create({
       data: {
@@ -130,8 +113,8 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         userId: day.userId,
         role: 'ATTACHMENT',
         timeBoxId: day.timeBoxId,
-        transcript: tr?.transcript ?? (isFirst ? originalTranscript : null),
-        transcriptModel: tr?.transcriptModel ?? (isFirst ? originalTranscriptModel : null),
+        transcript: tr?.transcript ?? null,
+        transcriptModel: tr?.transcriptModel ?? null,
       }
     })
   }
@@ -288,13 +271,6 @@ async function loadNotesForTimeBox(timeBoxId: string, userId: string, dayId: str
       audioCapturedAtIso: audioAtt?.asset.capturedAt?.toISOString() ?? null,
       audioUploadedAtIso: audioAtt?.asset.createdAt?.toISOString() ?? null,
       text: j.content ?? '',
-      // Backward compatibility: use first audio attachment transcript or fallback to JournalEntry
-      originalTranscript: audioAtt 
-        ? (audioAtt.transcript ?? j.originalTranscript ?? null)
-        : (j.originalTranscript ?? null),
-      originalTranscriptModel: audioAtt
-        ? (audioAtt.transcriptModel ?? j.originalTranscriptModel ?? null)
-        : (j.originalTranscriptModel ?? null),
       audioFilePath: audioAtt?.asset.filePath ?? null,
       audioFileId: audioAtt?.asset.id ?? null,
       keepAudio: true,

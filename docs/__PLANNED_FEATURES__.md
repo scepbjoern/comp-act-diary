@@ -17,6 +17,8 @@
 
 **Vibe Voice ASR Speech-to-text**: https://www.youtube.com/watch?v=BYPlfLQm0CQ&t=1441s
 
+**Neue Modelle auf Together.ai**: https://www.together.ai/models/kimi-k2-5 (extrem gute Ratings); https://www.together.ai/blog/flux-2-multi-reference-image-generation-now-available-on-together-ai; 
+
 ### Verlinkungen auf andere Ereignisse
 **On This Day - Rediscover memories from previous years and months Transkriptionon the same date**: für jeden Tag, wenn man gerade in einem aktuellen Tag ist, immer in der Datenbank geschaut wird, ob es vom Vorjahr und vom Vormonat Tagebucheinträge gibt von diesem einen Tag. Und falls ja, wird dieser Eintrag, aber auch diejenigen der Vorjahre, immer kurz angezeigt, so das Wichtigste zusammengefasst. Dies soll erlauben, dass man mit der Zeit ein bisschen das Bewusstsein schärft, so im Sinne von Carpe Diem, dass man sieht auch, dass vor einem Jahr vielleicht es besser war oder auch schlechter war. Und beides kann ja ermuntern und zur Reflexion beitragen. -> Bei journiv entspricht dies: "On This Day — Rediscover memories from previous years on the same date"
 

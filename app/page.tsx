@@ -135,8 +135,6 @@ export default function HeutePage() {
     newDiaryText,
     newDiaryTitle,
     newDiaryAudioFileIds,
-    newDiaryOriginalTranscript,
-    newDiaryOriginalTranscriptModel,
     newDiaryAudioTranscripts,
     newDiaryTime,
     editorKey,
@@ -146,8 +144,6 @@ export default function HeutePage() {
     setNewDiaryText,
     setNewDiaryTitle,
     setNewDiaryAudioFileIds,
-    setNewDiaryOriginalTranscript: _setNewDiaryOriginalTranscript,
-    setNewDiaryOriginalTranscriptModel,
     setNewDiaryAudioTranscripts,
     setNewDiaryOcrAssetIds,
     setNewDiaryTime,
@@ -444,8 +440,6 @@ export default function HeutePage() {
         audioFileIds: newDiaryAudioFileIds,
         audioTranscripts: newDiaryAudioTranscripts,
         keepAudio,
-        originalTranscript: newDiaryOriginalTranscript,
-        originalTranscriptModel: newDiaryOriginalTranscriptModel,
         occurredAt: occurredAtDate.toISOString(),
         capturedAt,
         tzOffsetMinutes: new Date().getTimezoneOffset(),
@@ -504,7 +498,6 @@ export default function HeutePage() {
       setNewDiaryText('')
       setNewDiaryAudioFileIds([])
       setNewDiaryAudioTranscripts([])
-      _setNewDiaryOriginalTranscript(null)
       const now = new Date()
       const hh = String(now.getHours()).padStart(2, '0')
       const mm = String(now.getMinutes()).padStart(2, '0')
@@ -690,7 +683,6 @@ export default function HeutePage() {
             newDiaryCapturedDate={newDiaryCapturedDate}
             newDiaryCapturedTime={newDiaryCapturedTime}
             newDiaryAudioFileIds={newDiaryAudioFileIds}
-            newDiaryOriginalTranscriptModel={newDiaryOriginalTranscriptModel}
             editorKey={editorKey}
             keepAudio={keepAudio}
             showRetranscribeOptions={showRetranscribeOptions}
@@ -703,7 +695,6 @@ export default function HeutePage() {
             editingTitle={editingTitle}
             saving={saving}
             savedAt={savedAt}
-            originalDiaryText={newDiaryOriginalTranscript || undefined}
             onNewDiaryTitleChange={setNewDiaryTitle}
             onNewDiaryTextChange={setNewDiaryText}
             onNewDiaryTimeChange={setNewDiaryTime}
@@ -711,7 +702,6 @@ export default function HeutePage() {
             onNewDiaryCapturedTimeChange={setNewDiaryCapturedTime}
             onAddNewDiaryAudioFileId={(id) => setNewDiaryAudioFileIds(prev => [...prev, id])}
             onAddNewDiaryAudioTranscript={addNewDiaryAudioTranscript}
-            onNewDiaryOriginalTranscriptModelChange={setNewDiaryOriginalTranscriptModel}
             onNewDiaryOcrAssetIdsChange={setNewDiaryOcrAssetIds}
             onEditorKeyIncrement={() => setEditorKey(prev => prev + 1)}
             onKeepAudioChange={setKeepAudio}
@@ -734,7 +724,6 @@ export default function HeutePage() {
             onDeleteAudio={deleteAudio}
             onHandleRetranscribe={handleRetranscribe}
             onGenerateTitle={handleGenerateTitle}
-            onOriginalPreserved={(orig) => _setNewDiaryOriginalTranscript(orig)}
             onUpdateNoteContent={updateNoteContent}
             onRefreshNotes={async () => {
               try {

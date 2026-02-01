@@ -665,6 +665,29 @@ export function DiaryEntriesAccordion({
                           className="text-gray-300 hover:text-gray-100 text-xs"
                           compact
                         />
+                        <label className="cursor-pointer text-gray-300 hover:text-gray-100" title="Audio-Datei hochladen">
+                          <TablerIcon name="cloud-upload" size={20} />
+                          <input
+                            type="file"
+                            accept=".mp3,.m4a,.webm,.ogg,.wav,audio/*"
+                            className="hidden"
+                            disabled={audioUploadingEntryId === n.id}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0]
+                              if (file) {
+                                const transcript = await handleAudioFileUpload(n.id, file)
+                                if (transcript) {
+                                  onTextChange(editingText ? (editingText + '\n\n' + transcript) : transcript)
+                                  setTimeout(() => setEditorKey(k => k + 1), 0)
+                                }
+                              }
+                              e.target.value = ''
+                            }}
+                          />
+                        </label>
+                        {audioUploadingEntryId === n.id && (
+                          <span className="loading loading-spinner loading-xs text-amber-500" />
+                        )}
                         {n.originalTranscript && (
                           <button
                             className="btn btn-ghost btn-xs text-primary"

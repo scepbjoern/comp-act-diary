@@ -316,8 +316,6 @@ async function loadNotesForTimeBox(timeBoxId: string, userId: string, dayId: str
       audioCapturedAtIso: audioAtt?.asset.capturedAt?.toISOString() ?? null,
       audioUploadedAtIso: audioAtt?.asset.createdAt?.toISOString() ?? null,
       text: j.content ?? '',
-      originalTranscript: audioAttachments[0]?.transcript ?? j.originalTranscript ?? null,
-      originalTranscriptModel: audioAttachments[0]?.transcriptModel ?? j.originalTranscriptModel ?? null,
       aiSummary: j.aiSummary ?? null,
       analysis: j.analysis ?? null,
       contentUpdatedAt: j.contentUpdatedAt?.toISOString() ?? null,

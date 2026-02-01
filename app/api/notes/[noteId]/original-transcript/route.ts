@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ noteId:
 
   const entry = await prisma.journalEntry.findUnique({
     where: { id: noteId },
-    select: { id: true, userId: true, originalTranscript: true, originalTranscriptModel: true }
+    select: { id: true, userId: true }
   })
   
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -38,8 +38,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ noteId:
   return NextResponse.json({ 
     noteId: entry.id,
     attachmentId: attachment?.id ?? null,
-    originalTranscript: attachment?.transcript ?? entry.originalTranscript,
-    originalTranscriptModel: attachment?.transcriptModel ?? entry.originalTranscriptModel,
+    originalTranscript: attachment?.transcript ?? null,
+    originalTranscriptModel: attachment?.transcriptModel ?? null,
   })
 }
 
@@ -84,28 +84,22 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ noteId:
     select: { id: true },
   })
 
-  if (attachment) {
-    await prisma.mediaAttachment.update({
-      where: { id: attachment.id },
-      data: {
-        transcript: originalTranscript,
-        ...(originalTranscriptModel !== undefined && { transcriptModel: originalTranscriptModel }),
-      },
-    })
-  } else {
-    await prisma.journalEntry.update({
-      where: { id: noteId },
-      data: { 
-        originalTranscript,
-        ...(originalTranscriptModel !== undefined && { originalTranscriptModel })
-      }
-    })
+  if (!attachment) {
+    return NextResponse.json({ error: 'No audio attachment found' }, { status: 404 })
   }
+  
+  await prisma.mediaAttachment.update({
+    where: { id: attachment.id },
+    data: {
+      transcript: originalTranscript,
+      ...(originalTranscriptModel !== undefined && { transcriptModel: originalTranscriptModel }),
+    },
+  })
 
   return NextResponse.json({ 
     ok: true,
     noteId,
-    attachmentId: attachment?.id ?? null,
+    attachmentId: attachment.id,
     originalTranscript,
     originalTranscriptModel: originalTranscriptModel ?? null
   })

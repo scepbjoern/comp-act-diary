@@ -51,8 +51,6 @@ export type DayNote = {
   time?: string
   techTime?: string
   text: string
-  originalTranscript?: string | null
-  originalTranscriptModel?: string | null
   aiSummary?: string | null
   analysis?: string | null
   contentUpdatedAt?: string | null

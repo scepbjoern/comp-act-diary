@@ -49,8 +49,12 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
-, "prisma.config.mjs"  ],
+    ".next/types/**/*.ts",
+    "prisma.config.mjs",
+    "eslint.config.mjs",
+    "next.config.mjs",
+    "postcss.config.js"
+  ],
   "exclude": [
     "node_modules"
   ]
