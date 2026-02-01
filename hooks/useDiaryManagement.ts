@@ -1,24 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { DayNote } from '@/types/day'
 
-type DayNote = {
-  id: string
-  dayId: string
-  type: 'MEAL' | 'REFLECTION' | 'DIARY'
-  title?: string | null
-  time?: string
-  techTime?: string
-  text: string
-  originalTranscript?: string | null
-  originalTranscriptModel?: string | null
-  audioFilePath?: string | null
-  audioFileId?: string | null
-  keepAudio?: boolean
-  photos?: { id: string; url: string }[]
-  occurredAtIso?: string
-  capturedAtIso?: string
-  createdAtIso?: string
-  audioCapturedAtIso?: string | null
-  audioUploadedAtIso?: string | null
+type NewDiaryAudioTranscript = {
+  assetId: string
+  transcript: string
+  transcriptModel: string | null
 }
 
 export function useDiaryManagement(
@@ -40,9 +26,11 @@ export function useDiaryManagement(
   // New diary entry state
   const [newDiaryText, setNewDiaryText] = useState('')
   const [newDiaryTitle, setNewDiaryTitle] = useState('')
-  const [newDiaryAudioFileId, setNewDiaryAudioFileId] = useState<string | null>(null)
+  // Support multiple audio files per new entry
+  const [newDiaryAudioFileIds, setNewDiaryAudioFileIds] = useState<string[]>([])
   const [newDiaryOriginalTranscript, setNewDiaryOriginalTranscript] = useState<string | null>(null)
   const [newDiaryOriginalTranscriptModel, setNewDiaryOriginalTranscriptModel] = useState<string | null>(null)
+  const [newDiaryAudioTranscripts, setNewDiaryAudioTranscripts] = useState<NewDiaryAudioTranscript[]>([])
   const [newDiaryOcrAssetIds, setNewDiaryOcrAssetIds] = useState<string[]>([])
   const [newDiaryTime, setNewDiaryTime] = useState('')
   const [newDiaryCapturedDate, setNewDiaryCapturedDate] = useState('')
@@ -171,6 +159,15 @@ export function useDiaryManagement(
     }
   }, [onToast])
 
+  const addNewDiaryAudioTranscript = useCallback((assetId: string, transcript: string, transcriptModel: string | null) => {
+    const cleanedTranscript = transcript.trim()
+    if (!assetId || !cleanedTranscript) return
+    setNewDiaryAudioTranscripts(prev => {
+      const without = prev.filter(t => t.assetId !== assetId)
+      return [...without, { assetId, transcript: cleanedTranscript, transcriptModel }]
+    })
+  }, [])
+
   // Delete note
   const deleteNote = useCallback(async (noteId: string) => {
     if (!window.confirm('Tagebucheintrag wirklich löschen? Audio wird ebenfalls gelöscht.')) return false
@@ -193,12 +190,47 @@ export function useDiaryManagement(
   }, [editingNoteId, cancelEditNote, onToast])
 
   // Delete audio from note
-  const deleteAudio = useCallback(async (noteId: string) => {
+  const deleteAudio = useCallback(async (noteId: string, attachmentId?: string) => {
     const note = notes.find(n => n.id === noteId)
-    if (!note?.audioFilePath) return false
-    if (!window.confirm('Nur die Audioaufnahme löschen?')) return false
+    if (!note) return false
+
+    const resolvedAttachmentId = attachmentId || note.audioAttachments?.[0]?.id || null
+    if (!resolvedAttachmentId && !note.audioFilePath) return false
+    if (!window.confirm('Audio wirklich löschen?')) return false
     
     try {
+      if (resolvedAttachmentId) {
+        const res = await fetch(`/api/journal-entries/${note.id}/audio?attachmentId=${resolvedAttachmentId}`, {
+          method: 'DELETE',
+          credentials: 'same-origin',
+        })
+        const data = await res.json().catch(() => ({} as Record<string, unknown>))
+        if (!res.ok) {
+          onToast(`Audio löschen fehlgeschlagen: ${String(data.error || 'Unbekannter Fehler')}`, 'error')
+          return false
+        }
+
+        setNotes(prev => prev.map(n => {
+          if (n.id !== note.id) return n
+          const updatedAttachments = (n.audioAttachments || []).filter(att => att.id !== resolvedAttachmentId)
+          const primary = updatedAttachments[0]
+          return {
+            ...n,
+            audioAttachments: updatedAttachments,
+            audioFilePath: primary?.filePath ?? null,
+            audioFileId: primary?.assetId ?? null,
+            audioCapturedAtIso: primary?.capturedAt ?? null,
+            audioUploadedAtIso: primary?.createdAt ?? null,
+            originalTranscript: primary?.transcript ?? n.originalTranscript ?? null,
+            originalTranscriptModel: primary?.transcriptModel ?? n.originalTranscriptModel ?? null,
+            keepAudio: updatedAttachments.length > 0,
+          }
+        }))
+
+        onToast('Audio gelöscht', 'info')
+        return true
+      }
+
       const res = await fetch(`/api/notes/${note.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -278,16 +310,17 @@ export function useDiaryManagement(
     }
   }, [])
 
-  // Retranscribe audio
+  // Retranscribe audio (uses first audio file)
   const retranscribeAudio = useCallback(async (model: string) => {
-    if (!newDiaryAudioFileId) return false
+    if (newDiaryAudioFileIds.length === 0) return false
+    const audioFileId = newDiaryAudioFileIds[0]
     
     setIsRetranscribing(true)
     setShowRetranscribeOptions(false)
     
     try {
       const formData = new FormData()
-      formData.append('audioFileId', newDiaryAudioFileId)
+      formData.append('audioFileId', audioFileId)
       formData.append('model', model)
       
       const response = await fetch('/api/diary/retranscribe', {
@@ -306,6 +339,7 @@ export function useDiaryManagement(
       setNewDiaryText(data.text)
       setNewDiaryOriginalTranscript(data.text)
       setNewDiaryOriginalTranscriptModel(data.model || model)
+      addNewDiaryAudioTranscript(audioFileId, data.text, data.model || model)
       onToast(`Re-Transkription mit ${model} erfolgreich!`, 'success')
       return true
     } catch (error) {
@@ -315,16 +349,86 @@ export function useDiaryManagement(
     } finally {
       setIsRetranscribing(false)
     }
-  }, [newDiaryAudioFileId, onToast])
+  }, [addNewDiaryAudioTranscript, newDiaryAudioFileIds, onToast])
 
-  // Handle retranscribe from existing note
-  const handleRetranscribe = useCallback(async (noteId: string, newText: string, model?: string) => {
-    setNotes(prev => prev.map(note => 
-      note.id === noteId 
-        ? { ...note, text: newText, originalTranscript: newText, originalTranscriptModel: model ?? note.originalTranscriptModel }
-        : note
-    ))
-    onToast('Transkription aktualisiert', 'success')
+  // Handle retranscribe from existing note (update transcript only)
+  const handleRetranscribe = useCallback(async (payload: {
+    noteId: string
+    attachmentId?: string
+    assetId?: string
+    newText: string
+    model?: string
+  }) => {
+    const { noteId, attachmentId, newText, model } = payload
+
+    try {
+      if (attachmentId) {
+        const res = await fetch(`/api/journal-entries/${noteId}/audio`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            attachmentId,
+            transcript: newText,
+            transcriptModel: model ?? null,
+          }),
+        })
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({} as Record<string, unknown>))
+          onToast(`Re-Transkription fehlgeschlagen: ${String(errorData.error || 'Unbekannter Fehler')}`, 'error')
+          return
+        }
+
+        const data = await res.json().catch(() => ({} as Record<string, unknown>))
+        const updated = (data as { attachment?: { id?: string; transcript?: string | null; transcriptModel?: string | null } }).attachment
+
+        setNotes(prev => prev.map(note => {
+          if (note.id !== noteId) return note
+          const updatedAttachments = note.audioAttachments?.map(att =>
+            att.id === attachmentId
+              ? {
+                  ...att,
+                  transcript: updated?.transcript ?? newText,
+                  transcriptModel: updated?.transcriptModel ?? model ?? att.transcriptModel,
+                }
+              : att
+          )
+
+          return {
+            ...note,
+            audioAttachments: updatedAttachments,
+          }
+        }))
+      } else {
+        const res = await fetch(`/api/notes/${noteId}/original-transcript`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            originalTranscript: newText,
+            originalTranscriptModel: model ?? null,
+          }),
+        })
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({} as Record<string, unknown>))
+          onToast(`Re-Transkription fehlgeschlagen: ${String(errorData.error || 'Unbekannter Fehler')}`, 'error')
+          return
+        }
+
+        setNotes(prev => prev.map(note =>
+          note.id === noteId
+            ? { ...note, originalTranscript: newText, originalTranscriptModel: model ?? note.originalTranscriptModel }
+            : note
+        ))
+      }
+
+      onToast('Transkription aktualisiert', 'success')
+    } catch (error) {
+      console.error('Re-transcription update failed:', error)
+      onToast('Re-Transkription fehlgeschlagen: Netzwerkfehler', 'error')
+    }
   }, [onToast])
 
   // Cleanup audio file
@@ -350,25 +454,30 @@ export function useDiaryManagement(
 
   // Clear diary form
   const clearDiaryForm = useCallback(() => {
-    // Clean up audio file ONLY if it exists and wasn't saved
-    if (newDiaryAudioFileId) {
-      const isReferenced = notes.some(note => note.audioFileId === newDiaryAudioFileId)
+    // Clean up ALL audio files that weren't saved yet
+    for (const audioFileId of newDiaryAudioFileIds) {
+      const isReferenced = notes.some(note => {
+        if (note.audioFileId === audioFileId) return true
+        if (note.audioAttachments?.some(a => a.assetId === audioFileId)) return true
+        return false
+      })
       if (!isReferenced) {
-        void cleanupAudioFile(newDiaryAudioFileId)
+        void cleanupAudioFile(audioFileId)
       }
     }
     
     setNewDiaryText('')
-    setNewDiaryAudioFileId(null)
+    setNewDiaryAudioFileIds([])
     setNewDiaryOriginalTranscript(null)
     setNewDiaryOriginalTranscriptModel(null)
+    setNewDiaryAudioTranscripts([])
     setNewDiaryOcrAssetIds([])
     setNewDiaryTime('')
     setNewDiaryCapturedDate('')
     setNewDiaryCapturedTime('')
     setShowRetranscribeOptions(false)
     setIsRetranscribing(false)
-  }, [newDiaryAudioFileId, notes, cleanupAudioFile])
+  }, [newDiaryAudioFileIds, notes, cleanupAudioFile])
 
   // Save new diary entry
   const saveDiaryEntry = useCallback(async () => {
@@ -395,7 +504,11 @@ export function useDiaryManagement(
           type: 'DIARY',
           title: newDiaryTitle.trim() || null,
           text: newDiaryText.trim(),
-          audioFileId: newDiaryAudioFileId,
+          // Send all audio file IDs for multi-audio support
+          audioFileIds: newDiaryAudioFileIds,
+          audioTranscripts: newDiaryAudioTranscripts,
+          // Legacy: first audio for backward compatibility
+          audioFileId: newDiaryAudioFileIds[0] || null,
           keepAudio,
           originalTranscript: newDiaryOriginalTranscript,
           originalTranscriptModel: newDiaryOriginalTranscriptModel,
@@ -412,9 +525,10 @@ export function useDiaryManagement(
       
       // Reset form WITHOUT cleanup (audio was saved successfully)
       setNewDiaryText('')
-      setNewDiaryAudioFileId(null)
+      setNewDiaryAudioFileIds([])
       setNewDiaryOriginalTranscript(null)
       setNewDiaryOriginalTranscriptModel(null)
+      setNewDiaryAudioTranscripts([])
       setNewDiaryOcrAssetIds([])
       
       // Reset time to current time for next entry
@@ -441,7 +555,7 @@ export function useDiaryManagement(
     } finally {
       onSavingChange(false)
     }
-  }, [buildIsoFromDateTime, date, dayId, keepAudio, newDiaryAudioFileId, newDiaryCapturedDate, newDiaryCapturedTime, newDiaryOcrAssetIds, newDiaryOriginalTranscript, newDiaryOriginalTranscriptModel, newDiaryText, newDiaryTime, newDiaryTitle, onSavingChange, onToast])
+  }, [buildIsoFromDateTime, date, dayId, keepAudio, newDiaryAudioFileIds, newDiaryAudioTranscripts, newDiaryCapturedDate, newDiaryCapturedTime, newDiaryOcrAssetIds, newDiaryOriginalTranscript, newDiaryOriginalTranscriptModel, newDiaryText, newDiaryTime, newDiaryTitle, onSavingChange, onToast])
 
   return {
     // State
@@ -454,9 +568,10 @@ export function useDiaryManagement(
     editingTitle,
     newDiaryText,
     newDiaryTitle,
-    newDiaryAudioFileId,
+    newDiaryAudioFileIds,
     newDiaryOriginalTranscript,
     newDiaryOriginalTranscriptModel,
+    newDiaryAudioTranscripts,
     newDiaryOcrAssetIds,
     newDiaryTime,
     newDiaryCapturedDate,
@@ -475,9 +590,10 @@ export function useDiaryManagement(
     setEditingTitle,
     setNewDiaryText,
     setNewDiaryTitle,
-    setNewDiaryAudioFileId,
+    setNewDiaryAudioFileIds,
     setNewDiaryOriginalTranscript,
     setNewDiaryOriginalTranscriptModel,
+    setNewDiaryAudioTranscripts,
     setNewDiaryOcrAssetIds,
     setNewDiaryTime,
     setNewDiaryCapturedDate,
@@ -497,6 +613,8 @@ export function useDiaryManagement(
     deletePhoto,
     retranscribeAudio,
     handleRetranscribe,
+    cleanupAudioFile,
+    addNewDiaryAudioTranscript,
     clearDiaryForm,
     saveDiaryEntry,
   }

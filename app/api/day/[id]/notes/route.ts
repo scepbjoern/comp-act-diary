@@ -36,9 +36,41 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   const type = String(body?.type || '') as NoteType
   const text = String(body?.text || '').trim()
   const title = body?.title ? String(body.title).trim() : null
-  const audioFileId = body?.audioFileId ?? null
-  const originalTranscript = body?.originalTranscript ? String(body.originalTranscript).trim() : null
-  const originalTranscriptModel = body?.originalTranscriptModel ? String(body.originalTranscriptModel).trim() : null
+  // Support both single audioFileId (legacy) and multiple audioFileIds (new)
+  const audioFileIds: string[] = Array.isArray(body?.audioFileIds) 
+    ? body.audioFileIds 
+    : (body?.audioFileId ? [body.audioFileId] : [])
+  const audioTranscriptsRaw: any[] = Array.isArray(body?.audioTranscripts) ? body.audioTranscripts : []
+  const audioTranscriptByAssetId = new Map<string, { transcript: string | null; transcriptModel: string | null }>()
+  for (const t of audioTranscriptsRaw) {
+    const assetId = typeof t?.assetId === 'string'
+      ? String(t.assetId)
+      : (typeof t?.audioFileId === 'string' ? String(t.audioFileId) : null)
+    const transcript = typeof t?.transcript === 'string'
+      ? String(t.transcript).trim()
+      : (typeof t?.text === 'string' ? String(t.text).trim() : null)
+    const transcriptModel = typeof t?.transcriptModel === 'string'
+      ? String(t.transcriptModel).trim()
+      : (typeof t?.model === 'string' ? String(t.model).trim() : null)
+
+    if (assetId) {
+      audioTranscriptByAssetId.set(assetId, {
+        transcript: transcript || null,
+        transcriptModel: transcriptModel || null,
+      })
+    }
+  }
+
+  const firstAudioId = audioFileIds[0] ?? null
+  const firstAudioTranscript = firstAudioId ? audioTranscriptByAssetId.get(firstAudioId)?.transcript ?? null : null
+  const firstAudioTranscriptModel = firstAudioId ? audioTranscriptByAssetId.get(firstAudioId)?.transcriptModel ?? null : null
+
+  const originalTranscript = body?.originalTranscript
+    ? String(body.originalTranscript).trim()
+    : firstAudioTranscript
+  const originalTranscriptModel = body?.originalTranscriptModel
+    ? String(body.originalTranscriptModel).trim()
+    : firstAudioTranscriptModel
   const ocrAssetIds: string[] = Array.isArray(body?.ocrAssetIds) ? body.ocrAssetIds : []
   const occurredAt = body?.occurredAt ? new Date(body.occurredAt) : new Date()
   const capturedAt = body?.capturedAt ? new Date(body.capturedAt) : new Date()
@@ -82,15 +114,24 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     }
   })
 
-  // If audioFileId provided, create MediaAttachment
-  if (audioFileId) {
+  // Create MediaAttachments for all audio files
+  // First audio gets the originalTranscript for backward compatibility
+  for (let i = 0; i < audioFileIds.length; i++) {
+    const assetId = audioFileIds[i]
+    // First audio attachment gets the transcript from the request (legacy support)
+    // Additional audios already have their transcripts stored on their MediaAttachment
+    // when they were created via /api/journal-entries/[id]/audio
+    const isFirst = i === 0
+    const tr = audioTranscriptByAssetId.get(assetId) || null
     await prisma.mediaAttachment.create({
       data: {
-        assetId: audioFileId,
+        assetId,
         entityId: entry.id,
         userId: day.userId,
         role: 'ATTACHMENT',
         timeBoxId: day.timeBoxId,
+        transcript: tr?.transcript ?? (isFirst ? originalTranscript : null),
+        transcriptModel: tr?.transcriptModel ?? (isFirst ? originalTranscriptModel : null),
       }
     })
   }
@@ -205,7 +246,9 @@ async function loadNotesForTimeBox(timeBoxId: string, userId: string, dayId: str
 
   return journalRows.map((j) => {
     const entryAttachments = attachmentsByEntry.get(j.id) || []
-    const audioAtt = entryAttachments.find(a => a.asset.mimeType?.startsWith('audio/'))
+    // Get all audio attachments for multi-audio support
+    const audioAtts = entryAttachments.filter(a => a.asset.mimeType?.startsWith('audio/'))
+    const audioAtt = audioAtts[0] // Primary audio for backward compatibility
     // Only include images that are ATTACHMENT or GALLERY, not SOURCE (OCR sources)
     // Also exclude images in ocr/ folder as fallback
     const photoAtts = entryAttachments.filter(a => {
@@ -220,6 +263,18 @@ async function loadNotesForTimeBox(timeBoxId: string, userId: string, dayId: str
     // Use occurredAt for display time, fallback to createdAt
     const displayTime = j.occurredAt ?? j.createdAt
     
+    // Build audio attachments array for multi-audio support
+    const audioAttachments = audioAtts.map(a => ({
+      id: a.id,
+      assetId: a.asset.id,
+      filePath: a.asset.filePath,
+      duration: a.asset.duration,
+      transcript: a.transcript ?? null,
+      transcriptModel: a.transcriptModel ?? null,
+      capturedAt: a.asset.capturedAt?.toISOString() ?? null,
+      createdAt: a.createdAt?.toISOString() ?? null,
+    }))
+    
     return {
       id: j.id,
       dayId,
@@ -233,11 +288,18 @@ async function loadNotesForTimeBox(timeBoxId: string, userId: string, dayId: str
       audioCapturedAtIso: audioAtt?.asset.capturedAt?.toISOString() ?? null,
       audioUploadedAtIso: audioAtt?.asset.createdAt?.toISOString() ?? null,
       text: j.content ?? '',
-      originalTranscript: j.originalTranscript ?? null,
-      originalTranscriptModel: j.originalTranscriptModel ?? null,
+      // Backward compatibility: use first audio attachment transcript or fallback to JournalEntry
+      originalTranscript: audioAtt 
+        ? (audioAtt.transcript ?? j.originalTranscript ?? null)
+        : (j.originalTranscript ?? null),
+      originalTranscriptModel: audioAtt
+        ? (audioAtt.transcriptModel ?? j.originalTranscriptModel ?? null)
+        : (j.originalTranscriptModel ?? null),
       audioFilePath: audioAtt?.asset.filePath ?? null,
       audioFileId: audioAtt?.asset.id ?? null,
       keepAudio: true,
+      // New: all audio attachments for multi-audio UI
+      audioAttachments,
       photos: photoAtts.map((p) => ({ 
         id: p.asset.id, 
         url: p.asset.filePath ? `/uploads/${p.asset.filePath}` : '' 

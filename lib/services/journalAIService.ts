@@ -159,7 +159,17 @@ export class JournalAIService {
       throw new Error('Unauthorized')
     }
 
-    const inputText = text ?? entry.originalTranscript ?? entry.content
+    const audioAttachment = await this.prisma.mediaAttachment.findFirst({
+      where: {
+        entityId: journalEntryId,
+        userId,
+        asset: { mimeType: { startsWith: 'audio/' } },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { transcript: true },
+    })
+
+    const inputText = text ?? audioAttachment?.transcript ?? entry.originalTranscript ?? entry.content
     if (!inputText) {
       throw new Error('No text to process')
     }

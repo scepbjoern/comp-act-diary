@@ -59,6 +59,18 @@ import {
   IconClock,
 } from '@tabler/icons-react'
 
+/** Audio attachment info for multi-audio support */
+type AudioAttachmentInfo = {
+  id: string
+  assetId: string
+  filePath: string | null
+  duration: number | null
+  transcript: string | null
+  transcriptModel: string | null
+  capturedAt: string | null
+  createdAt: string | null
+}
+
 type DayNote = {
   id: string
   dayId: string
@@ -75,6 +87,8 @@ type DayNote = {
   audioFilePath?: string | null
   audioFileId?: string | null
   keepAudio?: boolean
+  /** All audio attachments for multi-audio support */
+  audioAttachments?: AudioAttachmentInfo[]
   photos?: { id: string; url: string }[]
   occurredAtIso?: string
   capturedAtIso?: string
@@ -110,8 +124,14 @@ interface DiaryEntriesAccordionProps {
   onUploadPhotos: (id: string, files: FileList | File[]) => void
   onDeletePhoto: (id: string) => void
   onViewPhoto: (noteId: string, index: number, url?: string) => void
-  onDeleteAudio?: (id: string) => void
-  onRetranscribe?: (noteId: string, newText: string) => void
+  onDeleteAudio?: (id: string, attachmentId?: string) => void
+  onRetranscribe?: (payload: {
+    noteId: string
+    attachmentId?: string
+    assetId?: string
+    newText: string
+    model?: string
+  }) => void
   onUpdateContent?: (noteId: string, newContent: string) => void
   onRefreshNotes?: () => void
 }
@@ -147,7 +167,10 @@ export function DiaryEntriesAccordion({
   const [timestampModalNoteId, setTimestampModalNoteId] = useState<string | null>(null)
   const [shareModalNoteId, setShareModalNoteId] = useState<string | null>(null)
   const [loadingStates, setLoadingStates] = useState<Record<string, 'content' | 'analysis' | 'summary' | 'pipeline' | null>>({})
+  const [audioUploadingEntryId, setAudioUploadingEntryId] = useState<string | null>(null)
   const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null)
+  // Key to force RichTextEditor remount when text is updated externally (e.g., after audio transcription)
+  const [editorKey, setEditorKey] = useState(0)
   const searchParams = useSearchParams()
   const highlightEntryId = searchParams.get('entry')
   
@@ -346,6 +369,52 @@ export function DiaryEntriesAccordion({
       onRefreshNotes?.()
     } catch (err) {
       console.error('Failed to update timestamps', err)
+    }
+  }
+
+  // Handle file upload for existing entry - sends directly to the journal entry audio endpoint
+  // Returns the transcript so caller can update the editor
+  const handleAudioFileUpload = async (entryId: string, file: File): Promise<string | null> => {
+    setAudioUploadingEntryId(entryId)
+    try {
+      // Get transcription model from user settings
+      let model = 'gpt-4o-transcribe'
+      try {
+        const settingsRes = await fetch('/api/user/settings', { credentials: 'same-origin' })
+        if (settingsRes.ok) {
+          const data = await settingsRes.json()
+          if (data.settings?.transcriptionModel) {
+            model = data.settings.transcriptionModel
+          }
+        }
+      } catch { /* use default */ }
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('model', model)
+      // Don't append to DB - we update editor locally
+      formData.append('appendText', 'false')
+
+      const res = await fetch(`/api/journal-entries/${entryId}/audio`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        console.error('Failed to add audio:', errorData.error || errorData)
+        return null
+      }
+
+      const data = await res.json()
+      onRefreshNotes?.()
+      return data.transcript || null
+    } catch (err) {
+      console.error('Failed to add audio to entry', err)
+      return null
+    } finally {
+      setAudioUploadingEntryId(null)
     }
   }
 
@@ -576,13 +645,23 @@ export function DiaryEntriesAccordion({
                     </div>
                     <div className="space-y-1">
                       <RichTextEditor
+                        key={editorKey}
                         markdown={editingText}
                         onChange={onTextChange}
                         placeholder="Tagebucheintrag bearbeiten..."
                       />
                       <div className="flex items-center gap-2">
                         <MicrophoneButton
-                          onText={(t: string) => onTextChange(editingText ? (editingText + ' ' + t) : t)}
+                          existingEntryId={n.id}
+                          onAudioData={({ text }) => {
+                            // Append transcribed text to editor and refresh to show new audio
+                            if (text) {
+                              onTextChange(editingText ? (editingText + '\n\n' + text) : text)
+                              // Force editor remount to show updated text
+                              setTimeout(() => setEditorKey(k => k + 1), 0)
+                            }
+                            onRefreshNotes?.()
+                          }}
                           className="text-gray-300 hover:text-gray-100 text-xs"
                           compact
                         />
@@ -646,32 +725,107 @@ export function DiaryEntriesAccordion({
                   />
                 )}
                 
-                {/* Audio section - compact with inline delete */}
-                {n.audioFilePath && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <AudioPlayerH5 
-                        audioFilePath={n.audioFilePath} 
-                        compact
-                      />
+                {/* Audio section - shows audio attachments and add buttons in edit mode */}
+                <div className="space-y-2">
+                  {/* Show existing audio attachments */}
+                  {n.audioAttachments && n.audioAttachments.length > 0 && (
+                    <>
+                      <div className="text-xs text-gray-400 font-medium">
+                        Angehängte Audios ({n.audioAttachments.length})
+                      </div>
+                      {n.audioAttachments.map((audio, idx) => (
+                        <div key={audio.id} className="flex items-center gap-2 p-2 bg-slate-700/30 rounded">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
+                              <span>🎵 {audio.capturedAt ? fmtDateOrTime(audio.capturedAt) : `Audio ${idx + 1}`}</span>
+                              {audio.duration && (
+                                <span>({Math.floor(audio.duration / 60)}:{String(Math.floor(audio.duration % 60)).padStart(2, '0')})</span>
+                              )}
+                              {audio.transcript && (
+                                <span className="truncate max-w-[150px]" title={audio.transcript}>
+                                  &quot;{audio.transcript.substring(0, 30)}...&quot;
+                                </span>
+                              )}
+                            </div>
+                            {audio.filePath && (
+                              <AudioPlayerH5 
+                                audioFilePath={audio.filePath} 
+                                compact
+                              />
+                            )}
+                          </div>
+                          {editingNoteId === n.id && (
+                            <button 
+                              className="btn btn-ghost btn-xs text-red-400 hover:text-red-300"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                e.preventDefault()
+                                onDeleteAudio?.(n.id, audio.id)
+                              }}
+                              title="Audio löschen"
+                            >
+                              <TablerIcon name="trash" size={16} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  
+                  {/* Add audio buttons - only in edit mode */}
+                  {editingNoteId === n.id && (
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <span>{n.audioAttachments && n.audioAttachments.length > 0 ? 'Weiteres Audio:' : 'Audio hinzufügen:'}</span>
+                      {audioUploadingEntryId === n.id ? (
+                        <span className="loading loading-spinner loading-xs text-amber-500" />
+                      ) : (
+                        <>
+                          <MicrophoneButton
+                            existingEntryId={n.id}
+                            onAudioData={({ text }) => {
+                              // Append text to editor and force remount
+                              if (text) {
+                                onTextChange(editingText ? (editingText + '\n\n' + text) : text)
+                                setTimeout(() => setEditorKey(k => k + 1), 0)
+                              }
+                              onRefreshNotes?.()
+                            }}
+                            className="text-green-500 hover:text-green-400"
+                            compact
+                          />
+                          <label className="cursor-pointer text-green-500 hover:text-green-400" title="Audio-Datei hochladen">
+                            <TablerIcon name="cloud-upload" size={20} />
+                            <input
+                              type="file"
+                              accept=".mp3,.m4a,.webm,.ogg,.wav,audio/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0]
+                                if (file) {
+                                  const transcript = await handleAudioFileUpload(n.id, file)
+                                  if (transcript) {
+                                    onTextChange(editingText ? (editingText + '\n\n' + transcript) : transcript)
+                                    setTimeout(() => setEditorKey(k => k + 1), 0)
+                                  }
+                                }
+                                e.target.value = ''
+                              }}
+                            />
+                          </label>
+                        </>
+                      )}
                     </div>
-                    <button 
-                      className="btn btn-ghost btn-xs text-red-400 hover:text-red-300"
-                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); onDeleteAudio?.(n.id); }}
-                      title="Audio löschen"
-                    >
-                      <TablerIcon name="trash" size={16} />
-                    </button>
-                  </div>
-                )}
+                  )}
+                </div>
                 
                 {/* Original transcript - lazy loaded with edit capability */}
-                {(n.audioFileId || n.originalTranscript) && (
+                {(n.audioFileId || n.originalTranscript || (n.audioAttachments && n.audioAttachments.length > 0)) && (
                   <OriginalTranscriptPanel
                     noteId={n.id}
                     initialTranscript={n.originalTranscript}
                     initialTranscriptModel={n.originalTranscriptModel}
                     audioFileId={n.audioFileId}
+                    audioAttachments={n.audioAttachments}
                     onRestoreToContent={(text) => {
                       if (editingNoteId === n.id) {
                         onTextChange(text)

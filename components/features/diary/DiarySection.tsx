@@ -28,7 +28,7 @@ interface DiarySectionProps {
   newDiaryTime: string
   newDiaryCapturedDate: string
   newDiaryCapturedTime: string
-  newDiaryAudioFileId: string | null
+  newDiaryAudioFileIds: string[]
   newDiaryOriginalTranscriptModel: string | null
   editorKey: number
   keepAudio: boolean
@@ -48,7 +48,8 @@ interface DiarySectionProps {
   onNewDiaryTimeChange: (time: string) => void
   onNewDiaryCapturedDateChange: (date: string) => void
   onNewDiaryCapturedTimeChange: (time: string) => void
-  onNewDiaryAudioFileIdChange: (id: string | null) => void
+  onAddNewDiaryAudioFileId: (id: string) => void
+  onAddNewDiaryAudioTranscript: (assetId: string, transcript: string, transcriptModel: string | null) => void
   onNewDiaryOriginalTranscriptModelChange: (model: string | null) => void
   onNewDiaryOcrAssetIdsChange?: (ids: string[]) => void
   onEditorKeyIncrement: () => void
@@ -69,8 +70,14 @@ interface DiarySectionProps {
   onUploadPhotos: (noteId: string, files: FileList | File[]) => void
   onDeletePhoto: (photoId: string) => void
   onViewPhoto: (noteId: string, index: number, url?: string) => void
-  onDeleteAudio: (noteId: string) => void
-  onHandleRetranscribe: (noteId: string, model: string) => Promise<void>
+  onDeleteAudio: (noteId: string, attachmentId?: string) => void
+  onHandleRetranscribe: (payload: {
+    noteId: string
+    attachmentId?: string
+    assetId?: string
+    newText: string
+    model?: string
+  }) => Promise<void>
   onGenerateTitle: () => Promise<void>
   onOriginalPreserved: (orig: string) => void
   onUpdateNoteContent: (noteId: string, newContent: string) => Promise<boolean>
@@ -87,7 +94,7 @@ export function DiarySection({
   newDiaryTime,
   newDiaryCapturedDate,
   newDiaryCapturedTime,
-  newDiaryAudioFileId,
+  newDiaryAudioFileIds,
   newDiaryOriginalTranscriptModel: _newDiaryOriginalTranscriptModel,
   editorKey,
   keepAudio,
@@ -107,7 +114,8 @@ export function DiarySection({
   onNewDiaryTimeChange,
   onNewDiaryCapturedDateChange,
   onNewDiaryCapturedTimeChange,
-  onNewDiaryAudioFileIdChange,
+  onAddNewDiaryAudioFileId,
+  onAddNewDiaryAudioTranscript,
   onNewDiaryOriginalTranscriptModelChange,
   onNewDiaryOcrAssetIdsChange,
   onEditorKeyIncrement,
@@ -269,7 +277,7 @@ export function DiarySection({
         )}
         
         {/* Direct re-transcribe button for newly uploaded audio */}
-        {newDiaryAudioFileId && (
+        {newDiaryAudioFileIds.length > 0 && (
           <div className="flex items-center gap-2 p-2 bg-slate-700/30 rounded">
             <span className="text-xs text-gray-400">
               Audio bereit {isRetranscribing && '(transkribiere...)'}
@@ -346,11 +354,13 @@ export function DiarySection({
             time={newDiaryTime}
             keepAudio={keepAudio}
             onAudioData={({ text, audioFileId, capturedAt, model }: { text: string; audioFileId?: string | null; capturedAt?: string; model?: string }) => {
+              const isFirstAudio = newDiaryAudioFileIds.length === 0
               onNewDiaryTextChange(newDiaryText ? (newDiaryText + '\n\n' + text) : text)
               if (audioFileId) {
-                onNewDiaryAudioFileIdChange(audioFileId)
+                onAddNewDiaryAudioFileId(audioFileId)
+                onAddNewDiaryAudioTranscript(audioFileId, text, model || null)
               }
-              if (model) {
+              if (isFirstAudio && model) {
                 onNewDiaryOriginalTranscriptModelChange(model)
               }
               if (capturedAt) {
@@ -363,8 +373,10 @@ export function DiarySection({
                 onNewDiaryCapturedDateChange(`${y}-${m}-${day}`)
                 onNewDiaryCapturedTimeChange(`${hh}:${mm}`)
               }
-              // Set original transcript when first transcribing
-              onOriginalPreserved(text)
+              // Set original transcript only for the first audio (legacy)
+              if (isFirstAudio) {
+                onOriginalPreserved(text)
+              }
               onEditorKeyIncrement()
             }}
             className="text-gray-300 hover:text-gray-100"
@@ -376,11 +388,13 @@ export function DiarySection({
             time={newDiaryTime}
             keepAudio={keepAudio}
             onAudioUploaded={({ text, audioFileId, capturedAt, model }: { text: string; audioFileId?: string | null; capturedAt?: string; model?: string }) => {
+              const isFirstAudio = newDiaryAudioFileIds.length === 0
               onNewDiaryTextChange(newDiaryText ? (newDiaryText + '\n\n' + text) : text)
               if (audioFileId) {
-                onNewDiaryAudioFileIdChange(audioFileId)
+                onAddNewDiaryAudioFileId(audioFileId)
+                onAddNewDiaryAudioTranscript(audioFileId, text, model || null)
               }
-              if (model) {
+              if (isFirstAudio && model) {
                 onNewDiaryOriginalTranscriptModelChange(model)
               }
               if (capturedAt) {
@@ -393,8 +407,10 @@ export function DiarySection({
                 onNewDiaryCapturedDateChange(`${y}-${m}-${day}`)
                 onNewDiaryCapturedTimeChange(`${hh}:${mm}`)
               }
-              // Set original transcript when first transcribing
-              onOriginalPreserved(text)
+              // Set original transcript only for the first audio (legacy)
+              if (isFirstAudio) {
+                onOriginalPreserved(text)
+              }
               onEditorKeyIncrement()
             }}
             compact
@@ -489,7 +505,7 @@ export function DiarySection({
           )}
           
           {/* Cancel button - icon only, hidden when nothing to cancel */}
-          {(newDiaryText.trim() || newDiaryAudioFileId || newDiaryTime) && (
+          {(newDiaryText.trim() || newDiaryAudioFileIds.length > 0 || newDiaryTime) && (
             <button 
               type="button"
               onClick={onClearDiaryForm}

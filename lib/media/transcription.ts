@@ -1,7 +1,8 @@
 import { Together } from 'together-ai'
 import { createClient as createDeepgramClient } from '@deepgram/sdk'
-import { readFile } from 'fs/promises'
+import { readFile, mkdir, unlink } from 'fs/promises'
 import path from 'path'
+import ffmpeg from 'fluent-ffmpeg'
 import {
   getAudioMetadata,
   needsChunking,
@@ -177,9 +178,29 @@ export async function transcribeAudioBuffer(
       return { text: '', error: 'Missing OPENAI_API_KEY' }
     }
 
+    const normalizeOpenAiUpload = (inputFilename: string, inputMimeType: string) => {
+      let normalizedMimeType = inputMimeType
+      if (normalizedMimeType === 'audio/x-m4a' || normalizedMimeType === 'audio/m4a') {
+        normalizedMimeType = 'audio/mp4'
+      }
+
+      const ext = path.extname(inputFilename).toLowerCase()
+      if (!ext) {
+        if (normalizedMimeType === 'audio/mp4') {
+          return { filename: `${inputFilename}.m4a`, mimeType: normalizedMimeType }
+        }
+        if (normalizedMimeType === 'audio/mpeg') {
+          return { filename: `${inputFilename}.mp3`, mimeType: normalizedMimeType }
+        }
+      }
+
+      return { filename: inputFilename, mimeType: normalizedMimeType }
+    }
+
     const formData = new FormData()
-    const blob = new Blob([new Uint8Array(bytes)], { type: mimeType })
-    formData.append('file', blob, filename)
+    const normalized = normalizeOpenAiUpload(filename, mimeType)
+    const file = new File([new Uint8Array(bytes)], normalized.filename, { type: normalized.mimeType })
+    formData.append('file', file)
     formData.append('model', model)
     formData.append('language', effectiveLanguage)
     
@@ -230,6 +251,18 @@ export interface TranscribeFileResult {
   duration: number
   error?: string
   details?: string
+}
+
+async function convertAudioToWav(inputPath: string, outputPath: string): Promise<void> {
+  await mkdir(path.dirname(outputPath), { recursive: true })
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .outputOptions(['-acodec pcm_s16le', '-ac 1', '-ar 16000'])
+      .format('wav')
+      .on('end', () => resolve())
+      .on('error', (err) => reject(new Error(`Failed to convert audio: ${err.message}`)))
+      .save(outputPath)
+  })
 }
 
 // Transcribe an audio file with automatic chunking for long files
@@ -297,12 +330,35 @@ export async function transcribeAudioFile(
     const chunkBuffer = await readFile(chunk.filePath)
     const chunkFilename = path.basename(chunk.filePath)
 
-    const result = await transcribeAudioBuffer(
+    let result = await transcribeAudioBuffer(
       new Uint8Array(chunkBuffer),
       chunkFilename,
       mimeType,
       { model, language, prompt, glossary }
     )
+
+    const shouldRetryAsWav =
+      !isWhisperModel(model) &&
+      !isDeepgramModel(model) &&
+      Boolean(result.error) &&
+      (result.details?.includes('Invalid file format') || result.error?.includes('Invalid file format'))
+
+    if (shouldRetryAsWav) {
+      const wavPath = path.join(uploadsDir, 'temp', 'openai', `${uuidv4()}.wav`)
+      try {
+        log('OpenAI rejected format; re-encoding to WAV and retrying...')
+        await convertAudioToWav(chunk.filePath, wavPath)
+        const wavBuffer = await readFile(wavPath)
+        result = await transcribeAudioBuffer(
+          new Uint8Array(wavBuffer),
+          path.basename(wavPath),
+          'audio/wav',
+          { model, language, prompt, glossary }
+        )
+      } finally {
+        await unlink(wavPath).catch(() => undefined)
+      }
+    }
 
     if (result.error) {
       await cleanupChunks(chunks, filePath)

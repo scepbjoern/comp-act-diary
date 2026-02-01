@@ -170,7 +170,11 @@ export async function POST(req: NextRequest) {
     const transcriptionLanguage = modelLanguages[model]
 
     // Transcribe audio using shared library
-    const mimeType = file.type || (extension === 'webm' ? 'audio/webm' : extension === 'm4a' ? 'audio/m4a' : 'audio/mpeg')
+    // Normalize mimeType for OpenAI compatibility (audio/x-m4a and audio/m4a → audio/mp4)
+    let mimeType = file.type || (extension === 'webm' ? 'audio/webm' : extension === 'm4a' ? 'audio/mp4' : 'audio/mpeg')
+    if (mimeType === 'audio/x-m4a' || mimeType === 'audio/m4a') {
+      mimeType = 'audio/mp4'
+    }
 
     const transcriptionResult = await transcribeAudioFile({
       filePath: fullPath,

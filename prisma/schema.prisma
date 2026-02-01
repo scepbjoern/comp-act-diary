@@ -1464,6 +1464,12 @@ model MediaAttachment {
   displayOrder Int       @default(0)
   /// Zeitraum-Zuordnung (optional, für explizite Zeit-Verankerung)
   timeBoxId    String?
+  /// Original-Transkript (bei Audio-Attachments, direkt von Speech-to-Text)
+  transcript       String?
+  /// Modell das für Transkription verwendet wurde (z.B. "gpt-4o-transcribe")
+  transcriptModel  String?
+  /// Feld-ID wenn Aufnahme zu spezifischem Template-Feld gehört (für zukünftige Template-Integration)
+  fieldId          String?
   /// Erstellungszeitpunkt
   createdAt    DateTime  @default(now())
 
@@ -1475,6 +1481,7 @@ model MediaAttachment {
   @@unique([assetId, entityId, role])
   @@index([userId, entityId])
   @@index([timeBoxId])
+  @@index([entityId, fieldId])
 }
 
 /// KI-generiertes Bild für eine Entität (Tag, Reflexion, etc.)

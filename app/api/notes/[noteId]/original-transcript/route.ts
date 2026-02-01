@@ -25,10 +25,21 @@ export async function GET(req: NextRequest, context: { params: Promise<{ noteId:
   if (!entry) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (entry.userId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
+  const attachment = await prisma.mediaAttachment.findFirst({
+    where: {
+      entityId: noteId,
+      userId: user.id,
+      asset: { mimeType: { startsWith: 'audio/' } },
+    },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, transcript: true, transcriptModel: true },
+  })
+
   return NextResponse.json({ 
     noteId: entry.id,
-    originalTranscript: entry.originalTranscript,
-    originalTranscriptModel: entry.originalTranscriptModel 
+    attachmentId: attachment?.id ?? null,
+    originalTranscript: attachment?.transcript ?? entry.originalTranscript,
+    originalTranscriptModel: attachment?.transcriptModel ?? entry.originalTranscriptModel,
   })
 }
 
@@ -63,17 +74,38 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ noteId:
     ? body.originalTranscriptModel
     : undefined // undefined means don't change existing value
 
-  await prisma.journalEntry.update({
-    where: { id: noteId },
-    data: { 
-      originalTranscript,
-      ...(originalTranscriptModel !== undefined && { originalTranscriptModel })
-    }
+  const attachment = await prisma.mediaAttachment.findFirst({
+    where: {
+      entityId: noteId,
+      userId: user.id,
+      asset: { mimeType: { startsWith: 'audio/' } },
+    },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true },
   })
+
+  if (attachment) {
+    await prisma.mediaAttachment.update({
+      where: { id: attachment.id },
+      data: {
+        transcript: originalTranscript,
+        ...(originalTranscriptModel !== undefined && { transcriptModel: originalTranscriptModel }),
+      },
+    })
+  } else {
+    await prisma.journalEntry.update({
+      where: { id: noteId },
+      data: { 
+        originalTranscript,
+        ...(originalTranscriptModel !== undefined && { originalTranscriptModel })
+      }
+    })
+  }
 
   return NextResponse.json({ 
     ok: true,
     noteId,
+    attachmentId: attachment?.id ?? null,
     originalTranscript,
     originalTranscriptModel: originalTranscriptModel ?? null
   })

@@ -43,7 +43,7 @@ model MediaAsset {
 
 ---
 
-## Lösung
+## Lösung (Implementiert)
 
 ### Option A: Transkript am MediaAsset speichern
 
@@ -88,7 +88,7 @@ model MediaAttachment {
 **Nachteile**:
 - Etwas mehr Redundanz
 
-### Empfehlung: **Option B**
+### Empfehlung: **Option B (umgesetzt)**
 
 Begründung: `fieldId` ist wichtig für Template-Integration, und Transkript gehört zur Verknüpfung Entry↔Asset.
 
@@ -125,7 +125,7 @@ model MediaAttachment {
 
 ---
 
-## Migration
+## Migration (Ist-Zustand)
 
 ### Schritt 1: Schema erweitern
 
@@ -140,30 +140,9 @@ ALTER TABLE "MediaAttachment"
 
 ```typescript
 // Migration: JournalEntry.originalTranscript → MediaAttachment.transcript
-async function migrateTranscripts() {
-  const entries = await prisma.journalEntry.findMany({
-    where: { originalTranscript: { not: null } },
-    include: { 
-      mediaAttachments: {
-        where: { asset: { mimeType: { startsWith: 'audio/' } } }
-      }
-    }
-  })
-  
-  for (const entry of entries) {
-    // Transkript zum ersten Audio-Attachment verschieben
-    const audioAttachment = entry.mediaAttachments[0]
-    if (audioAttachment) {
-      await prisma.mediaAttachment.update({
-        where: { id: audioAttachment.id },
-        data: {
-          transcript: entry.originalTranscript,
-          transcriptModel: entry.originalTranscriptModel
-        }
-      })
-    }
-  }
-}
+// Siehe: scripts/migrate-transcripts-to-attachments.ts
+// - migriert nur, wenn das erste Audio-Attachment noch KEIN Transcript hat
+// - lässt JournalEntry.originalTranscript für Legacy-Kompatibilität bestehen
 ```
 
 ### Schritt 3: Alte Felder deprecaten
@@ -182,47 +161,42 @@ model JournalEntry {
 
 ---
 
-## API-Anpassungen
+## API-Anpassungen (Ist)
 
-### Upload-Audio Endpoint
+### Upload-Audio Endpoint (neue Einträge)
 
-`POST /api/diary/upload-audio` → Rückgabe erweitern:
+`POST /api/diary/upload-audio` → erstellt **MediaAsset**, noch **kein MediaAttachment**.
+Die Attachments entstehen erst beim Speichern des Eintrags.
 
 ```typescript
-// Aktuell
-return { text, audioFileId, duration, model }
-
-// Neu: attachmentId zurückgeben
-return { 
-  text,           // Transkript
-  audioFileId,    // MediaAsset.id (für Rückwärtskompatibilität)
-  attachmentId,   // MediaAttachment.id (neu)
-  duration, 
-  model 
+return {
+  text,         // Transkript
+  audioFileId,  // MediaAsset.id (wird beim Speichern verknüpft)
+  model,
+  ...
 }
 ```
 
-### Neuer Endpoint: Audio zu Entry hinzufügen
+### Endpoint: Audio zu bestehendem Entry hinzufügen
 
-`POST /api/journal/{id}/audio`
+`POST /api/journal-entries/{id}/audio`
 
 ```typescript
-interface AddAudioRequest {
-  file: File
-  fieldId?: string  // Optional: Zuordnung zu Template-Feld
-  appendText?: boolean  // true = Text anhängen, false = nur speichern
-}
+// Response enthält attachmentId, transcript, model
+// appendText steuert ob der Text am JournalEntry.content angehängt wird
+```
 
-interface AddAudioResponse {
-  attachmentId: string
-  transcript: string
-  model: string
-}
+### Endpoint: Transcript eines Attachments aktualisieren
+
+`PATCH /api/journal-entries/{id}/audio`
+
+```typescript
+{ attachmentId, transcript, transcriptModel }
 ```
 
 ---
 
-## UI-Anpassungen
+## UI-Anpassungen (Ist)
 
 ### DiarySection / DynamicJournalForm
 
@@ -244,11 +218,13 @@ interface AddAudioResponse {
 
 - Neue Aufnahme → Text wird an Cursor/Ende angehängt
 - Original-Transkripte bleiben pro Audio erhalten
+- „Übernehmen“ wird nur angezeigt, wenn **genau ein** Audio vorhanden ist
+- „Re-Transkribieren“ überschreibt **nur das zugehörige Original-Transkript**, nicht den Entry-Content
 - "Verbessern" betrifft den kombinierten Text
 
 ---
 
-## Implementierungsplan
+## Implementierungsplan (erledigt)
 
 | Schritt | Beschreibung | Aufwand |
 |---------|--------------|---------|
@@ -273,3 +249,18 @@ interface AddAudioResponse {
 ---
 
 *Konzept v1 – 28. Januar 2026*
+*Implementiert: 28. Januar 2026*
+
+---
+
+## Implementierungsstatus
+
+✅ **Vollständig implementiert:**
+- Schema erweitert: `MediaAttachment.transcript`, `transcriptModel`, `fieldId`
+- Migration-Script: `scripts/migrate-transcripts-to-attachments.ts` (migriert nur fehlende Attachment-Transkripte)
+- API: `POST /api/journal-entries/[id]/audio` (Audio zu Entry hinzufügen)
+- API: `GET /api/journal-entries/[id]/audio` (Audio-Attachments auflisten)
+- API: `DELETE /api/journal-entries/[id]/audio?attachmentId=...` (Audio löschen)
+- UI: Multi-Audio-Anzeige in DiaryEntriesAccordion
+- Rückwärtskompatibilität: `JournalEntry.originalTranscript` bleibt erhalten (Legacy/Fallback, z. B. OCR)
+- New-Entry Flow: `audioFileIds` + `audioTranscripts` werden bei `POST /api/day/[id]/notes` verwendet

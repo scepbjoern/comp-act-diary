@@ -1,8 +1,9 @@
 # Planned Features
 
 ## Windsurf-related
-**Skills und Workflows**: Sich einarbeiten in https://docs.windsurf.com/windsurf/cascade/skills und https://agentskills.io/home und https://docs.windsurf.com/windsurf/cascade/workflows und überlegen, wann skills und wann workflows
+**Skills und Workflows**: Sich einarbeiten in https://docs.windsurf.com/windsurf/cascade/skills und https://agentskills.io/home und https://docs.windsurf.com/windsurf/cascade/workflows und überlegen, wann skills und wann workflows. Gutes Video: https://youtu.be/-iTNOaCmLcw?si=4uPQO8PInh88UddT
 **Agents**: Sich einarbeiten in https://docs.windsurf.com/windsurf/cascade/agents-md
+**Plan MOde**: Pro tip: Type megaplan in the Cascade input box to trigger an advanced form that asks clarifying questions to create a more aligned, comprehensive plan.
 
 ## MCP
 **Playwright oder Puppeteer**: Könnte spannend sein.
@@ -13,6 +14,8 @@
 
 ## Varia
 **.env**: an .env.example anpassen, damit alle Beschreibungen enthalten sind. Zudem folgende Aussage prüfen: "MISTRAL_API_KEY und MAPBOX_ACCESS_TOKEN werden aktuell im Code nicht verwendet (Suche ergab keine Treffer)"
+
+**Vibe Voice ASR Speech-to-text**: https://www.youtube.com/watch?v=BYPlfLQm0CQ&t=1441s
 
 ### Verlinkungen auf andere Ereignisse
 **On This Day - Rediscover memories from previous years and months Transkriptionon the same date**: für jeden Tag, wenn man gerade in einem aktuellen Tag ist, immer in der Datenbank geschaut wird, ob es vom Vorjahr und vom Vormonat Tagebucheinträge gibt von diesem einen Tag. Und falls ja, wird dieser Eintrag, aber auch diejenigen der Vorjahre, immer kurz angezeigt, so das Wichtigste zusammengefasst. Dies soll erlauben, dass man mit der Zeit ein bisschen das Bewusstsein schärft, so im Sinne von Carpe Diem, dass man sieht auch, dass vor einem Jahr vielleicht es besser war oder auch schlechter war. Und beides kann ja ermuntern und zur Reflexion beitragen. -> Bei journiv entspricht dies: "On This Day — Rediscover memories from previous years on the same date"
@@ -35,6 +38,8 @@
     - https://findpenguins.com/
     - https://www.polarsteps.com/de/
 
+**Erste Überlegungen**: Aus Sicht des Tagebuchs, das ausgedruckt wird, möchte ich natürlich die Möglichkeit haben, einen PDF-Export zu machen. Und es braucht sicher ein Titelblatt, das man gestalten muss. Dann brauche ich die Möglichkeit, die Reise in Abschnitte zu unterteilen. Das heisst umgekehrt, dass man mehrere Tagebucheinträge kombinieren kann zu einem Abschnitt. Es braucht auch die Möglichkeit, dass man innerhalb der Abschnitte zum Beispiel zunächst eine Zusammenfassung für den Abschnitt insgesamt, zum Beispiel ein bestimmtes Land oder eine Woche, ein Festival, erstellen kann. Und einen Titel für den Abschnitt geben kann. Dann ist es möglich sein, für einzelne Tage in diesem Abschnitt wiederum Zusammenfassungen des Tages zu machen und auch eine Karte einzublenden, die zeigt, welche Orte man an diesem Tag besucht hat. Dasselbe gilt übrigens auch für den Abschnitt und dort ist es möglich, eine Standortkarte mitzugeben. Und pro Tag muss es auch möglich sein, mehrere Tagebucheinträge zu machen für verschiedene Stationen, die man an diesem Tag gesehen hat. Und dort sollte es auch möglich sein, dass man mit einem QR-Code Webseiten aufrufen kann, zum Beispiel Google Maps für dieses Restaurant oder Hotel oder was auch immer. Selbstverständlich ist ein wichtiger Bestandteil Fotos und jedes Foto soll zu einem Tag und oder Ort gehören. Und was glaube ich aktuell auch noch komplett fehlt, ist, dass bei jedem Foto, wenn man das möchte, noch eine kleine Notiz stehen kann, so wie eine Caption, was man auf dem Foto sieht oder wo das aufgenommen wurde.
+
 **Instagram & WhatsApp Status**: Möglichkeit, einzelne Post direkt auf Instagram oder WhatsApp Status zu setzen
 
 ## Offene Punkte aus Datenmodell
@@ -56,6 +61,8 @@ Im Datenmodell sind ja viele Teile wie zum Beispiel die ACT-Unterstützung schon
 Auch Traumtagebuch als Journal-Type
 
 ## Coach-Features / Psychologische Analysen
+**Persona Plex**: https://www.youtube.com/watch?v=BYPlfLQm0CQ&t=410s
+
 **Identify Patterns**: Learn from the patterns in the experiences that bring you joy and those that challenge you. -> https://www.reflection.app
 
 **Von Coach-Gespräch zu Tagebucheintrag**: Im Coach-Mode Tagebuch schreiben/sagen, dann gleich in Dialog kommen mit AI und das Gesamtergebnis als Tagebucheintrag abspeichern mit komplettem Transkript, Zusammenfassung und Analyse. Inspiriert aus https://www.mindsera.com/

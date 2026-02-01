@@ -3,10 +3,21 @@ import React, { useState, useCallback } from 'react'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 import { RetranscribeButton } from '@/components/features/transcription/RetranscribeButton'
 
+// Type for audio attachment with transcript
+type AudioAttachmentWithTranscript = {
+  id: string
+  assetId: string
+  filePath?: string | null
+  transcript?: string | null
+  transcriptModel?: string | null
+  capturedAt?: string | null
+}
+
 /**
  * OriginalTranscriptPanel
- * - Collapsible panel showing original transcript
- * - Lazy loads the transcript on first expand
+ * - Collapsible panel showing original transcript(s)
+ * - Supports multiple transcripts from audioAttachments (multi-audio)
+ * - Lazy loads the transcript on first expand if not provided
  * - Allows editing and saving the original transcript
  * - Allows restoring original to content
  */
@@ -16,21 +27,34 @@ export function OriginalTranscriptPanel(props: {
   initialTranscript?: string | null
   /** Model used for the initial transcript */
   initialTranscriptModel?: string | null
-  /** Audio file ID for re-transcription */
+  /** Audio file ID for re-transcription (legacy single audio) */
   audioFileId?: string | null
+  /** All audio attachments with their transcripts (multi-audio support) */
+  audioAttachments?: AudioAttachmentWithTranscript[]
   /** Called when user wants to use original as the new content */
   onRestoreToContent: (originalText: string) => void
   /** Called when original transcript is updated */
   onOriginalUpdated?: (newOriginal: string) => void
   /** Called when re-transcription completes */
-  onRetranscribe?: (noteId: string, newText: string, model?: string) => void
+  onRetranscribe?: (payload: {
+    noteId: string
+    attachmentId?: string
+    assetId?: string
+    newText: string
+    model?: string
+  }) => void
 }) {
-  const { noteId, initialTranscript, initialTranscriptModel, audioFileId, onRestoreToContent, onOriginalUpdated, onRetranscribe } = props
+  const { noteId, initialTranscript, initialTranscriptModel, audioFileId, audioAttachments, onRestoreToContent, onOriginalUpdated, onRetranscribe } = props
+  
+  // Use transcripts from audioAttachments if available (multi-audio)
+  const hasMultipleTranscripts = audioAttachments && audioAttachments.length > 0
+  const attachmentTranscripts = audioAttachments?.filter(a => a.transcript) || []
   
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [transcript, setTranscript] = useState<string | null>(initialTranscript ?? null)
   const [transcriptModel, setTranscriptModel] = useState<string | null>(initialTranscriptModel ?? null)
+  const [attachmentOverrides, setAttachmentOverrides] = useState<Record<string, { transcript: string; transcriptModel: string | null }>>({})
   // hasLoaded should only be true if we have an actual string, not null
   const [hasLoaded, setHasLoaded] = useState(typeof initialTranscript === 'string' && initialTranscript.length > 0)
   const [isEditing, setIsEditing] = useState(false)
@@ -130,7 +154,7 @@ export function OriginalTranscriptPanel(props: {
         />
         <TablerIcon name="file-text" size={16} />
         <span>Original-Transkript</span>
-        {transcriptModel && (
+        {!hasMultipleTranscripts && transcriptModel && (
           <span className="text-xs text-base-content/50 ml-2">({transcriptModel})</span>
         )}
         {isLoading && (
@@ -141,7 +165,63 @@ export function OriginalTranscriptPanel(props: {
       {/* Expanded content */}
       {isExpanded && (
         <div className="pb-2 px-1">
-          {isLoading ? (
+          {/* Multi-audio mode: show all transcripts from attachments */}
+          {hasMultipleTranscripts ? (
+            <div className="space-y-3">
+              {attachmentTranscripts.length === 0 ? (
+                <div className="text-sm text-base-content/50 italic py-2">
+                  Keine Transkripte vorhanden
+                </div>
+              ) : (
+                attachmentTranscripts.map((att, idx) => {
+                  const override = attachmentOverrides[att.id]
+                  const displayTranscript = override?.transcript ?? att.transcript
+                  const displayModel = override?.transcriptModel ?? att.transcriptModel
+
+                  return (
+                  <div key={att.id} className="space-y-1">
+                    <div className="text-xs text-base-content/50 flex items-center gap-2">
+                      <span>Audio {idx + 1}</span>
+                      {displayModel && <span>({displayModel})</span>}
+                    </div>
+                    <div className="bg-base-100 border border-base-300 rounded p-2 text-sm whitespace-pre-wrap max-h-[150px] overflow-y-auto">
+                      {displayTranscript}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {attachmentTranscripts.length === 1 && displayTranscript && (
+                        <button
+                          onClick={() => onRestoreToContent(displayTranscript)}
+                          className="btn btn-ghost btn-xs text-warning"
+                          title="Dieses Transkript als Inhalt übernehmen"
+                        >
+                          <TablerIcon name="restore" size={14} />
+                          <span className="hidden sm:inline">Übernehmen</span>
+                        </button>
+                      )}
+                      {att.assetId && onRetranscribe && (
+                        <RetranscribeButton
+                          audioFileId={att.assetId}
+                          onRetranscribed={(newText, model) => {
+                            setAttachmentOverrides(prev => ({
+                              ...prev,
+                              [att.id]: { transcript: newText, transcriptModel: model ?? null },
+                            }))
+                            onRetranscribe({
+                              noteId,
+                              attachmentId: att.id,
+                              assetId: att.assetId,
+                              newText,
+                              model,
+                            })
+                          }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )})
+              )}
+            </div>
+          ) : isLoading ? (
             <div className="flex items-center gap-2 text-sm text-base-content/50 py-4">
               <span className="loading loading-spinner loading-sm"></span>
               <span>Lade Original-Transkript...</span>
@@ -159,7 +239,7 @@ export function OriginalTranscriptPanel(props: {
                     setTranscript(newText)
                     setTranscriptModel(model ?? null)
                     setHasLoaded(true)
-                    onRetranscribe(noteId, newText, model)
+                    onRetranscribe({ noteId, assetId: audioFileId, newText, model })
                   }}
                 />
               )}
@@ -236,7 +316,7 @@ export function OriginalTranscriptPanel(props: {
                     onRetranscribed={(newText, model) => {
                       setTranscript(newText)
                       setTranscriptModel(model ?? null)
-                      onRetranscribe(noteId, newText, model)
+                      onRetranscribe({ noteId, assetId: audioFileId, newText, model })
                     }}/>
                 )}
               </div>

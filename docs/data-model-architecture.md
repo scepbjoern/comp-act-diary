@@ -217,7 +217,7 @@ Die zentrale Architektur-Entscheidung ist die **Entity-Registry** für FK-basier
 | Entität | Wichtigste Attribute | Beziehungen |
 |---------|---------------------|-------------|
 | **MediaAsset** | id (=Entity.id), userId, **filePath?**, thumbnailData (Bytes)?, mimeType, width?, height?, duration?, externalProvider?, externalId?, externalUrl?, thumbnailUrl?, capturedAt?, **ocrText?, ocrMetadata (Json)?, ocrStatus (Enum)?, ocrProcessedAt?** | 1:N zu MediaAttachment, **1:1 zu GeneratedImage** |
-| **MediaAttachment** | id, assetId, entityId (→Entity), userId, role (COVER/GALLERY/ATTACHMENT/**THUMBNAIL/SOURCE**), displayOrder, timeBoxId? | N:1 zu MediaAsset, N:1 zu Entity |
+| **MediaAttachment** | id, assetId, entityId (→Entity), userId, role (COVER/GALLERY/ATTACHMENT/**THUMBNAIL/SOURCE**), displayOrder, timeBoxId?, **transcript?**, **transcriptModel?**, **fieldId?** | N:1 zu MediaAsset, N:1 zu Entity |
 | **GeneratedImage** | id, userId, entityId (→Entity), assetId, model, prompt, aspectRatio, steps, displayOrder | N:1 zu Entity, N:1 zu MediaAsset |
 
 ### 3.9 Messwerte

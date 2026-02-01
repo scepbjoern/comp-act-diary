@@ -26,6 +26,7 @@ export function MicrophoneButton(props: {
   keepAudio?: boolean
   date?: string // ISO date string YYYY-MM-DD
   time?: string // HH:MM time string
+  existingEntryId?: string // If set, use /api/journal-entries/[id]/audio endpoint
 }) {
   const {
     onAudioData,
@@ -38,6 +39,7 @@ export function MicrophoneButton(props: {
     keepAudio = false,
     date,
     time,
+    existingEntryId,
   } = props
 
   const defaultModels = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_TRANSCRIBE_MODELS)
@@ -316,7 +318,33 @@ export function MicrophoneButton(props: {
       fd.append('file', new File([blob], filename, { type: blob.type || 'audio/webm' }))
       fd.append('model', selectedModel)
 
-      if (keepAudio && date) {
+      // Use existing entry endpoint if existingEntryId is provided
+      if (existingEntryId) {
+        // Don't append text to DB - we update the editor locally instead
+        fd.append('appendText', 'false')
+        
+        setStatusMessage('Wird transkribiert...')
+        const res = await fetch(`/api/journal-entries/${existingEntryId}/audio`, { method: 'POST', body: fd, credentials: 'same-origin' })
+        if (!res.ok) {
+          const errorData = await res.json()
+          console.error('Server error response:', errorData)
+          const errorMessage = errorData.error || 'Upload fehlgeschlagen'
+          const details = errorData.details ? ` (${errorData.details})` : ''
+          throw new Error(errorMessage + details)
+        }
+        const data = await res.json()
+        if (onAudioData) {
+          onAudioData({ 
+            text: data.transcript, 
+            audioFileId: data.assetId,
+            audioFilePath: data.filePath,
+            capturedAt: startTime.toISOString(),
+            model: data.model || selectedModel,
+          })
+        } else if (onText) {
+          onText(data.transcript)
+        }
+      } else if (keepAudio && date) {
         fd.append('date', date)
         fd.append('time', time || '')
         fd.append('keepAudio', String(keepAudio))

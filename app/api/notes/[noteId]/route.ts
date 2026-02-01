@@ -159,7 +159,12 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ noteI
     }
   }
 
-  const notes = await loadNotesForTimeBox(previousTimeBoxId, user.id, entry.userId)
+  const previousDayEntry = await prisma.dayEntry.findFirst({ where: { userId: user.id, timeBoxId: previousTimeBoxId } })
+  const previousDayId = previousDayEntry
+    ? previousDayEntry.id
+    : (await prisma.dayEntry.create({ data: { userId: user.id, timeBoxId: previousTimeBoxId } })).id
+
+  const notes = await loadNotesForTimeBox(previousTimeBoxId, user.id, previousDayId)
   return NextResponse.json({ ok: true, note: { id: noteId }, notes })
 }
 
@@ -202,7 +207,12 @@ export async function DELETE(req: NextRequest, context: { params: Promise<{ note
   // Delete JournalEntry
   await prisma.journalEntry.delete({ where: { id: noteId } })
 
-  const notes = await loadNotesForTimeBox(entry.timeBoxId, user.id, entry.userId)
+  const dayEntry = await prisma.dayEntry.findFirst({ where: { userId: user.id, timeBoxId: entry.timeBoxId } })
+  const dayId = dayEntry
+    ? dayEntry.id
+    : (await prisma.dayEntry.create({ data: { userId: user.id, timeBoxId: entry.timeBoxId } })).id
+
+  const notes = await loadNotesForTimeBox(entry.timeBoxId, user.id, dayId)
   return NextResponse.json({ ok: true, deleted: noteId, notes })
 }
 
@@ -270,9 +280,26 @@ async function loadNotesForTimeBox(timeBoxId: string, userId: string, dayId: str
 
   return journalRows.map((j) => {
     const entryAttachments = attachmentsByEntry.get(j.id) || []
-    const audioAtt = entryAttachments.find(a => a.asset.mimeType?.startsWith('audio/'))
-    const photoAtts = entryAttachments.filter(a => a.asset.mimeType?.startsWith('image/'))
-    
+    const audioAtts = entryAttachments.filter(a => a.asset.mimeType?.startsWith('audio/'))
+    const audioAtt = audioAtts[0] || null
+    const photoAtts = entryAttachments.filter(a => {
+      if (!a.asset.mimeType?.startsWith('image/')) return false
+      if (a.role === 'SOURCE') return false
+      if (a.asset.filePath?.startsWith('ocr/')) return false
+      return true
+    })
+
+    const audioAttachments = audioAtts.map(a => ({
+      id: a.id,
+      assetId: a.asset.id,
+      filePath: a.asset.filePath,
+      duration: a.asset.duration,
+      transcript: a.transcript ?? null,
+      transcriptModel: a.transcriptModel ?? null,
+      capturedAt: a.asset.capturedAt?.toISOString() ?? null,
+      createdAt: a.createdAt?.toISOString() ?? null,
+    }))
+
     // Use occurredAt for display time, fallback to createdAt
     const displayTime = j.occurredAt ?? j.createdAt
     
@@ -289,15 +316,19 @@ async function loadNotesForTimeBox(timeBoxId: string, userId: string, dayId: str
       audioCapturedAtIso: audioAtt?.asset.capturedAt?.toISOString() ?? null,
       audioUploadedAtIso: audioAtt?.asset.createdAt?.toISOString() ?? null,
       text: j.content ?? '',
-      originalTranscript: j.originalTranscript ?? null,
-      originalTranscriptModel: j.originalTranscriptModel ?? null,
+      originalTranscript: audioAttachments[0]?.transcript ?? j.originalTranscript ?? null,
+      originalTranscriptModel: audioAttachments[0]?.transcriptModel ?? j.originalTranscriptModel ?? null,
       aiSummary: j.aiSummary ?? null,
       analysis: j.analysis ?? null,
       contentUpdatedAt: j.contentUpdatedAt?.toISOString() ?? null,
       audioFilePath: audioAtt?.asset.filePath ?? null,
       audioFileId: audioAtt?.asset.id ?? null,
       keepAudio: true,
-      photos: photoAtts.map((p) => ({ id: p.asset.id, url: p.asset.filePath || '' })),
+      audioAttachments,
+      photos: photoAtts.map((p) => ({ 
+        id: p.asset.id, 
+        url: p.asset.filePath ? `/uploads/${p.asset.filePath}` : '' 
+      })),
       // Sharing information
       sharedStatus: j.sharedStatus,
       ownerUserId: j.userId,

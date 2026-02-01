@@ -121,7 +121,10 @@ export async function GET(req: NextRequest) {
   // Map JournalEntry to old DayNote format for API compatibility
   const ownedNotes = journalRows.map((j) => {
     const entryAttachments = attachmentsByEntry.get(j.id) || []
-    const audioAtt = entryAttachments.find(a => a.asset.mimeType?.startsWith('audio/'))
+    // Get ALL audio attachments for multi-audio support
+    const audioAtts = entryAttachments.filter(a => a.asset.mimeType?.startsWith('audio/'))
+    // First audio for backward compatibility
+    const audioAtt = audioAtts[0] || null
     // Only include images that are ATTACHMENT or GALLERY, not SOURCE (OCR sources)
     const photoAtts = entryAttachments.filter(a => {
       if (!a.asset.mimeType?.startsWith('image/')) return false
@@ -131,6 +134,18 @@ export async function GET(req: NextRequest) {
       if (a.asset.filePath?.startsWith('ocr/')) return false
       return true
     })
+    
+    // Build audioAttachments array for multi-audio UI
+    const audioAttachments = audioAtts.map(a => ({
+      id: a.id,
+      assetId: a.asset.id,
+      filePath: a.asset.filePath,
+      duration: a.asset.duration,
+      transcript: a.transcript ?? null,
+      transcriptModel: a.transcriptModel ?? null,
+      capturedAt: a.asset.capturedAt?.toISOString() ?? null,
+      createdAt: a.createdAt?.toISOString() ?? null,
+    }))
     
     // Use occurredAt for display time, fallback to createdAt
     const displayTime = j.occurredAt ?? j.createdAt
@@ -156,6 +171,8 @@ export async function GET(req: NextRequest) {
       audioFilePath: audioAtt?.asset.filePath ?? null,
       audioFileId: audioAtt?.asset.id ?? null,
       keepAudio: true,
+      // Multi-audio support
+      audioAttachments,
       photos: photoAtts.map((p) => ({ 
         id: p.asset.id, 
         url: p.asset.filePath ? `/uploads/${p.asset.filePath}` : '' 

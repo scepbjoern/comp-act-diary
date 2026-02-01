@@ -31,6 +31,18 @@ export type SharedStatus = 'owned' | 'shared-view' | 'shared-edit'
 /** Access role for shared entries */
 export type AccessRole = 'VIEWER' | 'EDITOR'
 
+/** Audio attachment info for multi-audio support */
+export type AudioAttachment = {
+  id: string
+  assetId: string
+  filePath: string | null
+  duration: number | null
+  transcript: string | null
+  transcriptModel: string | null
+  capturedAt: string | null
+  createdAt: string | null
+}
+
 export type DayNote = {
   id: string
   dayId: string
@@ -40,12 +52,15 @@ export type DayNote = {
   techTime?: string
   text: string
   originalTranscript?: string | null
+  originalTranscriptModel?: string | null
   aiSummary?: string | null
   analysis?: string | null
   contentUpdatedAt?: string | null
   audioFilePath?: string | null
   audioFileId?: string | null
   keepAudio?: boolean
+  /** All audio attachments for multi-audio support */
+  audioAttachments?: AudioAttachment[]
   photos?: { id: string; url: string }[]
   occurredAtIso?: string
   capturedAtIso?: string
