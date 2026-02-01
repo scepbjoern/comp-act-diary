@@ -165,7 +165,7 @@ export function SiteNav({ user }: { user: UserLite }) {
           <Link href="/" className={navIconClass} title="Tagebuch" aria-label="Tagebuch">
             <IconNotebook size={20} />
           </Link>
-          <Link href="/reflections" className={navIconClass} title="Reflexionen" aria-label="Reflexionen">
+          <Link href="/journal" className={navIconClass} title="Journal" aria-label="Journal">
             <IconSparkles size={20} />
           </Link>
           <Link href="/analytics" className={navIconClass} title="Auswertungen" aria-label="Auswertungen">
@@ -394,7 +394,7 @@ export function SiteNav({ user }: { user: UserLite }) {
           <div className="flex flex-col gap-1">
             <Link href="/" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Tagebuch</Link>
             <Link href="/analytics" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Auswertungen</Link>
-            <Link href="/reflections" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Reflexionen</Link>
+            <Link href="/journal" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Journal</Link>
             <Link href="/prm" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Kontakte</Link>
             <Link href="/coach" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Coach</Link>
             <Link href="/locations" className="px-3 py-2 rounded hover:bg-pill text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white" onClick={close}>Orte</Link>

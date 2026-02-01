@@ -405,22 +405,106 @@ async function seedSystemMetrics() {
 async function seedJournalEntryTypes() {
   console.log('Seeding JournalEntryTypes...')
   const types = [
-    { code: 'daily_note', name: 'Tagesnotiz', icon: '📝' },
-    { code: 'reflection_week', name: 'Wochenreflexion', icon: '📅' },
-    { code: 'reflection_month', name: 'Monatsreflexion', icon: '📆' },
+    { code: 'daily_note', name: 'Tagesnotiz', icon: '📝', bgColorClass: 'bg-blue-900/20' },
+    { code: 'reflection_week', name: 'Wochenreflexion', icon: '📅', bgColorClass: 'bg-purple-900/20' },
+    { code: 'reflection_month', name: 'Monatsreflexion', icon: '📆', bgColorClass: 'bg-indigo-900/20' },
+    { code: 'diary', name: 'Tagebuch', icon: '📔', bgColorClass: 'bg-emerald-900/20' },
   ]
   const result: Record<string, string> = {}
   for (const t of types) {
     let type = await prisma.journalEntryType.findFirst({ where: { code: t.code, userId: null } })
     if (!type) {
       type = await prisma.journalEntryType.create({
-        data: { code: t.code, name: t.name, icon: t.icon }
+        data: { code: t.code, name: t.name, icon: t.icon, bgColorClass: t.bgColorClass }
       })
       console.log(`  Created: ${t.code}`)
+    } else if (!type.bgColorClass) {
+      // Update existing types with bgColorClass
+      type = await prisma.journalEntryType.update({
+        where: { id: type.id },
+        data: { bgColorClass: t.bgColorClass }
+      })
     }
     result[t.code] = type.id
   }
   return result
+}
+
+// System templates with field definitions
+async function seedSystemTemplates(journalTypes: Record<string, string>) {
+  console.log('Seeding System Templates...')
+
+  // Weekly reflection template with structured fields
+  const weeklyReflectionFields = [
+    { id: 'changed', label: 'Was hat sich verändert?', icon: '🔄', type: 'textarea', order: 0, required: true },
+    { id: 'gratitude', label: 'Wofür bin ich dankbar?', icon: '🙏', type: 'textarea', order: 1, required: true },
+    { id: 'vows', label: 'Meine Vorsätze', icon: '🎯', type: 'textarea', order: 2, required: false },
+    { id: 'remarks', label: 'Sonstige Bemerkungen', icon: '💭', type: 'textarea', order: 3, required: false },
+  ]
+
+  const weeklyReflectionAIConfig = {
+    contentModel: 'gpt-4o-mini',
+    titleModel: 'gpt-4o-mini',
+    summaryModel: 'gpt-4o-mini',
+    analysisModel: 'gpt-4o',
+    segmentationModel: 'gpt-4o-mini',
+  }
+
+  // Simple diary template (1 field, no label = minimal)
+  const diaryFields = [
+    { id: 'content', type: 'textarea', order: 0, required: false },
+  ]
+
+  // Monthly reflection template
+  const monthlyReflectionFields = [
+    { id: 'highlights', label: 'Highlights des Monats', icon: '✨', type: 'textarea', order: 0, required: true },
+    { id: 'challenges', label: 'Herausforderungen', icon: '💪', type: 'textarea', order: 1, required: false },
+    { id: 'learnings', label: 'Was habe ich gelernt?', icon: '📚', type: 'textarea', order: 2, required: false },
+    { id: 'goals', label: 'Ziele für nächsten Monat', icon: '🎯', type: 'textarea', order: 3, required: false },
+  ]
+
+  const templates = [
+    {
+      name: 'Wochenreflexion (Standard)',
+      description: 'Strukturierte Reflexion mit Veränderungen, Dankbarkeit und Vorsätzen',
+      typeId: journalTypes['reflection_week'],
+      fields: weeklyReflectionFields,
+      aiConfig: weeklyReflectionAIConfig,
+    },
+    {
+      name: 'Einfaches Tagebuch',
+      description: 'Minimales Template für freies Schreiben ohne Struktur',
+      typeId: journalTypes['diary'],
+      fields: diaryFields,
+      aiConfig: { contentModel: 'gpt-4o-mini', titleModel: 'gpt-4o-mini' },
+    },
+    {
+      name: 'Monatsreflexion',
+      description: 'Rückblick auf den Monat mit Highlights und Learnings',
+      typeId: journalTypes['reflection_month'],
+      fields: monthlyReflectionFields,
+      aiConfig: weeklyReflectionAIConfig,
+    },
+  ]
+
+  for (const t of templates) {
+    let template = await prisma.journalTemplate.findFirst({
+      where: { name: t.name, userId: null }
+    })
+    if (!template) {
+      template = await prisma.journalTemplate.create({
+        data: {
+          name: t.name,
+          description: t.description,
+          typeId: t.typeId,
+          fields: t.fields,
+          aiConfig: t.aiConfig,
+          origin: 'SYSTEM',
+        }
+      })
+      console.log(`  Created template: ${t.name}`)
+    }
+  }
 }
 
 async function createUserWithHabits(username: string, displayName: string, password: string) {
@@ -858,6 +942,9 @@ async function main() {
 
   // 2. Seed journal entry types
   const journalTypes = await seedJournalEntryTypes()
+
+  // 2b. Seed system templates for journal entries
+  await seedSystemTemplates(journalTypes)
 
   // 3. Create demo user with habits
   const { user: demoUser } = await createUserWithHabits('demo', 'Demo', 'demo')

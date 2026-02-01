@@ -1,12 +1,12 @@
 "use client"
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import NextImage from 'next/image'
 import { SaveIndicator, useSaveIndicator } from '@/components/ui/SaveIndicator'
 import { Icon } from '@/components/ui/Icon'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 import { LlmModelManager } from '@/components/features/ai/LlmModelManager'
-import { AIConfigSection } from '@/components/features/ai/AIConfigSection'
 import { ImageGenerationSettings } from '@/components/features/ai/ImageGenerationSettings'
 import { PasscodeSettings } from '@/components/features/security/PasscodeSettings'
 import { SharingDefaultsSection } from '@/components/features/settings/SharingDefaultsSection'
@@ -814,6 +814,45 @@ export default function SettingsPage() {
                 </div>
               </div>
             </details>
+
+<<<<<<< E:/bjoer/Documents/repos/comp-act-diary/app/settings/page.tsx
+=======
+            {/* Link to Journal Entry Types */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="layout-grid" size={18} />
+                  Eintragstypen
+                </span>
+              </summary>
+              <div className="collapse-content pt-2">
+                <p className="text-sm text-gray-400 mb-3">
+                  Verwalte die Typen für deine Journal-Einträge (z.B. Tagebuch, Reflexion, Notiz).
+                </p>
+                <Link href="/settings/types" className="pill">
+                  Typen verwalten →
+                </Link>
+              </div>
+            </details>
+
+>>>>>>> C:/Users/bjoer/.windsurf/worktrees/comp-act-diary/comp-act-diary-51aed217/app/settings/page.tsx
+            {/* Link to Journal Templates */}
+            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
+              <summary className="collapse-title font-medium">
+                <span className="inline-flex items-center gap-2">
+                  <TablerIcon name="template" size={18} />
+                  Journal-Templates
+                </span>
+              </summary>
+              <div className="collapse-content pt-2">
+                <p className="text-sm text-gray-400 mb-3">
+                  Verwalte Templates für Journal-Einträge mit benutzerdefinierten Feldern und KI-Konfiguration.
+                </p>
+                <Link href="/settings/templates" className="pill">
+                  Templates verwalten →
+                </Link>
+              </div>
+            </details>
           </div>
         </div>
 
@@ -903,19 +942,6 @@ export default function SettingsPage() {
                     <SaveIndicator saving={saving} savedAt={savedAt} />
                   </div>
                 </div>
-              </div>
-            </details>
-
-            {/* Accordion: Journal AI */}
-            <details className="collapse collapse-arrow bg-base-200 border border-base-300">
-              <summary className="collapse-title font-medium">
-                <span className="inline-flex items-center gap-2">
-                  <TablerIcon name="brain" size={18} />
-                  Journal AI-Konfiguration
-                </span>
-              </summary>
-              <div className="collapse-content pt-2">
-                <AIConfigSection />
               </div>
             </details>
 

@@ -388,6 +388,63 @@ export const helpCategories: HelpCategory[] = [
         description: 'Eigene Symptome, Gewohnheiten und Links',
         icon: 'add_circle',
         keywords: ['eigen', 'custom', 'symptom', 'gewohnheit', 'link']
+      },
+      {
+        id: 'templates',
+        slug: 'templates',
+        title: 'Journal-Templates',
+        description: 'Vorlagen für strukturierte Tagebucheinträge',
+        icon: 'template',
+        keywords: ['template', 'vorlage', 'felder', 'struktur', 'formular']
+      }
+    ]
+  },
+  {
+    id: 'templates',
+    slug: 'templates',
+    title: 'Journal-Templates',
+    description: 'Vorlagen für strukturierte Journal-Einträge mit benutzerdefinierten Feldern',
+    icon: 'template',
+    topics: [
+      {
+        id: 'templates-overview',
+        slug: 'uebersicht',
+        title: 'Übersicht',
+        description: 'Was sind Templates und wie funktionieren sie?',
+        icon: 'info',
+        keywords: ['template', 'vorlage', 'übersicht', 'einführung']
+      },
+      {
+        id: 'create-template',
+        slug: 'erstellen',
+        title: 'Template erstellen',
+        description: 'Eigene Templates mit Feldern definieren',
+        icon: 'add',
+        keywords: ['erstellen', 'neu', 'anlegen', 'felder', 'definieren']
+      },
+      {
+        id: 'use-template',
+        slug: 'verwenden',
+        title: 'Templates verwenden',
+        description: 'Einträge mit Templates erstellen',
+        icon: 'edit',
+        keywords: ['verwenden', 'nutzen', 'eintrag', 'erstellen']
+      },
+      {
+        id: 'ai-config',
+        slug: 'ki-konfiguration',
+        title: 'KI-Konfiguration',
+        description: 'KI-Modelle und Prompts für Templates anpassen',
+        icon: 'brain',
+        keywords: ['ki', 'ai', 'modell', 'prompt', 'konfiguration']
+      },
+      {
+        id: 'system-templates',
+        slug: 'system-templates',
+        title: 'System-Templates',
+        description: 'Vorgefertigte Templates anpassen',
+        icon: 'settings',
+        keywords: ['system', 'vorgefertigt', 'standard', 'anpassen']
       }
     ]
   }
