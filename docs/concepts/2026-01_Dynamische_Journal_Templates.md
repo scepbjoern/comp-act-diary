@@ -3,7 +3,34 @@
 > Konzept für konfigurierbare Eingabefelder pro JournalEntryType/JournalTemplate
 
 *Erstellt: Januar 2026*  
-*Aktualisiert: 1. Februar 2026 (v3 – nach Multi-Audio-Implementation)*
+*Aktualisiert: 1. Februar 2026 (v5 – Feature Complete)*
+
+## Implementierungsstatus
+
+| Feature | Status | Beschreibung |
+|---------|--------|--------------|
+| Template-Datenmodell | ✅ | `fields` (JSON), `aiConfig` (JSON) auf `JournalTemplate` |
+| Template-CRUD API | ✅ | `/api/templates` (GET, POST), `/api/templates/[id]` (GET, PATCH, DELETE) |
+| Template-Editor UI | ✅ | `/settings/templates` mit vollständigem CRUD |
+| System-Templates AI-Config | ✅ | Nur AI-Konfiguration editierbar, Rest schreibgeschützt |
+| DynamicJournalForm | ✅ | Dynamisches Rendering basierend auf Template-Feldern |
+| FieldRenderer | ✅ | Unterstützt `textarea`, `text`, `number`, `date`, `time` |
+| EmojiPicker | ✅ | `frimousse` Library für Feld-Icons |
+| Content-Aggregation | ✅ | Felder → Markdown mit H1-Überschriften |
+| JournalEntry Detail | ✅ | `/journal/[id]` mit Edit-Funktion |
+| JournalTypes CRUD API | ✅ | `/api/journal-entry-types` (GET, POST), `/api/journal-entry-types/[id]` (PATCH, DELETE) |
+| JournalTypes UI | ✅ | `/settings/types` – Erreichbar via Einstellungen → Erfassung → Eintragstypen |
+| Hilfeseiten | ✅ | `/help/templates` mit Dokumentation |
+| Audio-Transkription | ✅ | Upload-Button transkribiert via `/api/transcribe` |
+| Audio-Segmentierung | ✅ | Automatische Aufteilung auf Felder via `/api/journal-ai/segment-audio` |
+| Drag & Drop | ✅ | Felder im Template-Editor per Drag & Drop verschiebbar |
+| Template-Duplizierung | ✅ | Kopiert Template inkl. AI-Konfiguration |
+
+### Navigation
+
+- **Templates verwalten:** Einstellungen → Erfassung → Journal-Templates → "Templates verwalten"
+- **Eintragstypen verwalten:** Einstellungen → Erfassung → Eintragstypen → "Typen verwalten"
+- **Neuer Journal-Eintrag:** `/journal` → Typ und Template wählen
 
 ---
 

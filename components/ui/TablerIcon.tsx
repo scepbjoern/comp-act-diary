@@ -102,6 +102,8 @@ import {
   IconCalendarMonth,
   IconTestPipe,
   IconCircleX,
+  IconTemplate,
+  IconLayoutGrid,
 } from '@tabler/icons-react'
 
 // Mapping from old Material Icon names to Tabler Icons
@@ -272,6 +274,10 @@ const iconMap: Record<string, typeof IconSettings> = {
   school: IconSchool,
   code: IconCode,
   message_circle: IconMessageCircle,
+  
+  // Template icons
+  template: IconTemplate,
+  'layout-grid': IconLayoutGrid,
 }
 
 interface TablerIconProps {

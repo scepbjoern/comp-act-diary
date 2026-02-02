@@ -499,6 +499,8 @@ model JournalEntryType {
   icon              String?
   /// Standard-Template für diesen Typ
   defaultTemplateId String?
+  /// Hintergrundfarbe für Anzeige im DiariesPanel (Tailwind-Klasse, z.B. "bg-emerald-900/20")
+  bgColorClass      String?
   /// Sortierreihenfolge in der UI
   sortOrder         Int      @default(0)
   /// Erstellungszeitpunkt
@@ -509,13 +511,15 @@ model JournalEntryType {
   user            User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
   defaultTemplate JournalTemplate? @relation("DefaultTemplate", fields: [defaultTemplateId], references: [id])
   journalEntries  JournalEntry[]
+  /// Alle Templates für diesen Typ (one-to-many: Type hat viele Templates)
+  templates       JournalTemplate[] @relation("TemplatesForType")
 
   @@unique([userId, code])
   @@index([userId, sortOrder])
 }
 
 /// Vorlage für strukturierte Tagebucheinträge.
-/// Enthält Prompts/Fragen, die den Benutzer beim Schreiben leiten.
+/// Enthält dynamische Feld-Definitionen und AI-Konfiguration pro Template.
 model JournalTemplate {
   /// Eindeutige ID
   id          String         @id @default(uuid())
@@ -525,7 +529,11 @@ model JournalTemplate {
   name        String
   /// Beschreibung (optional)
   description String?
-  /// Prompts/Fragen als JSON-Array (z.B. ["Was war heute gut?", "Wofür bist du dankbar?"])
+  /// Strukturierte Feld-Definitionen als JSON-Array (Format: TemplateField[])
+  fields      Json?
+  /// AI-Konfiguration (Titel, Summary, Analysis Prompts + Modell) als JSON (Format: TemplateAIConfig)
+  aiConfig    Json?
+  /// Prompts/Fragen als JSON-Array - DEPRECATED: Migration zu fields
   prompts     Json?
   /// Herkunft (SYSTEM, USER, AI)
   origin      TaxonomyOrigin @default(USER)
@@ -534,11 +542,17 @@ model JournalTemplate {
   /// Letztes Update
   updatedAt   DateTime       @updatedAt
 
+  // Bestehende Relationen
   user            User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
   journalEntries  JournalEntry[]
   defaultForTypes JournalEntryType[] @relation("DefaultTemplate")
 
+  // Relation zum Type: Ein Template gehört zu genau einem Type (one-to-many)
+  typeId          String?
+  type            JournalEntryType?  @relation("TemplatesForType", fields: [typeId], references: [id])
+
   @@index([userId])
+  @@index([typeId])
 }
 
 /// Tagebucheintrag: Kern-Entität für alle Arten von Journal-Einträgen.

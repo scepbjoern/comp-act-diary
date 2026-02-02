@@ -13,6 +13,7 @@ import { aufgabenContent, aufgabenOverview } from './06-aufgaben'
 import { kiFeaturesContent, kiFeaturesOverview } from './07-ki-features'
 import { datenSyncContent, datenSyncOverview } from './08-daten-sync'
 import { einstellungenContent, einstellungenOverview } from './09-einstellungen'
+import { templatesContent, templatesOverview } from './10-templates'
 
 type ContentRegistry = Record<string, Record<string, TopicContent>>
 
@@ -26,6 +27,7 @@ const helpContent: ContentRegistry = {
   'ki-features': kiFeaturesContent,
   'daten-sync': datenSyncContent,
   'einstellungen': einstellungenContent,
+  'templates': templatesContent,
 }
 
 export const categoryOverviews: Record<string, string> = {
@@ -38,6 +40,7 @@ export const categoryOverviews: Record<string, string> = {
   'ki-features': kiFeaturesOverview,
   'daten-sync': datenSyncOverview,
   'einstellungen': einstellungenOverview,
+  'templates': templatesOverview,
 }
 
 /**
