@@ -118,10 +118,10 @@ export interface ParsedField extends TemplateField {
 /** Schema for creating a new template */
 export const createTemplateSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
-  description: z.string().max(500).optional(),
-  fields: templateFieldsSchema.optional(),
-  aiConfig: templateAIConfigSchema.optional(),
-  typeId: z.string().uuid().optional(),
+  description: z.string().max(500).optional().nullable(),
+  fields: templateFieldsSchema.optional().nullable(),
+  aiConfig: templateAIConfigSchema.optional().nullable(),
+  typeId: z.string().uuid().optional().nullable(),
 })
 
 /** Schema for updating an existing template */

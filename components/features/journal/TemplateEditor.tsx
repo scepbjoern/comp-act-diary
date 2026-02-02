@@ -7,7 +7,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import { IconPlus, IconCopy, IconTrash, IconAlertTriangle } from '@tabler/icons-react'
+import { IconPlus, IconCopy, IconTrash, IconAlertTriangle, IconGripVertical } from '@tabler/icons-react'
 import { TemplateFieldEditor } from './TemplateFieldEditor'
 import { TemplateAIConfigEditor } from './TemplateAIConfigEditor'
 import { TemplateField, TemplateAIConfig } from '@/types/journal'
@@ -90,6 +90,10 @@ export function TemplateEditor({
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
+  // Drag & Drop state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
   // Check if template has multiple fields (for segmentation config)
   const hasMultipleFields = useMemo(() => fields.length > 1, [fields])
 
@@ -122,6 +126,36 @@ export function TemplateEditor({
     }
     setFields((prev) => [...prev, newField])
   }, [fields.length])
+
+  // Drag & Drop handlers
+  const handleDragStart = useCallback((index: number) => {
+    setDraggedIndex(index)
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index)
+    }
+  }, [draggedIndex])
+
+  const handleDragEnd = useCallback(() => {
+    if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
+      setFields((prev) => {
+        const newFields = [...prev]
+        const [draggedField] = newFields.splice(draggedIndex, 1)
+        newFields.splice(dragOverIndex, 0, draggedField)
+        // Update order values
+        return newFields.map((f, i) => ({ ...f, order: i }))
+      })
+    }
+    setDraggedIndex(null)
+    setDragOverIndex(null)
+  }, [draggedIndex, dragOverIndex])
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverIndex(null)
+  }, [])
 
   // Handle save
   const handleSave = useCallback(() => {
@@ -318,15 +352,37 @@ export function TemplateEditor({
         ) : (
           <div className="space-y-3">
             {fields.map((field, index) => (
-              <TemplateFieldEditor
+              <div
                 key={field.id}
-                field={field}
-                index={index}
-                onChange={(updatedField) => handleFieldChange(index, updatedField)}
-                onDelete={() => handleFieldDelete(index)}
-                canDelete={!isSystemTemplate}
-                disabled={isFieldsDisabled}
-              />
+                draggable={!isFieldsDisabled}
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+                onDragLeave={handleDragLeave}
+                className={`relative transition-all duration-150 ${
+                  draggedIndex === index ? 'opacity-50' : ''
+                } ${
+                  dragOverIndex === index ? 'translate-y-2 border-t-2 border-primary' : ''
+                }`}
+              >
+                {/* Drag Handle */}
+                {!isFieldsDisabled && (
+                  <div
+                    className="absolute -left-6 top-1/2 -translate-y-1/2 cursor-grab text-base-content/40 hover:text-base-content/70 active:cursor-grabbing"
+                    title="Ziehen zum Verschieben"
+                  >
+                    <IconGripVertical className="h-5 w-5" />
+                  </div>
+                )}
+                <TemplateFieldEditor
+                  field={field}
+                  index={index}
+                  onChange={(updatedField) => handleFieldChange(index, updatedField)}
+                  onDelete={() => handleFieldDelete(index)}
+                  canDelete={!isSystemTemplate}
+                  disabled={isFieldsDisabled}
+                />
+              </div>
             ))}
 
             {/* Add field button below the field list */}

@@ -815,8 +815,6 @@ export default function SettingsPage() {
               </div>
             </details>
 
-<<<<<<< E:/bjoer/Documents/repos/comp-act-diary/app/settings/page.tsx
-=======
             {/* Link to Journal Entry Types */}
             <details className="collapse collapse-arrow bg-base-200 border border-base-300">
               <summary className="collapse-title font-medium">
@@ -835,7 +833,6 @@ export default function SettingsPage() {
               </div>
             </details>
 
->>>>>>> C:/Users/bjoer/.windsurf/worktrees/comp-act-diary/comp-act-diary-51aed217/app/settings/page.tsx
             {/* Link to Journal Templates */}
             <details className="collapse collapse-arrow bg-base-200 border border-base-300">
               <summary className="collapse-title font-medium">

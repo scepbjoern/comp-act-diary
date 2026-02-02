@@ -6,8 +6,8 @@
 
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
-import { IconUpload, IconPhoto, IconAlertTriangle } from '@tabler/icons-react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { IconUpload, IconPhoto, IconAlertTriangle, IconLoader2 } from '@tabler/icons-react'
 import { FieldRenderer } from './FieldRenderer'
 import { MicrophoneButton } from '@/components/features/transcription/MicrophoneButton'
 import { TemplateField, TemplateAIConfig } from '@/types/journal'
@@ -212,24 +212,133 @@ export function DynamicJournalForm({
     [selectedTypeId, selectedTemplateId, selectedTemplate, fieldValues, onSubmit]
   )
 
-  // Handle audio file selection
+  // State for media uploads
+  const [isTranscribing, setIsTranscribing] = useState(false)
+  const [transcribeError, setTranscribeError] = useState<string | null>(null)
+  const audioInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  // Handle audio file selection - transcribe and append to content
   const handleAudioFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
-      if (file && onAudioUpload) {
+      if (!file) return
+
+      // Reset input so same file can be selected again
+      if (audioInputRef.current) audioInputRef.current.value = ''
+
+      // If external handler provided, use it
+      if (onAudioUpload) {
         onAudioUpload(file)
+        return
+      }
+
+      // Otherwise, transcribe internally
+      setIsTranscribing(true)
+      setTranscribeError(null)
+
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const response = await fetch('/api/transcribe', {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.error || 'Transkription fehlgeschlagen')
+        }
+
+        const data = await response.json()
+        const transcript = data.text
+
+        if (transcript) {
+          // If template has multiple textarea fields, try to segment the transcript
+          const textareaFields = fields.filter((f) => f.type === 'textarea')
+          
+          if (textareaFields.length > 1 && selectedTemplateId) {
+            // Try AI segmentation for multi-field templates
+            try {
+              const segmentResponse = await fetch('/api/journal-ai/segment-audio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  transcript,
+                  templateId: selectedTemplateId,
+                }),
+              })
+
+              if (segmentResponse.ok) {
+                const segmentData = await segmentResponse.json()
+                if (segmentData.segments) {
+                  // Apply segmented content to fields
+                  setFieldValues((prev) => {
+                    const newValues = { ...prev }
+                    for (const [fieldId, content] of Object.entries(segmentData.segments)) {
+                      if (content && typeof content === 'string') {
+                        newValues[fieldId] = prev[fieldId]
+                          ? `${prev[fieldId]}\n\n${content}`
+                          : content
+                      }
+                    }
+                    return newValues
+                  })
+                  return // Successfully segmented
+                }
+              }
+            } catch {
+              // Segmentation failed, fall back to single field
+              console.warn('Audio segmentation failed, using first field')
+            }
+          }
+
+          // Fallback: append to first textarea field or content
+          if (fields.length > 0) {
+            const textareaField = fields.find((f) => f.type === 'textarea')
+            if (textareaField) {
+              setFieldValues((prev) => ({
+                ...prev,
+                [textareaField.id]: prev[textareaField.id]
+                  ? `${prev[textareaField.id]}\n\n${transcript}`
+                  : transcript,
+              }))
+            }
+          } else {
+            setFieldValues((prev) => ({
+              ...prev,
+              content: prev.content ? `${prev.content}\n\n${transcript}` : transcript,
+            }))
+          }
+        }
+      } catch (err) {
+        console.error('Transcription failed:', err)
+        setTranscribeError(err instanceof Error ? err.message : 'Transkription fehlgeschlagen')
+      } finally {
+        setIsTranscribing(false)
       }
     },
-    [onAudioUpload]
+    [onAudioUpload, fields, selectedTemplateId]
   )
 
   // Handle image file selection
   const handleImageFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
-      if (file && onImageUpload) {
+      if (!file) return
+
+      // Reset input so same file can be selected again
+      if (imageInputRef.current) imageInputRef.current.value = ''
+
+      // If external handler provided, use it
+      if (onImageUpload) {
         onImageUpload(file)
+        return
       }
+
+      // For now, show alert that image upload requires saving the entry first
+      alert('Bilder k\u00f6nnen nach dem Speichern des Eintrags hinzugef\u00fcgt werden.')
     },
     [onImageUpload]
   )
@@ -403,32 +512,54 @@ export function DynamicJournalForm({
 
       {/* Media Upload Buttons */}
       {showMediaButtons && (
-        <div className="flex flex-wrap gap-2 border-t border-base-300 pt-4">
-          {/* Audio Upload */}
-          <label className="btn btn-ghost btn-sm gap-2 cursor-pointer">
-            <IconUpload className="h-4 w-4" />
-            <span>Audio hochladen</span>
-            <input
-              type="file"
-              accept="audio/*"
-              onChange={handleAudioFileChange}
-              className="hidden"
-              disabled={isSubmitting}
-            />
-          </label>
+        <div className="space-y-2 border-t border-base-300 pt-4">
+          <div className="flex flex-wrap gap-2">
+            {/* Audio Upload */}
+            <label className={`btn btn-ghost btn-sm gap-2 cursor-pointer ${isTranscribing ? 'btn-disabled' : ''}`}>
+              {isTranscribing ? (
+                <IconLoader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <IconUpload className="h-4 w-4" />
+              )}
+              <span>{isTranscribing ? 'Transkribiere...' : 'Audio hochladen'}</span>
+              <input
+                ref={audioInputRef}
+                type="file"
+                accept="audio/*"
+                onChange={handleAudioFileChange}
+                className="hidden"
+                disabled={isSubmitting || isTranscribing}
+              />
+            </label>
 
-          {/* Image Upload */}
-          <label className="btn btn-ghost btn-sm gap-2 cursor-pointer">
-            <IconPhoto className="h-4 w-4" />
-            <span>Bild hinzufügen</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageFileChange}
-              className="hidden"
-              disabled={isSubmitting}
-            />
-          </label>
+            {/* Image Upload */}
+            <label className="btn btn-ghost btn-sm gap-2 cursor-pointer">
+              <IconPhoto className="h-4 w-4" />
+              <span>Bild hinzufügen</span>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageFileChange}
+                className="hidden"
+                disabled={isSubmitting}
+              />
+            </label>
+          </div>
+
+          {/* Transcription Error */}
+          {transcribeError && (
+            <div className="alert alert-error alert-sm">
+              <span className="text-sm">{transcribeError}</span>
+              <button
+                type="button"
+                onClick={() => setTranscribeError(null)}
+                className="btn btn-ghost btn-xs"
+              >
+                ×
+              </button>
+            </div>
+          )}
         </div>
       )}
 
