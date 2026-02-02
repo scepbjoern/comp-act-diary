@@ -251,6 +251,10 @@ export const createJournalEntrySchema = z.object({
   occurredAt: z.string().datetime().optional(),
   capturedAt: z.string().datetime().optional(),
   isSensitive: z.boolean().optional(),
+  /** Audio file IDs (MediaAsset IDs) to attach */
+  audioFileIds: z.array(z.string().uuid()).optional(),
+  /** Map of audioFileId → transcript for each audio */
+  audioTranscripts: z.record(z.string(), z.string()).optional(),
 })
 
 /** Request body for updating a journal entry */

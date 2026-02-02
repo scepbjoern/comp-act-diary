@@ -5,12 +5,15 @@
  */
 
 import { TemplateField, SegmentationResult, TemplateAIConfig } from '@/types/journal'
-import { generateText } from 'ai'
-import { createOpenAI } from '@ai-sdk/openai'
+import { getJournalAIService } from '@/lib/services/journalAIService'
+import { prisma } from '@/lib/core/prisma'
 
 // =============================================================================
 // CONSTANTS
 // =============================================================================
+
+// Default model for segmentation (used when no model is configured in template)
+const DEFAULT_SEGMENTATION_MODEL = 'gpt-4o-mini'
 
 // Explicit markers that users can say to indicate field transitions
 const EXPLICIT_MARKERS = [
@@ -170,7 +173,7 @@ function escapeRegex(str: string): string {
 async function segmentByAI(
   transcript: string,
   fields: TemplateField[],
-  options: { model?: string; prompt?: string }
+  options: { model?: string; prompt?: string; userId: string }
 ): Promise<SegmentationResult> {
   const sortedFields = [...fields].sort((a, b) => a.order - b.order)
 
@@ -185,24 +188,21 @@ async function segmentByAI(
 
   // Build prompt
   const promptTemplate = options.prompt || DEFAULT_SEGMENTATION_PROMPT
-  const prompt = promptTemplate
+  const systemPrompt = promptTemplate
     .replace('{{fieldLabels}}', fieldLabels)
-    .replace('{{transcript}}', transcript)
+    .replace('{{transcript}}', '')
 
-  // Determine model to use
-  const modelName = options.model || 'gpt-4o-mini'
+  // Use configured model or default
+  const modelId = options.model || DEFAULT_SEGMENTATION_MODEL
 
   try {
-    // Create OpenAI provider
-    const openai = createOpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    })
-
-    // Generate segmentation
-    const result = await generateText({
-      model: openai(modelName),
-      prompt,
-      temperature: 0.3, // Lower temperature for more consistent output
+    // Use JournalAIService for LLM call (supports OpenAI + Together.ai)
+    const aiService = getJournalAIService(prisma)
+    const result = await aiService.callLLMRaw({
+      modelId,
+      systemPrompt,
+      userMessage: transcript,
+      userId: options.userId,
     })
 
     // Parse JSON response
@@ -267,7 +267,8 @@ export async function segmentTranscriptByFields(
   options: {
     model?: string
     prompt?: string
-  } = {}
+    userId: string
+  }
 ): Promise<SegmentationResult> {
   // Validate inputs
   if (!transcript || transcript.trim().length === 0) {

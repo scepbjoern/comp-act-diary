@@ -50,6 +50,8 @@ interface DynamicJournalFormProps {
     templateId: string | null
     content: string
     fieldValues: Record<string, string>
+    audioFileIds?: string[]
+    audioTranscripts?: Record<string, string>
   }) => void
   /** Whether form is submitting */
   isSubmitting?: boolean
@@ -61,6 +63,8 @@ interface DynamicJournalFormProps {
   showMediaButtons?: boolean
   /** Additional CSS classes */
   className?: string
+  /** Date for new entries (ISO format YYYY-MM-DD) - enables audio persistence */
+  date?: string
 }
 
 /**
@@ -79,6 +83,7 @@ export function DynamicJournalForm({
   onImageUpload,
   showMediaButtons = true,
   className = '',
+  date,
 }: DynamicJournalFormProps) {
   // State for selections
   const [selectedTypeId, setSelectedTypeId] = useState<string>(initialTypeId || types[0]?.id || '')
@@ -189,6 +194,10 @@ export function DynamicJournalForm({
     setSelectedTemplateId(newTemplateId)
   }, [])
 
+  // Track audio files for new entries (will be attached on save)
+  const [audioFileIds, setAudioFileIds] = useState<string[]>([])
+  const [audioTranscripts, setAudioTranscripts] = useState<Record<string, string>>({})
+
   // Handle form submission
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -202,14 +211,19 @@ export function DynamicJournalForm({
         content = fieldValues.content || ''
       }
 
+      console.log('[DynamicJournalForm] Submitting with audioFileIds:', audioFileIds)
+      console.log('[DynamicJournalForm] Submitting with audioTranscripts:', Object.keys(audioTranscripts))
+      
       onSubmit({
         typeId: selectedTypeId,
         templateId: selectedTemplateId,
         content,
         fieldValues,
+        audioFileIds: audioFileIds.length > 0 ? audioFileIds : undefined,
+        audioTranscripts: Object.keys(audioTranscripts).length > 0 ? audioTranscripts : undefined,
       })
     },
-    [selectedTypeId, selectedTemplateId, selectedTemplate, fieldValues, onSubmit]
+    [selectedTypeId, selectedTemplateId, selectedTemplate, fieldValues, onSubmit, audioFileIds, audioTranscripts]
   )
 
   // State for media uploads
@@ -349,11 +363,26 @@ export function DynamicJournalForm({
 
   // Handle microphone transcription for a field
   const handleMicrophoneResult = useCallback(
-    (fieldId: string, transcript: string) => {
+    (fieldId: string, result: { text: string; audioFileId?: string | null }) => {
+      const { text: transcript, audioFileId } = result
+      
+      console.log('[DynamicJournalForm] handleMicrophoneResult:', { fieldId, transcript: transcript.substring(0, 50), audioFileId })
+      
+      // Update field value with transcript
       setFieldValues((prev) => ({
         ...prev,
         [fieldId]: prev[fieldId] ? `${prev[fieldId]}\n\n${transcript}` : transcript,
       }))
+      
+      // Track audio file ID for later attachment
+      if (audioFileId) {
+        console.log('[DynamicJournalForm] Tracking audioFileId:', audioFileId)
+        setAudioFileIds((prev) => [...prev, audioFileId])
+        setAudioTranscripts((prev) => ({ ...prev, [audioFileId]: transcript }))
+      } else {
+        console.log('[DynamicJournalForm] No audioFileId received - audio not persisted')
+      }
+      
       setRecordingFieldId(null)
     },
     []
@@ -466,7 +495,9 @@ export function DynamicJournalForm({
                   <div className="card bg-base-100 p-6 shadow-xl">
                     <h3 className="mb-4 text-lg font-medium">Spracheingabe</h3>
                     <MicrophoneButton
-                      onAudioData={(result) => handleMicrophoneResult(field.id, result.text)}
+                      onAudioData={(result) => handleMicrophoneResult(field.id, result)}
+                      keepAudio={!!date}
+                      date={date}
                       className="mx-auto"
                     />
                     <button

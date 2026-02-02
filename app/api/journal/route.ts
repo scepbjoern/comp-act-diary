@@ -175,6 +175,8 @@ export async function POST(request: NextRequest) {
       occurredAt,
       capturedAt,
       isSensitive,
+      audioFileIds,
+      audioTranscripts,
     } = result.data
 
     // Validate typeId
@@ -244,6 +246,56 @@ export async function POST(request: NextRequest) {
         },
       },
     })
+
+    // Create Entity registry entry (required for polymorphic relations like MediaAttachment)
+    await prisma.entity.create({
+      data: {
+        id: entry.id,
+        userId,
+        type: 'JOURNAL_ENTRY',
+      },
+    })
+
+    // Create MediaAttachments for audio files if provided
+    console.log('[journal/route] audioFileIds:', audioFileIds)
+    console.log('[journal/route] audioTranscripts:', audioTranscripts)
+    
+    if (audioFileIds && audioFileIds.length > 0) {
+      console.log('[journal/route] Creating MediaAttachments for', audioFileIds.length, 'audio files')
+      
+      // Entity registry entry was created above
+      for (let i = 0; i < audioFileIds.length; i++) {
+        const assetId = audioFileIds[i]
+        const transcript = audioTranscripts?.[assetId] || null
+
+        // Verify asset exists and belongs to user
+        const asset = await prisma.mediaAsset.findFirst({
+          where: { id: assetId, userId },
+        })
+        
+        console.log('[journal/route] Asset', assetId, 'found:', !!asset)
+
+        if (asset) {
+          try {
+            const attachment = await prisma.mediaAttachment.create({
+              data: {
+                assetId,
+                entityId: entry.id,
+                userId,
+                role: 'ATTACHMENT',
+                timeBoxId,
+                displayOrder: i,
+                transcript,
+                transcriptModel: transcript ? 'gpt-4o-transcribe' : null,
+              },
+            })
+            console.log('[journal/route] Created MediaAttachment:', attachment.id)
+          } catch (attachmentError) {
+            console.error('[journal/route] Failed to create MediaAttachment:', attachmentError)
+          }
+        }
+      }
+    }
 
     return NextResponse.json({ entry }, { status: 201 })
   } catch (error) {

@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
     const segmentationOptions = {
       ...getSegmentationOptions(aiConfig),
       ...options,
+      userId, // Required for LLM call
     }
 
     // Perform segmentation

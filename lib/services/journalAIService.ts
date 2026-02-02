@@ -753,6 +753,22 @@ export class JournalAIService {
   }
 
   /**
+   * Public method for raw LLM calls (used by segmenterService, etc.).
+   * Allows calling any configured model with custom prompts.
+   */
+  async callLLMRaw(params: {
+    modelId: string
+    systemPrompt: string
+    userMessage: string
+    userId: string
+    temperature?: number
+  }): Promise<{ text: string; tokensUsed: number }> {
+    return this.callLLM({
+      ...params,
+    })
+  }
+
+  /**
    * Calls the LLM via the appropriate provider (OpenAI or TogetherAI).
    * Supports reasoning_effort parameter for OpenAI GPT-5 series models.
    */

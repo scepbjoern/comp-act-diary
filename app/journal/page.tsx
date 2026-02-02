@@ -190,6 +190,8 @@ export default function JournalPage() {
       templateId: string | null
       content: string
       fieldValues: Record<string, string>
+      audioFileIds?: string[]
+      audioTranscripts?: Record<string, string>
     }) => {
       try {
         setIsSubmitting(true)
@@ -213,7 +215,12 @@ export default function JournalPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            ...data,
+            typeId: data.typeId,
+            templateId: data.templateId,
+            content: data.content,
+            fieldValues: data.fieldValues,
+            audioFileIds: data.audioFileIds,
+            audioTranscripts: data.audioTranscripts,
             timeBoxId,
           }),
         })
@@ -287,6 +294,7 @@ export default function JournalPage() {
             onSubmit={handleCreateEntry}
             isSubmitting={isSubmitting}
             showMediaButtons={true}
+            date={format(new Date(), 'yyyy-MM-dd')}
           />
           <div className="mt-4 flex justify-end">
             <button
