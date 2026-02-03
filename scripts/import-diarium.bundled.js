@@ -1,7 +1,31 @@
+"use strict";
+var __create = Object.create;
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+
 // scripts/import-diarium.ts
-import { PrismaClient, TimeBoxKind, TaxonomyKind, TaxonomyOrigin, TaggingSource, MeasurementSource, Prisma } from "@prisma/client";
-import * as fs from "fs";
-var prisma = new PrismaClient();
+var import_client = require("@prisma/client");
+var fs = __toESM(require("fs"), 1);
+var prisma = new import_client.PrismaClient();
 function htmlToText(html) {
   if (!html) return "";
   return html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n\n").replace(/<\/li>/gi, "\n").replace(/<li>/gi, "- ").replace(/<\/?[ou]l>/gi, "").replace(/<strong>/gi, "**").replace(/<\/strong>/gi, "**").replace(/<b>/gi, "**").replace(/<\/b>/gi, "**").replace(/<em>/gi, "*").replace(/<\/em>/gi, "*").replace(/<i>/gi, "*").replace(/<\/i>/gi, "*").replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ").replace(/\n{3,}/g, "\n\n").trim();
@@ -137,7 +161,7 @@ async function importDiarium(jsonPath, dryRun = false) {
   const taxonomyCache = /* @__PURE__ */ new Map();
   const contactCache = /* @__PURE__ */ new Map();
   const existingTaxonomies = await prisma.taxonomy.findMany({
-    where: { userId: user.id, kind: TaxonomyKind.TAG }
+    where: { userId: user.id, kind: import_client.TaxonomyKind.TAG }
   });
   for (const t of existingTaxonomies) {
     taxonomyCache.set(t.shortName.toLowerCase(), t.id);
@@ -171,7 +195,7 @@ async function importDiarium(jsonPath, dryRun = false) {
       let timeBox = await prisma.timeBox.findFirst({
         where: {
           userId: user.id,
-          kind: TimeBoxKind.DAY,
+          kind: import_client.TimeBoxKind.DAY,
           localDate
         }
       });
@@ -179,7 +203,7 @@ async function importDiarium(jsonPath, dryRun = false) {
         timeBox = await prisma.timeBox.create({
           data: {
             userId: user.id,
-            kind: TimeBoxKind.DAY,
+            kind: import_client.TimeBoxKind.DAY,
             startAt,
             endAt,
             localDate,
@@ -203,7 +227,7 @@ async function importDiarium(jsonPath, dryRun = false) {
               userId: user.id,
               timeBoxId: timeBox.id,
               dayRating: bestRating,
-              weather: weather ?? Prisma.JsonNull
+              weather: weather ?? import_client.Prisma.JsonNull
             }
           });
           stats.dayEntriesCreated++;
@@ -270,8 +294,8 @@ async function importDiarium(jsonPath, dryRun = false) {
                     userId: user.id,
                     slug: slugify(tagName) + "-" + Date.now().toString(36).slice(-4),
                     shortName: tagName,
-                    kind: TaxonomyKind.TAG,
-                    origin: TaxonomyOrigin.IMPORT
+                    kind: import_client.TaxonomyKind.TAG,
+                    origin: import_client.TaxonomyOrigin.IMPORT
                   }
                 });
                 taxonomyId = taxonomy.id;
@@ -283,7 +307,7 @@ async function importDiarium(jsonPath, dryRun = false) {
                   taxonomyId,
                   entityId: entity.id,
                   userId: user.id,
-                  source: TaggingSource.IMPORT
+                  source: import_client.TaggingSource.IMPORT
                 }
               }).catch(() => {
               });
@@ -368,7 +392,7 @@ async function importDiarium(jsonPath, dryRun = false) {
                       metricId: weightMetric.id,
                       timeBoxId: timeBox.id,
                       valueNum: value,
-                      source: MeasurementSource.IMPORT,
+                      source: import_client.MeasurementSource.IMPORT,
                       occurredAt: new Date(entry.date)
                     }
                   });
@@ -390,7 +414,7 @@ async function importDiarium(jsonPath, dryRun = false) {
                       metricId: stepsMetric.id,
                       timeBoxId: timeBox.id,
                       valueNum: value,
-                      source: MeasurementSource.IMPORT,
+                      source: import_client.MeasurementSource.IMPORT,
                       occurredAt: new Date(entry.date)
                     }
                   });

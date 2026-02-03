@@ -53,8 +53,9 @@ This helper script automatically finds and bundles all `.ts` files in the `scrip
 
 - Scans for all `.ts` files (excluding `.d.ts` and `.bundled.ts`)
 - Bundles each file separately with esbuild
-- Creates `{name}.bundled.js` for each `{name}.ts`
+- Creates `{name}.bundled.js` for each `{name}.ts` (CommonJS format)
 - Marks `@prisma/client` as external (must use runtime client)
+- Uses CommonJS format to support libraries with dynamic requires (e.g., pino)
 - Reports success/failure for each script
 
 **Result:** Any new script you add is automatically bundled on the next build.

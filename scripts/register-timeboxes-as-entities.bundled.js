@@ -1,6 +1,8 @@
+"use strict";
+
 // scripts/register-timeboxes-as-entities.ts
-import { PrismaClient } from "@prisma/client";
-var prisma = new PrismaClient();
+var import_client = require("@prisma/client");
+var prisma = new import_client.PrismaClient();
 async function registerTimeBoxesAsEntities() {
   console.log("Starting migration of existing TimeBoxes to Entities...");
   try {

@@ -49,7 +49,7 @@ async function bundleScripts() {
         entryPoints: [entryPoint],
         bundle: true,
         platform: 'node',
-        format: 'esm',
+        format: 'cjs', // Changed from 'esm' to support dynamic requires
         outfile,
         external: ['@prisma/client'], // Prisma must use runtime client
         minify: false, // Keep readable for debugging

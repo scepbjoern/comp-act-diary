@@ -1,6 +1,8 @@
+"use strict";
+
 // scripts/backfill-timebox-entities.ts
-import { PrismaClient } from "@prisma/client";
-var prisma = new PrismaClient();
+var import_client = require("@prisma/client");
+var prisma = new import_client.PrismaClient();
 async function backfillTimeBoxEntities() {
   console.log("Starting backfill of TimeBox entities...");
   try {

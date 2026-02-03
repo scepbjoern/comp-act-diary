@@ -1,16 +1,11 @@
+"use strict";
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
-}) : x)(function(x) {
-  if (typeof require !== "undefined") return require.apply(this, arguments);
-  throw Error('Dynamic require of "' + x + '" is not supported');
-});
-var __commonJS = (cb, mod) => function __require2() {
+var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
 var __copyProps = (to, from, except, desc) => {
@@ -32,7 +27,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 
 // node_modules/sharp/lib/is.js
 var require_is = __commonJS({
-  "node_modules/sharp/lib/is.js"(exports, module) {
+  "node_modules/sharp/lib/is.js"(exports2, module2) {
     var defined = (val) => typeof val !== "undefined" && val !== null;
     var object = (val) => typeof val === "object";
     var plainObject = (val) => Object.prototype.toString.call(val) === "[object Object]";
@@ -69,7 +64,7 @@ var require_is = __commonJS({
       context.message = native.message;
       return context;
     };
-    module.exports = {
+    module2.exports = {
       defined,
       object,
       plainObject,
@@ -91,7 +86,7 @@ var require_is = __commonJS({
 
 // node_modules/detect-libc/lib/process.js
 var require_process = __commonJS({
-  "node_modules/detect-libc/lib/process.js"(exports, module) {
+  "node_modules/detect-libc/lib/process.js"(exports2, module2) {
     "use strict";
     var isLinux = () => process.platform === "linux";
     var report = null;
@@ -108,15 +103,15 @@ var require_process = __commonJS({
       }
       return report;
     };
-    module.exports = { isLinux, getReport };
+    module2.exports = { isLinux, getReport };
   }
 });
 
 // node_modules/detect-libc/lib/filesystem.js
 var require_filesystem = __commonJS({
-  "node_modules/detect-libc/lib/filesystem.js"(exports, module) {
+  "node_modules/detect-libc/lib/filesystem.js"(exports2, module2) {
     "use strict";
-    var fs2 = __require("fs");
+    var fs2 = require("fs");
     var LDD_PATH = "/usr/bin/ldd";
     var SELF_PATH = "/proc/self/exe";
     var MAX_LENGTH = 2048;
@@ -142,7 +137,7 @@ var require_filesystem = __commonJS({
         }
       });
     });
-    module.exports = {
+    module2.exports = {
       LDD_PATH,
       SELF_PATH,
       readFileSync,
@@ -153,7 +148,7 @@ var require_filesystem = __commonJS({
 
 // node_modules/detect-libc/lib/elf.js
 var require_elf = __commonJS({
-  "node_modules/detect-libc/lib/elf.js"(exports, module) {
+  "node_modules/detect-libc/lib/elf.js"(exports2, module2) {
     "use strict";
     var interpreterPath = (elf) => {
       if (elf.length < 64) {
@@ -182,7 +177,7 @@ var require_elf = __commonJS({
       }
       return null;
     };
-    module.exports = {
+    module2.exports = {
       interpreterPath
     };
   }
@@ -190,9 +185,9 @@ var require_elf = __commonJS({
 
 // node_modules/detect-libc/lib/detect-libc.js
 var require_detect_libc = __commonJS({
-  "node_modules/detect-libc/lib/detect-libc.js"(exports, module) {
+  "node_modules/detect-libc/lib/detect-libc.js"(exports2, module2) {
     "use strict";
-    var childProcess = __require("child_process");
+    var childProcess = require("child_process");
     var { isLinux, getReport } = require_process();
     var { LDD_PATH, SELF_PATH, readFile, readFileSync } = require_filesystem();
     var { interpreterPath } = require_elf();
@@ -430,7 +425,7 @@ var require_detect_libc = __commonJS({
       }
       return version2;
     };
-    module.exports = {
+    module2.exports = {
       GLIBC,
       MUSL,
       family,
@@ -445,17 +440,17 @@ var require_detect_libc = __commonJS({
 
 // node_modules/sharp/node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "node_modules/sharp/node_modules/semver/internal/debug.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/internal/debug.js"(exports2, module2) {
     "use strict";
     var debug = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
-    module.exports = debug;
+    module2.exports = debug;
   }
 });
 
 // node_modules/sharp/node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "node_modules/sharp/node_modules/semver/internal/constants.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/internal/constants.js"(exports2, module2) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -472,7 +467,7 @@ var require_constants = __commonJS({
       "prepatch",
       "prerelease"
     ];
-    module.exports = {
+    module2.exports = {
       MAX_LENGTH,
       MAX_SAFE_COMPONENT_LENGTH,
       MAX_SAFE_BUILD_LENGTH,
@@ -487,7 +482,7 @@ var require_constants = __commonJS({
 
 // node_modules/sharp/node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "node_modules/sharp/node_modules/semver/internal/re.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/internal/re.js"(exports2, module2) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -495,12 +490,12 @@ var require_re = __commonJS({
       MAX_LENGTH
     } = require_constants();
     var debug = require_debug();
-    exports = module.exports = {};
-    var re = exports.re = [];
-    var safeRe = exports.safeRe = [];
-    var src = exports.src = [];
-    var safeSrc = exports.safeSrc = [];
-    var t = exports.t = {};
+    exports2 = module2.exports = {};
+    var re = exports2.re = [];
+    var safeRe = exports2.safeRe = [];
+    var src = exports2.src = [];
+    var safeSrc = exports2.safeSrc = [];
+    var t = exports2.t = {};
     var R = 0;
     var LETTERDASHNUMBER = "[a-zA-Z0-9-]";
     var safeRegexReplacements = [
@@ -553,18 +548,18 @@ var require_re = __commonJS({
     createToken("COERCERTLFULL", src[t.COERCEFULL], true);
     createToken("LONETILDE", "(?:~>?)");
     createToken("TILDETRIM", `(\\s*)${src[t.LONETILDE]}\\s+`, true);
-    exports.tildeTrimReplace = "$1~";
+    exports2.tildeTrimReplace = "$1~";
     createToken("TILDE", `^${src[t.LONETILDE]}${src[t.XRANGEPLAIN]}$`);
     createToken("TILDELOOSE", `^${src[t.LONETILDE]}${src[t.XRANGEPLAINLOOSE]}$`);
     createToken("LONECARET", "(?:\\^)");
     createToken("CARETTRIM", `(\\s*)${src[t.LONECARET]}\\s+`, true);
-    exports.caretTrimReplace = "$1^";
+    exports2.caretTrimReplace = "$1^";
     createToken("CARET", `^${src[t.LONECARET]}${src[t.XRANGEPLAIN]}$`);
     createToken("CARETLOOSE", `^${src[t.LONECARET]}${src[t.XRANGEPLAINLOOSE]}$`);
     createToken("COMPARATORLOOSE", `^${src[t.GTLT]}\\s*(${src[t.LOOSEPLAIN]})$|^$`);
     createToken("COMPARATOR", `^${src[t.GTLT]}\\s*(${src[t.FULLPLAIN]})$|^$`);
     createToken("COMPARATORTRIM", `(\\s*)${src[t.GTLT]}\\s*(${src[t.LOOSEPLAIN]}|${src[t.XRANGEPLAIN]})`, true);
-    exports.comparatorTrimReplace = "$1$2$3";
+    exports2.comparatorTrimReplace = "$1$2$3";
     createToken("HYPHENRANGE", `^\\s*(${src[t.XRANGEPLAIN]})\\s+-\\s+(${src[t.XRANGEPLAIN]})\\s*$`);
     createToken("HYPHENRANGELOOSE", `^\\s*(${src[t.XRANGEPLAINLOOSE]})\\s+-\\s+(${src[t.XRANGEPLAINLOOSE]})\\s*$`);
     createToken("STAR", "(<|>)?=?\\s*\\*");
@@ -575,7 +570,7 @@ var require_re = __commonJS({
 
 // node_modules/sharp/node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "node_modules/sharp/node_modules/semver/internal/parse-options.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/internal/parse-options.js"(exports2, module2) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -588,13 +583,13 @@ var require_parse_options = __commonJS({
       }
       return options;
     };
-    module.exports = parseOptions;
+    module2.exports = parseOptions;
   }
 });
 
 // node_modules/sharp/node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "node_modules/sharp/node_modules/semver/internal/identifiers.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/internal/identifiers.js"(exports2, module2) {
     "use strict";
     var numeric = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -610,7 +605,7 @@ var require_identifiers = __commonJS({
       return a === b ? 0 : anum && !bnum ? -1 : bnum && !anum ? 1 : a < b ? -1 : 1;
     };
     var rcompareIdentifiers = (a, b) => compareIdentifiers(b, a);
-    module.exports = {
+    module2.exports = {
       compareIdentifiers,
       rcompareIdentifiers
     };
@@ -619,7 +614,7 @@ var require_identifiers = __commonJS({
 
 // node_modules/sharp/node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "node_modules/sharp/node_modules/semver/classes/semver.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/classes/semver.js"(exports2, module2) {
     "use strict";
     var debug = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -892,13 +887,13 @@ var require_semver = __commonJS({
         return this;
       }
     };
-    module.exports = SemVer;
+    module2.exports = SemVer;
   }
 });
 
 // node_modules/sharp/node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "node_modules/sharp/node_modules/semver/functions/parse.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/functions/parse.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var parse = (version, options, throwErrors = false) => {
@@ -914,13 +909,13 @@ var require_parse = __commonJS({
         throw er;
       }
     };
-    module.exports = parse;
+    module2.exports = parse;
   }
 });
 
 // node_modules/sharp/node_modules/semver/functions/coerce.js
 var require_coerce = __commonJS({
-  "node_modules/sharp/node_modules/semver/functions/coerce.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/functions/coerce.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var parse = require_parse();
@@ -960,33 +955,33 @@ var require_coerce = __commonJS({
       const build = options.includePrerelease && match[6] ? `+${match[6]}` : "";
       return parse(`${major}.${minor}.${patch}${prerelease}${build}`, options);
     };
-    module.exports = coerce;
+    module2.exports = coerce;
   }
 });
 
 // node_modules/sharp/node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "node_modules/sharp/node_modules/semver/functions/compare.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/functions/compare.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
-    module.exports = compare;
+    module2.exports = compare;
   }
 });
 
 // node_modules/sharp/node_modules/semver/functions/gte.js
 var require_gte = __commonJS({
-  "node_modules/sharp/node_modules/semver/functions/gte.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/functions/gte.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var gte = (a, b, loose) => compare(a, b, loose) >= 0;
-    module.exports = gte;
+    module2.exports = gte;
   }
 });
 
 // node_modules/sharp/node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS({
-  "node_modules/sharp/node_modules/semver/internal/lrucache.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/internal/lrucache.js"(exports2, module2) {
     "use strict";
     var LRUCache = class {
       constructor() {
@@ -1018,63 +1013,63 @@ var require_lrucache = __commonJS({
         return this;
       }
     };
-    module.exports = LRUCache;
+    module2.exports = LRUCache;
   }
 });
 
 // node_modules/sharp/node_modules/semver/functions/eq.js
 var require_eq = __commonJS({
-  "node_modules/sharp/node_modules/semver/functions/eq.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/functions/eq.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var eq = (a, b, loose) => compare(a, b, loose) === 0;
-    module.exports = eq;
+    module2.exports = eq;
   }
 });
 
 // node_modules/sharp/node_modules/semver/functions/neq.js
 var require_neq = __commonJS({
-  "node_modules/sharp/node_modules/semver/functions/neq.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/functions/neq.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var neq = (a, b, loose) => compare(a, b, loose) !== 0;
-    module.exports = neq;
+    module2.exports = neq;
   }
 });
 
 // node_modules/sharp/node_modules/semver/functions/gt.js
 var require_gt = __commonJS({
-  "node_modules/sharp/node_modules/semver/functions/gt.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/functions/gt.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var gt = (a, b, loose) => compare(a, b, loose) > 0;
-    module.exports = gt;
+    module2.exports = gt;
   }
 });
 
 // node_modules/sharp/node_modules/semver/functions/lt.js
 var require_lt = __commonJS({
-  "node_modules/sharp/node_modules/semver/functions/lt.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/functions/lt.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var lt = (a, b, loose) => compare(a, b, loose) < 0;
-    module.exports = lt;
+    module2.exports = lt;
   }
 });
 
 // node_modules/sharp/node_modules/semver/functions/lte.js
 var require_lte = __commonJS({
-  "node_modules/sharp/node_modules/semver/functions/lte.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/functions/lte.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var lte = (a, b, loose) => compare(a, b, loose) <= 0;
-    module.exports = lte;
+    module2.exports = lte;
   }
 });
 
 // node_modules/sharp/node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS({
-  "node_modules/sharp/node_modules/semver/functions/cmp.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/functions/cmp.js"(exports2, module2) {
     "use strict";
     var eq = require_eq();
     var neq = require_neq();
@@ -1118,13 +1113,13 @@ var require_cmp = __commonJS({
           throw new TypeError(`Invalid operator: ${op}`);
       }
     };
-    module.exports = cmp;
+    module2.exports = cmp;
   }
 });
 
 // node_modules/sharp/node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS({
-  "node_modules/sharp/node_modules/semver/classes/comparator.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/classes/comparator.js"(exports2, module2) {
     "use strict";
     var ANY = Symbol("SemVer ANY");
     var Comparator = class _Comparator {
@@ -1225,7 +1220,7 @@ var require_comparator = __commonJS({
         return false;
       }
     };
-    module.exports = Comparator;
+    module2.exports = Comparator;
     var parseOptions = require_parse_options();
     var { safeRe: re, t } = require_re();
     var cmp = require_cmp();
@@ -1237,7 +1232,7 @@ var require_comparator = __commonJS({
 
 // node_modules/sharp/node_modules/semver/classes/range.js
 var require_range = __commonJS({
-  "node_modules/sharp/node_modules/semver/classes/range.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/classes/range.js"(exports2, module2) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
     var Range = class _Range {
@@ -1378,7 +1373,7 @@ var require_range = __commonJS({
         return false;
       }
     };
-    module.exports = Range;
+    module2.exports = Range;
     var LRU = require_lrucache();
     var cache = new LRU();
     var parseOptions = require_parse_options();
@@ -1614,7 +1609,7 @@ var require_range = __commonJS({
 
 // node_modules/sharp/node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
-  "node_modules/sharp/node_modules/semver/functions/satisfies.js"(exports, module) {
+  "node_modules/sharp/node_modules/semver/functions/satisfies.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var satisfies = (version, range, options) => {
@@ -1625,14 +1620,14 @@ var require_satisfies = __commonJS({
       }
       return range.test(version);
     };
-    module.exports = satisfies;
+    module2.exports = satisfies;
   }
 });
 
 // node_modules/sharp/package.json
 var require_package = __commonJS({
-  "node_modules/sharp/package.json"(exports, module) {
-    module.exports = {
+  "node_modules/sharp/package.json"(exports2, module2) {
+    module2.exports = {
       name: "sharp",
       description: "High performance Node.js image processing, the fastest module to resize JPEG, PNG, WebP, GIF, AVIF and TIFF images",
       version: "0.34.5",
@@ -1839,9 +1834,9 @@ var require_package = __commonJS({
 
 // node_modules/sharp/lib/libvips.js
 var require_libvips = __commonJS({
-  "node_modules/sharp/lib/libvips.js"(exports, module) {
-    var { spawnSync } = __require("node:child_process");
-    var { createHash } = __require("node:crypto");
+  "node_modules/sharp/lib/libvips.js"(exports2, module2) {
+    var { spawnSync } = require("node:child_process");
+    var { createHash } = require("node:crypto");
     var semverCoerce = require_coerce();
     var semverGreaterThanOrEqualTo = require_gte();
     var semverSatisfies = require_satisfies();
@@ -1887,10 +1882,10 @@ var require_libvips = __commonJS({
     };
     var buildSharpLibvipsIncludeDir = () => {
       try {
-        return __require(`@img/sharp-libvips-dev-${buildPlatformArch()}/include`);
+        return require(`@img/sharp-libvips-dev-${buildPlatformArch()}/include`);
       } catch {
         try {
-          return __require("@img/sharp-libvips-dev/include");
+          return require("@img/sharp-libvips-dev/include");
         } catch {
         }
       }
@@ -1898,17 +1893,17 @@ var require_libvips = __commonJS({
     };
     var buildSharpLibvipsCPlusPlusDir = () => {
       try {
-        return __require("@img/sharp-libvips-dev/cplusplus");
+        return require("@img/sharp-libvips-dev/cplusplus");
       } catch {
       }
       return "";
     };
     var buildSharpLibvipsLibDir = () => {
       try {
-        return __require(`@img/sharp-libvips-dev-${buildPlatformArch()}/lib`);
+        return require(`@img/sharp-libvips-dev-${buildPlatformArch()}/lib`);
       } catch {
         try {
-          return __require(`@img/sharp-libvips-${buildPlatformArch()}/lib`);
+          return require(`@img/sharp-libvips-${buildPlatformArch()}/lib`);
         } catch {
         }
       }
@@ -1999,7 +1994,7 @@ var require_libvips = __commonJS({
       const globalVipsVersion = globalLibvipsVersion();
       return !!globalVipsVersion && semverGreaterThanOrEqualTo(globalVipsVersion, minimumLibvipsVersion);
     };
-    module.exports = {
+    module2.exports = {
       minimumLibvipsVersion,
       prebuiltPlatforms,
       buildPlatformArch,
@@ -2020,7 +2015,7 @@ var require_libvips = __commonJS({
 
 // node_modules/sharp/lib/sharp.js
 var require_sharp = __commonJS({
-  "node_modules/sharp/lib/sharp.js"(exports, module) {
+  "node_modules/sharp/lib/sharp.js"(exports2, module2) {
     var { familySync, versionSync } = require_detect_libc();
     var { runtimePlatformArch, isUnsupportedNodeRuntime, prebuiltPlatforms, minimumLibvipsVersion } = require_libvips();
     var runtimePlatform = runtimePlatformArch();
@@ -2035,7 +2030,7 @@ var require_sharp = __commonJS({
     var errors = [];
     for (path2 of paths) {
       try {
-        sharp2 = __require(path2);
+        sharp2 = require(path2);
         break;
       } catch (err) {
         errors.push(err);
@@ -2048,7 +2043,7 @@ var require_sharp = __commonJS({
       sharp2 = null;
     }
     if (sharp2) {
-      module.exports = sharp2;
+      module2.exports = sharp2;
     } else {
       const [isLinux, isMacOs, isWindows] = ["linux", "darwin", "win32"].map((os) => runtimePlatform.startsWith(os));
       const help = [`Could not load the "sharp" module using the ${runtimePlatform} runtime`];
@@ -2087,7 +2082,7 @@ var require_sharp = __commonJS({
       }
       if (isLinux && /(symbol not found|CXXABI_)/i.test(messages)) {
         try {
-          const { config } = __require(`@img/sharp-libvips-${runtimePlatform}/package`);
+          const { config } = require(`@img/sharp-libvips-${runtimePlatform}/package`);
           const libcFound = `${familySync()} ${versionSync()}`;
           const libcRequires = `${config.musl ? "musl" : "glibc"} ${config.musl || config.glibc}`;
           help.push(
@@ -2132,9 +2127,9 @@ var require_sharp = __commonJS({
 
 // node_modules/sharp/lib/constructor.js
 var require_constructor = __commonJS({
-  "node_modules/sharp/lib/constructor.js"(exports, module) {
-    var util = __require("node:util");
-    var stream = __require("node:stream");
+  "node_modules/sharp/lib/constructor.js"(exports2, module2) {
+    var util = require("node:util");
+    var stream = require("node:stream");
     var is = require_is();
     require_sharp();
     var debuglog = util.debuglog("sharp");
@@ -2357,13 +2352,13 @@ var require_constructor = __commonJS({
       return clone2;
     }
     Object.assign(Sharp.prototype, { clone });
-    module.exports = Sharp;
+    module2.exports = Sharp;
   }
 });
 
 // node_modules/sharp/lib/input.js
 var require_input = __commonJS({
-  "node_modules/sharp/lib/input.js"(exports, module) {
+  "node_modules/sharp/lib/input.js"(exports2, module2) {
     var is = require_is();
     var sharp2 = require_sharp();
     var align = {
@@ -2963,7 +2958,7 @@ var require_input = __commonJS({
         }
       }
     }
-    module.exports = (Sharp) => {
+    module2.exports = (Sharp) => {
       Object.assign(Sharp.prototype, {
         // Private
         _inputOptionsFromObject,
@@ -2982,7 +2977,7 @@ var require_input = __commonJS({
 
 // node_modules/sharp/lib/resize.js
 var require_resize = __commonJS({
-  "node_modules/sharp/lib/resize.js"(exports, module) {
+  "node_modules/sharp/lib/resize.js"(exports2, module2) {
     var is = require_is();
     var gravity = {
       center: 0,
@@ -3224,7 +3219,7 @@ var require_resize = __commonJS({
       }
       return this;
     }
-    module.exports = (Sharp) => {
+    module2.exports = (Sharp) => {
       Object.assign(Sharp.prototype, {
         resize,
         extend,
@@ -3242,7 +3237,7 @@ var require_resize = __commonJS({
 
 // node_modules/sharp/lib/composite.js
 var require_composite = __commonJS({
-  "node_modules/sharp/lib/composite.js"(exports, module) {
+  "node_modules/sharp/lib/composite.js"(exports2, module2) {
     var is = require_is();
     var blend = {
       clear: "clear",
@@ -3345,7 +3340,7 @@ var require_composite = __commonJS({
       });
       return this;
     }
-    module.exports = (Sharp) => {
+    module2.exports = (Sharp) => {
       Sharp.prototype.composite = composite;
       Sharp.blend = blend;
     };
@@ -3354,7 +3349,7 @@ var require_composite = __commonJS({
 
 // node_modules/sharp/lib/operation.js
 var require_operation = __commonJS({
-  "node_modules/sharp/lib/operation.js"(exports, module) {
+  "node_modules/sharp/lib/operation.js"(exports2, module2) {
     var is = require_is();
     var vipsPrecision = {
       integer: "integer",
@@ -3789,7 +3784,7 @@ var require_operation = __commonJS({
       }
       return this;
     }
-    module.exports = (Sharp) => {
+    module2.exports = (Sharp) => {
       Object.assign(Sharp.prototype, {
         autoOrient,
         rotate,
@@ -3821,7 +3816,7 @@ var require_operation = __commonJS({
 
 // node_modules/@img/colour/color.cjs
 var require_color = __commonJS({
-  "node_modules/@img/colour/color.cjs"(exports, module) {
+  "node_modules/@img/colour/color.cjs"(exports2, module2) {
     var __defProp2 = Object.defineProperty;
     var __getOwnPropDesc2 = Object.getOwnPropertyDescriptor;
     var __getOwnPropNames2 = Object.getOwnPropertyNames;
@@ -3843,7 +3838,7 @@ var require_color = __commonJS({
     __export(index_exports, {
       default: () => index_default
     });
-    module.exports = __toCommonJS(index_exports);
+    module2.exports = __toCommonJS(index_exports);
     var color_name_default = {
       aliceblue: [240, 248, 255],
       antiquewhite: [250, 235, 215],
@@ -5407,14 +5402,14 @@ var require_color = __commonJS({
 
 // node_modules/@img/colour/index.cjs
 var require_colour = __commonJS({
-  "node_modules/@img/colour/index.cjs"(exports, module) {
-    module.exports = require_color().default;
+  "node_modules/@img/colour/index.cjs"(exports2, module2) {
+    module2.exports = require_color().default;
   }
 });
 
 // node_modules/sharp/lib/colour.js
 var require_colour2 = __commonJS({
-  "node_modules/sharp/lib/colour.js"(exports, module) {
+  "node_modules/sharp/lib/colour.js"(exports2, module2) {
     var color = require_colour();
     var is = require_is();
     var colourspace = {
@@ -5473,7 +5468,7 @@ var require_colour2 = __commonJS({
         this.options[key] = _getBackgroundColourOption(value);
       }
     }
-    module.exports = (Sharp) => {
+    module2.exports = (Sharp) => {
       Object.assign(Sharp.prototype, {
         // Public
         tint,
@@ -5495,7 +5490,7 @@ var require_colour2 = __commonJS({
 
 // node_modules/sharp/lib/channel.js
 var require_channel = __commonJS({
-  "node_modules/sharp/lib/channel.js"(exports, module) {
+  "node_modules/sharp/lib/channel.js"(exports2, module2) {
     var is = require_is();
     var bool = {
       and: "and",
@@ -5548,7 +5543,7 @@ var require_channel = __commonJS({
       }
       return this;
     }
-    module.exports = (Sharp) => {
+    module2.exports = (Sharp) => {
       Object.assign(Sharp.prototype, {
         // Public instance functions
         removeAlpha,
@@ -5564,8 +5559,8 @@ var require_channel = __commonJS({
 
 // node_modules/sharp/lib/output.js
 var require_output = __commonJS({
-  "node_modules/sharp/lib/output.js"(exports, module) {
-    var path2 = __require("node:path");
+  "node_modules/sharp/lib/output.js"(exports2, module2) {
+    var path2 = require("node:path");
     var is = require_is();
     var sharp2 = require_sharp();
     var formats = /* @__PURE__ */ new Map([
@@ -6403,7 +6398,7 @@ var require_output = __commonJS({
         }
       }
     }
-    module.exports = (Sharp) => {
+    module2.exports = (Sharp) => {
       Object.assign(Sharp.prototype, {
         // Public
         toFile,
@@ -6442,8 +6437,8 @@ var require_output = __commonJS({
 
 // node_modules/sharp/lib/utility.js
 var require_utility = __commonJS({
-  "node_modules/sharp/lib/utility.js"(exports, module) {
-    var events = __require("node:events");
+  "node_modules/sharp/lib/utility.js"(exports2, module2) {
+    var events = require("node:events");
     var detectLibc = require_detect_libc();
     var is = require_is();
     var { runtimePlatformArch } = require_libvips();
@@ -6475,16 +6470,16 @@ var require_utility = __commonJS({
     if (!libvipsVersion.isGlobal) {
       if (!libvipsVersion.isWasm) {
         try {
-          versions = __require(`@img/sharp-${runtimePlatform}/versions`);
+          versions = require(`@img/sharp-${runtimePlatform}/versions`);
         } catch (_) {
           try {
-            versions = __require(`@img/sharp-libvips-${runtimePlatform}/versions`);
+            versions = require(`@img/sharp-libvips-${runtimePlatform}/versions`);
           } catch (_2) {
           }
         }
       } else {
         try {
-          versions = __require("@img/sharp-wasm32/versions");
+          versions = require("@img/sharp-wasm32/versions");
         } catch (_) {
         }
       }
@@ -6514,7 +6509,7 @@ var require_utility = __commonJS({
     if (detectLibc.familySync() === detectLibc.GLIBC && !sharp2._isUsingJemalloc()) {
       sharp2.concurrency(1);
     } else if (detectLibc.familySync() === detectLibc.MUSL && sharp2.concurrency() === 1024) {
-      sharp2.concurrency(__require("node:os").availableParallelism());
+      sharp2.concurrency(require("node:os").availableParallelism());
     }
     var queue = new events.EventEmitter();
     function counters() {
@@ -6545,7 +6540,7 @@ var require_utility = __commonJS({
         throw is.invalidParameterError("options", "object", options);
       }
     }
-    module.exports = (Sharp) => {
+    module2.exports = (Sharp) => {
       Sharp.cache = cache;
       Sharp.concurrency = concurrency;
       Sharp.counters = counters;
@@ -6562,7 +6557,7 @@ var require_utility = __commonJS({
 
 // node_modules/sharp/lib/index.js
 var require_lib = __commonJS({
-  "node_modules/sharp/lib/index.js"(exports, module) {
+  "node_modules/sharp/lib/index.js"(exports2, module2) {
     var Sharp = require_constructor();
     require_input()(Sharp);
     require_resize()(Sharp);
@@ -6572,17 +6567,17 @@ var require_lib = __commonJS({
     require_channel()(Sharp);
     require_output()(Sharp);
     require_utility()(Sharp);
-    module.exports = Sharp;
+    module2.exports = Sharp;
   }
 });
 
 // scripts/convert-icons.ts
+var import_promises = __toESM(require("node:fs/promises"), 1);
+var import_node_path = __toESM(require("node:path"), 1);
 var import_sharp = __toESM(require_lib(), 1);
-import fs from "node:fs/promises";
-import path from "node:path";
 async function exists(p) {
   try {
-    await fs.access(p);
+    await import_promises.default.access(p);
     return true;
   } catch {
     return false;
@@ -6593,41 +6588,41 @@ async function convertOne(src, dst) {
     console.warn(`[icons] skip: source not found: ${src}`);
     return false;
   }
-  await fs.mkdir(path.dirname(dst), { recursive: true });
+  await import_promises.default.mkdir(import_node_path.default.dirname(dst), { recursive: true });
   await (0, import_sharp.default)(src).png({ quality: 92, compressionLevel: 9, adaptiveFiltering: true }).toFile(dst);
   console.log(`[icons] wrote ${dst}`);
   return true;
 }
 async function createAppleTouch(src, dst) {
   if (!await exists(src)) return false;
-  await fs.mkdir(path.dirname(dst), { recursive: true });
+  await import_promises.default.mkdir(import_node_path.default.dirname(dst), { recursive: true });
   await (0, import_sharp.default)(src).resize(180, 180, { fit: "cover" }).png({ quality: 92, compressionLevel: 9, adaptiveFiltering: true }).toFile(dst);
   console.log(`[icons] wrote ${dst}`);
   return true;
 }
 async function resizeToPng(src, dst, size) {
   if (!await exists(src)) return false;
-  await fs.mkdir(path.dirname(dst), { recursive: true });
+  await import_promises.default.mkdir(import_node_path.default.dirname(dst), { recursive: true });
   await (0, import_sharp.default)(src).resize(size, size, { fit: "cover" }).png({ quality: 92, compressionLevel: 9, adaptiveFiltering: true }).toFile(dst);
   console.log(`[icons] wrote ${dst}`);
   return true;
 }
 async function main() {
-  const base = path.resolve(process.cwd(), "public", "icons");
-  const avif192 = path.join(base, "logo_192.avif");
-  const avif512 = path.join(base, "logo_512.avif");
-  await convertOne(avif192, path.join(base, "logo_192.png"));
-  await convertOne(avif512, path.join(base, "logo_512.png"));
+  const base = import_node_path.default.resolve(process.cwd(), "public", "icons");
+  const avif192 = import_node_path.default.join(base, "logo_192.avif");
+  const avif512 = import_node_path.default.join(base, "logo_512.avif");
+  await convertOne(avif192, import_node_path.default.join(base, "logo_192.png"));
+  await convertOne(avif512, import_node_path.default.join(base, "logo_512.png"));
   const srcForApple = await exists(avif512) ? avif512 : avif192;
   if (await exists(srcForApple)) {
-    await createAppleTouch(srcForApple, path.join(base, "logo_180.png"));
+    await createAppleTouch(srcForApple, import_node_path.default.join(base, "logo_180.png"));
   } else {
     console.warn("[icons] skip: no source for apple-touch 180x180");
   }
   const bestSrc = await exists(avif512) ? avif512 : avif192;
   if (await exists(bestSrc)) {
-    await resizeToPng(bestSrc, path.join(base, "logo_32.png"), 32);
-    await resizeToPng(bestSrc, path.join(base, "logo_16.png"), 16);
+    await resizeToPng(bestSrc, import_node_path.default.join(base, "logo_32.png"), 32);
+    await resizeToPng(bestSrc, import_node_path.default.join(base, "logo_16.png"), 16);
   } else {
     console.warn("[icons] skip: no source for favicons 32/16");
   }

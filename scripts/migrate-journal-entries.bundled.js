@@ -1,16 +1,11 @@
+"use strict";
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
-}) : x)(function(x) {
-  if (typeof require !== "undefined") return require.apply(this, arguments);
-  throw Error('Dynamic require of "' + x + '" is not supported');
-});
-var __commonJS = (cb, mod) => function __require2() {
+var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
 var __export = (target, all) => {
@@ -36,7 +31,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 
 // node_modules/pino-std-serializers/lib/err-helpers.js
 var require_err_helpers = __commonJS({
-  "node_modules/pino-std-serializers/lib/err-helpers.js"(exports, module) {
+  "node_modules/pino-std-serializers/lib/err-helpers.js"(exports2, module2) {
     "use strict";
     var isErrorLike = (err) => {
       return err && typeof err.message === "string";
@@ -82,7 +77,7 @@ var require_err_helpers = __commonJS({
       }
     };
     var messageWithCauses = (err) => _messageWithCauses(err, /* @__PURE__ */ new Set());
-    module.exports = {
+    module2.exports = {
       isErrorLike,
       getErrorCause,
       stackWithCauses,
@@ -93,7 +88,7 @@ var require_err_helpers = __commonJS({
 
 // node_modules/pino-std-serializers/lib/err-proto.js
 var require_err_proto = __commonJS({
-  "node_modules/pino-std-serializers/lib/err-proto.js"(exports, module) {
+  "node_modules/pino-std-serializers/lib/err-proto.js"(exports2, module2) {
     "use strict";
     var seen = Symbol("circular-ref-tag");
     var rawSymbol = Symbol("pino-raw-err-ref");
@@ -132,7 +127,7 @@ var require_err_proto = __commonJS({
       writable: true,
       value: {}
     });
-    module.exports = {
+    module2.exports = {
       pinoErrProto,
       pinoErrorSymbols: {
         seen,
@@ -144,9 +139,9 @@ var require_err_proto = __commonJS({
 
 // node_modules/pino-std-serializers/lib/err.js
 var require_err = __commonJS({
-  "node_modules/pino-std-serializers/lib/err.js"(exports, module) {
+  "node_modules/pino-std-serializers/lib/err.js"(exports2, module2) {
     "use strict";
-    module.exports = errSerializer;
+    module2.exports = errSerializer;
     var { messageWithCauses, stackWithCauses, isErrorLike } = require_err_helpers();
     var { pinoErrProto, pinoErrorSymbols } = require_err_proto();
     var { seen } = pinoErrorSymbols;
@@ -184,9 +179,9 @@ var require_err = __commonJS({
 
 // node_modules/pino-std-serializers/lib/err-with-cause.js
 var require_err_with_cause = __commonJS({
-  "node_modules/pino-std-serializers/lib/err-with-cause.js"(exports, module) {
+  "node_modules/pino-std-serializers/lib/err-with-cause.js"(exports2, module2) {
     "use strict";
-    module.exports = errWithCauseSerializer;
+    module2.exports = errWithCauseSerializer;
     var { isErrorLike } = require_err_helpers();
     var { pinoErrProto, pinoErrorSymbols } = require_err_proto();
     var { seen } = pinoErrorSymbols;
@@ -227,9 +222,9 @@ var require_err_with_cause = __commonJS({
 
 // node_modules/pino-std-serializers/lib/req.js
 var require_req = __commonJS({
-  "node_modules/pino-std-serializers/lib/req.js"(exports, module) {
+  "node_modules/pino-std-serializers/lib/req.js"(exports2, module2) {
     "use strict";
-    module.exports = {
+    module2.exports = {
       mapHttpRequest,
       reqSerializer
     };
@@ -322,9 +317,9 @@ var require_req = __commonJS({
 
 // node_modules/pino-std-serializers/lib/res.js
 var require_res = __commonJS({
-  "node_modules/pino-std-serializers/lib/res.js"(exports, module) {
+  "node_modules/pino-std-serializers/lib/res.js"(exports2, module2) {
     "use strict";
-    module.exports = {
+    module2.exports = {
       mapHttpResponse,
       resSerializer
     };
@@ -371,13 +366,13 @@ var require_res = __commonJS({
 
 // node_modules/pino-std-serializers/index.js
 var require_pino_std_serializers = __commonJS({
-  "node_modules/pino-std-serializers/index.js"(exports, module) {
+  "node_modules/pino-std-serializers/index.js"(exports2, module2) {
     "use strict";
     var errSerializer = require_err();
     var errWithCauseSerializer = require_err_with_cause();
     var reqSerializers = require_req();
     var resSerializers = require_res();
-    module.exports = {
+    module2.exports = {
       err: errSerializer,
       errWithCause: errWithCauseSerializer,
       mapHttpRequest: reqSerializers.mapHttpRequest,
@@ -408,12 +403,12 @@ var require_pino_std_serializers = __commonJS({
 
 // node_modules/pino/lib/caller.js
 var require_caller = __commonJS({
-  "node_modules/pino/lib/caller.js"(exports, module) {
+  "node_modules/pino/lib/caller.js"(exports2, module2) {
     "use strict";
     function noOpPrepareStackTrace(_, stack) {
       return stack;
     }
-    module.exports = function getCallers() {
+    module2.exports = function getCallers() {
       const originalPrepare = Error.prepareStackTrace;
       Error.prepareStackTrace = noOpPrepareStackTrace;
       const stack = new Error().stack;
@@ -436,7 +431,7 @@ var require_caller = __commonJS({
 
 // node_modules/@pinojs/redact/index.js
 var require_redact = __commonJS({
-  "node_modules/@pinojs/redact/index.js"(exports, module) {
+  "node_modules/@pinojs/redact/index.js"(exports2, module2) {
     "use strict";
     function deepClone(obj) {
       if (obj === null || typeof obj !== "object") {
@@ -863,13 +858,13 @@ var require_redact = __commonJS({
         return JSON.stringify(cloned);
       };
     }
-    module.exports = slowRedact;
+    module2.exports = slowRedact;
   }
 });
 
 // node_modules/pino/lib/symbols.js
 var require_symbols = __commonJS({
-  "node_modules/pino/lib/symbols.js"(exports, module) {
+  "node_modules/pino/lib/symbols.js"(exports2, module2) {
     "use strict";
     var setLevelSym = Symbol("pino.setLevel");
     var getLevelSym = Symbol("pino.getLevel");
@@ -902,7 +897,7 @@ var require_symbols = __commonJS({
     var formattersSym = Symbol.for("pino.formatters");
     var hooksSym = Symbol.for("pino.hooks");
     var needsMetadataGsym = Symbol.for("pino.metadata");
-    module.exports = {
+    module2.exports = {
       setLevelSym,
       getLevelSym,
       levelValSym,
@@ -940,7 +935,7 @@ var require_symbols = __commonJS({
 
 // node_modules/pino/lib/redaction.js
 var require_redaction = __commonJS({
-  "node_modules/pino/lib/redaction.js"(exports, module) {
+  "node_modules/pino/lib/redaction.js"(exports2, module2) {
     "use strict";
     var Redact = require_redact();
     var { redactFmtSym, wildcardFirstSym } = require_symbols();
@@ -1016,13 +1011,13 @@ var require_redaction = __commonJS({
       if (remove === true) censor = void 0;
       return { paths, censor, remove };
     }
-    module.exports = redaction;
+    module2.exports = redaction;
   }
 });
 
 // node_modules/pino/lib/time.js
 var require_time = __commonJS({
-  "node_modules/pino/lib/time.js"(exports, module) {
+  "node_modules/pino/lib/time.js"(exports2, module2) {
     "use strict";
     var nullTime = () => "";
     var epochTime = () => `,"time":${Date.now()}`;
@@ -1047,13 +1042,13 @@ var require_time = __commonJS({
       const seconds = date.getUTCSeconds().toString().padStart(2, "0");
       return `,"time":"${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${nanosWithinSecond.toString().padStart(9, "0")}Z"`;
     };
-    module.exports = { nullTime, epochTime, unixTime, isoTime, isoTimeNano };
+    module2.exports = { nullTime, epochTime, unixTime, isoTime, isoTimeNano };
   }
 });
 
 // node_modules/quick-format-unescaped/index.js
 var require_quick_format_unescaped = __commonJS({
-  "node_modules/quick-format-unescaped/index.js"(exports, module) {
+  "node_modules/quick-format-unescaped/index.js"(exports2, module2) {
     "use strict";
     function tryStringify(o) {
       try {
@@ -1062,7 +1057,7 @@ var require_quick_format_unescaped = __commonJS({
         return '"[Circular]"';
       }
     }
-    module.exports = format;
+    module2.exports = format;
     function format(f, args, opts) {
       var ss = opts && opts.stringify || tryStringify;
       var offset = 1;
@@ -1172,7 +1167,7 @@ var require_quick_format_unescaped = __commonJS({
 
 // node_modules/atomic-sleep/index.js
 var require_atomic_sleep = __commonJS({
-  "node_modules/atomic-sleep/index.js"(exports, module) {
+  "node_modules/atomic-sleep/index.js"(exports2, module2) {
     "use strict";
     if (typeof SharedArrayBuffer !== "undefined" && typeof Atomics !== "undefined") {
       let sleep = function(ms) {
@@ -1186,7 +1181,7 @@ var require_atomic_sleep = __commonJS({
         Atomics.wait(nil, 0, 0, Number(ms));
       };
       const nil = new Int32Array(new SharedArrayBuffer(4));
-      module.exports = sleep;
+      module2.exports = sleep;
     } else {
       let sleep = function(ms) {
         const valid = ms > 0 && ms < Infinity;
@@ -1200,21 +1195,21 @@ var require_atomic_sleep = __commonJS({
         while (target > Date.now()) {
         }
       };
-      module.exports = sleep;
+      module2.exports = sleep;
     }
   }
 });
 
 // node_modules/sonic-boom/index.js
 var require_sonic_boom = __commonJS({
-  "node_modules/sonic-boom/index.js"(exports, module) {
+  "node_modules/sonic-boom/index.js"(exports2, module2) {
     "use strict";
-    var fs = __require("fs");
-    var EventEmitter = __require("events");
-    var inherits = __require("util").inherits;
-    var path = __require("path");
+    var fs = require("fs");
+    var EventEmitter = require("events");
+    var inherits = require("util").inherits;
+    var path = require("path");
     var sleep = require_atomic_sleep();
-    var assert = __require("assert");
+    var assert = require("assert");
     var BUSY_WRITE_TIMEOUT = 100;
     var kEmptyBuffer = Buffer.allocUnsafe(0);
     var MAX_WRITE = 16 * 1024;
@@ -1776,13 +1771,13 @@ var require_sonic_boom = __commonJS({
     }
     SonicBoom.SonicBoom = SonicBoom;
     SonicBoom.default = SonicBoom;
-    module.exports = SonicBoom;
+    module2.exports = SonicBoom;
   }
 });
 
 // node_modules/on-exit-leak-free/index.js
 var require_on_exit_leak_free = __commonJS({
-  "node_modules/on-exit-leak-free/index.js"(exports, module) {
+  "node_modules/on-exit-leak-free/index.js"(exports2, module2) {
     "use strict";
     var refs = {
       exit: [],
@@ -1866,7 +1861,7 @@ var require_on_exit_leak_free = __commonJS({
         uninstall(event);
       }
     }
-    module.exports = {
+    module2.exports = {
       register,
       registerBeforeExit,
       unregister
@@ -1876,8 +1871,8 @@ var require_on_exit_leak_free = __commonJS({
 
 // node_modules/thread-stream/package.json
 var require_package = __commonJS({
-  "node_modules/thread-stream/package.json"(exports, module) {
-    module.exports = {
+  "node_modules/thread-stream/package.json"(exports2, module2) {
+    module2.exports = {
       name: "thread-stream",
       version: "4.0.0",
       description: "A streaming way to send data to a Node.js Worker Thread",
@@ -1934,7 +1929,7 @@ var require_package = __commonJS({
 
 // node_modules/thread-stream/lib/wait.js
 var require_wait = __commonJS({
-  "node_modules/thread-stream/lib/wait.js"(exports, module) {
+  "node_modules/thread-stream/lib/wait.js"(exports2, module2) {
     "use strict";
     var WAIT_MS = 1e4;
     function wait(state, index, expected, timeout, done) {
@@ -1981,17 +1976,17 @@ var require_wait = __commonJS({
       };
       check();
     }
-    module.exports = { wait, waitDiff };
+    module2.exports = { wait, waitDiff };
   }
 });
 
 // node_modules/thread-stream/lib/indexes.js
 var require_indexes = __commonJS({
-  "node_modules/thread-stream/lib/indexes.js"(exports, module) {
+  "node_modules/thread-stream/lib/indexes.js"(exports2, module2) {
     "use strict";
     var WRITE_INDEX = 4;
     var READ_INDEX = 8;
-    module.exports = {
+    module2.exports = {
       WRITE_INDEX,
       READ_INDEX
     };
@@ -2000,20 +1995,20 @@ var require_indexes = __commonJS({
 
 // node_modules/thread-stream/index.js
 var require_thread_stream = __commonJS({
-  "node_modules/thread-stream/index.js"(exports, module) {
+  "node_modules/thread-stream/index.js"(exports2, module2) {
     "use strict";
     var { version } = require_package();
-    var { EventEmitter } = __require("events");
-    var { Worker } = __require("worker_threads");
-    var { join } = __require("path");
-    var { pathToFileURL } = __require("url");
+    var { EventEmitter } = require("events");
+    var { Worker } = require("worker_threads");
+    var { join } = require("path");
+    var { pathToFileURL } = require("url");
     var { wait } = require_wait();
     var {
       WRITE_INDEX,
       READ_INDEX
     } = require_indexes();
-    var buffer = __require("buffer");
-    var assert = __require("assert");
+    var buffer = require("buffer");
+    var assert = require("assert");
     var kImpl = Symbol("kImpl");
     var MAX_STRING = buffer.constants.MAX_STRING_LENGTH;
     var FakeWeakRef = class {
@@ -2421,17 +2416,17 @@ var require_thread_stream = __commonJS({
         }
       }
     }
-    module.exports = ThreadStream;
+    module2.exports = ThreadStream;
   }
 });
 
 // node_modules/pino/lib/transport.js
 var require_transport = __commonJS({
-  "node_modules/pino/lib/transport.js"(exports, module) {
+  "node_modules/pino/lib/transport.js"(exports2, module2) {
     "use strict";
-    var { createRequire } = __require("module");
+    var { createRequire } = require("module");
     var getCallers = require_caller();
-    var { join, isAbsolute, sep } = __require("node:path");
+    var { join, isAbsolute, sep } = require("node:path");
     var sleep = require_atomic_sleep();
     var onExit = require_on_exit_leak_free();
     var ThreadStream = require_thread_stream();
@@ -2456,7 +2451,7 @@ var require_transport = __commonJS({
       return false;
     }
     function buildStream(filename, workerData, workerOpts, sync) {
-      if (!workerOpts.execArgv && hasPreloadFlags() && __require.main === void 0) {
+      if (!workerOpts.execArgv && hasPreloadFlags() && require.main === void 0) {
         workerOpts = {
           ...workerOpts,
           execArgv: []
@@ -2571,15 +2566,15 @@ var require_transport = __commonJS({
         return fixTarget2;
       }
     }
-    module.exports = transport;
+    module2.exports = transport;
   }
 });
 
 // node_modules/pino/lib/tools.js
 var require_tools = __commonJS({
-  "node_modules/pino/lib/tools.js"(exports, module) {
+  "node_modules/pino/lib/tools.js"(exports2, module2) {
     "use strict";
-    var diagChan = __require("node:diagnostics_channel");
+    var diagChan = require("node:diagnostics_channel");
     var format = require_quick_format_unescaped();
     var { mapHttpRequest, mapHttpResponse } = require_pino_std_serializers();
     var SonicBoom = require_sonic_boom();
@@ -2602,7 +2597,7 @@ var require_tools = __commonJS({
       nestedKeyStrSym,
       msgPrefixSym
     } = require_symbols();
-    var { isMainThread } = __require("worker_threads");
+    var { isMainThread } = require("worker_threads");
     var transport = require_transport();
     var [nodeMajor] = process.versions.node.split(".").map((v) => Number(v));
     var asJsonChan = diagChan.tracingChannel("pino_asJson");
@@ -2890,7 +2885,7 @@ var require_tools = __commonJS({
       }
       return destination;
     }
-    module.exports = {
+    module2.exports = {
       noop,
       buildSafeSonicBoom,
       asChindings,
@@ -2906,7 +2901,7 @@ var require_tools = __commonJS({
 
 // node_modules/pino/lib/constants.js
 var require_constants = __commonJS({
-  "node_modules/pino/lib/constants.js"(exports, module) {
+  "node_modules/pino/lib/constants.js"(exports2, module2) {
     var DEFAULT_LEVELS = {
       trace: 10,
       debug: 20,
@@ -2919,7 +2914,7 @@ var require_constants = __commonJS({
       ASC: "ASC",
       DESC: "DESC"
     };
-    module.exports = {
+    module2.exports = {
       DEFAULT_LEVELS,
       SORTING_ORDER
     };
@@ -2928,7 +2923,7 @@ var require_constants = __commonJS({
 
 // node_modules/pino/lib/levels.js
 var require_levels = __commonJS({
-  "node_modules/pino/lib/levels.js"(exports, module) {
+  "node_modules/pino/lib/levels.js"(exports2, module2) {
     "use strict";
     var {
       lsCacheSym,
@@ -3103,7 +3098,7 @@ var require_levels = __commonJS({
       }
       throw new Error('Levels comparison should be one of "ASC", "DESC" or "function" type');
     }
-    module.exports = {
+    module2.exports = {
       initialLsCache,
       genLsCache,
       levelMethods,
@@ -3121,17 +3116,17 @@ var require_levels = __commonJS({
 
 // node_modules/pino/lib/meta.js
 var require_meta = __commonJS({
-  "node_modules/pino/lib/meta.js"(exports, module) {
+  "node_modules/pino/lib/meta.js"(exports2, module2) {
     "use strict";
-    module.exports = { version: "10.2.1" };
+    module2.exports = { version: "10.2.1" };
   }
 });
 
 // node_modules/pino/lib/proto.js
 var require_proto = __commonJS({
-  "node_modules/pino/lib/proto.js"(exports, module) {
+  "node_modules/pino/lib/proto.js"(exports2, module2) {
     "use strict";
-    var { EventEmitter } = __require("node:events");
+    var { EventEmitter } = require("node:events");
     var {
       lsCacheSym,
       levelValSym,
@@ -3213,7 +3208,7 @@ var require_proto = __commonJS({
       [setLevelSym]: setLevel
     };
     Object.setPrototypeOf(prototype, EventEmitter.prototype);
-    module.exports = function() {
+    module2.exports = function() {
       return Object.create(prototype);
     };
     var resetChildingsFormatter = (bindings2) => bindings2;
@@ -3359,16 +3354,16 @@ var require_proto = __commonJS({
 
 // node_modules/safe-stable-stringify/index.js
 var require_safe_stable_stringify = __commonJS({
-  "node_modules/safe-stable-stringify/index.js"(exports, module) {
+  "node_modules/safe-stable-stringify/index.js"(exports2, module2) {
     "use strict";
     var { hasOwnProperty } = Object.prototype;
     var stringify = configure();
     stringify.configure = configure;
     stringify.stringify = stringify;
     stringify.default = stringify;
-    exports.stringify = stringify;
-    exports.configure = configure;
-    module.exports = stringify;
+    exports2.stringify = stringify;
+    exports2.configure = configure;
+    module2.exports = stringify;
     var strEscapeSequencesRegExp = /[\u0000-\u001f\u0022\u005c\ud800-\udfff]/;
     function strEscape(str) {
       if (str.length < 5e3 && !strEscapeSequencesRegExp.test(str)) {
@@ -3955,7 +3950,7 @@ ${originalIndentation}`;
 
 // node_modules/pino/lib/multistream.js
 var require_multistream = __commonJS({
-  "node_modules/pino/lib/multistream.js"(exports, module) {
+  "node_modules/pino/lib/multistream.js"(exports2, module2) {
     "use strict";
     var metadata = Symbol.for("pino.metadata");
     var { DEFAULT_LEVELS } = require_constants();
@@ -4117,15 +4112,15 @@ var require_multistream = __commonJS({
     function checkLoopVar(i, length, dedupe) {
       return dedupe ? i >= 0 : i < length;
     }
-    module.exports = multistream;
+    module2.exports = multistream;
   }
 });
 
 // node_modules/pino/pino.js
 var require_pino = __commonJS({
-  "node_modules/pino/pino.js"(exports, module) {
+  "node_modules/pino/pino.js"(exports2, module2) {
     "use strict";
-    var os = __require("node:os");
+    var os = require("node:os");
     var stdSerializers = require_pino_std_serializers();
     var caller = require_caller();
     var redaction = require_redaction();
@@ -4310,8 +4305,8 @@ var require_pino = __commonJS({
       instance[setLevelSym](level);
       return instance;
     }
-    module.exports = pino2;
-    module.exports.destination = (dest = process.stdout.fd) => {
+    module2.exports = pino2;
+    module2.exports.destination = (dest = process.stdout.fd) => {
       if (typeof dest === "object") {
         dest.dest = normalizeDestFileDescriptor(dest.dest || process.stdout.fd);
         return buildSafeSonicBoom(dest);
@@ -4319,24 +4314,24 @@ var require_pino = __commonJS({
         return buildSafeSonicBoom({ dest: normalizeDestFileDescriptor(dest), minLength: 0 });
       }
     };
-    module.exports.transport = require_transport();
-    module.exports.multistream = require_multistream();
-    module.exports.levels = mappings();
-    module.exports.stdSerializers = serializers;
-    module.exports.stdTimeFunctions = Object.assign({}, time);
-    module.exports.symbols = symbols;
-    module.exports.version = version;
-    module.exports.default = pino2;
-    module.exports.pino = pino2;
+    module2.exports.transport = require_transport();
+    module2.exports.multistream = require_multistream();
+    module2.exports.levels = mappings();
+    module2.exports.stdSerializers = serializers;
+    module2.exports.stdTimeFunctions = Object.assign({}, time);
+    module2.exports.symbols = symbols;
+    module2.exports.version = version;
+    module2.exports.default = pino2;
+    module2.exports.pino = pino2;
   }
 });
 
 // node_modules/colorette/index.cjs
 var require_colorette = __commonJS({
-  "node_modules/colorette/index.cjs"(exports) {
+  "node_modules/colorette/index.cjs"(exports2) {
     "use strict";
-    Object.defineProperty(exports, "__esModule", { value: true });
-    var tty = __require("tty");
+    Object.defineProperty(exports2, "__esModule", { value: true });
+    var tty = require("tty");
     function _interopNamespace(e) {
       if (e && e.__esModule) return e;
       var n = /* @__PURE__ */ Object.create(null);
@@ -4469,56 +4464,56 @@ var require_colorette = __commonJS({
       bgCyanBright,
       bgWhiteBright
     } = createColors();
-    exports.bgBlack = bgBlack;
-    exports.bgBlackBright = bgBlackBright;
-    exports.bgBlue = bgBlue;
-    exports.bgBlueBright = bgBlueBright;
-    exports.bgCyan = bgCyan;
-    exports.bgCyanBright = bgCyanBright;
-    exports.bgGreen = bgGreen;
-    exports.bgGreenBright = bgGreenBright;
-    exports.bgMagenta = bgMagenta;
-    exports.bgMagentaBright = bgMagentaBright;
-    exports.bgRed = bgRed;
-    exports.bgRedBright = bgRedBright;
-    exports.bgWhite = bgWhite;
-    exports.bgWhiteBright = bgWhiteBright;
-    exports.bgYellow = bgYellow;
-    exports.bgYellowBright = bgYellowBright;
-    exports.black = black;
-    exports.blackBright = blackBright;
-    exports.blue = blue;
-    exports.blueBright = blueBright;
-    exports.bold = bold;
-    exports.createColors = createColors;
-    exports.cyan = cyan;
-    exports.cyanBright = cyanBright;
-    exports.dim = dim;
-    exports.gray = gray;
-    exports.green = green;
-    exports.greenBright = greenBright;
-    exports.hidden = hidden;
-    exports.inverse = inverse;
-    exports.isColorSupported = isColorSupported;
-    exports.italic = italic;
-    exports.magenta = magenta;
-    exports.magentaBright = magentaBright;
-    exports.red = red;
-    exports.redBright = redBright;
-    exports.reset = reset;
-    exports.strikethrough = strikethrough;
-    exports.underline = underline;
-    exports.white = white;
-    exports.whiteBright = whiteBright;
-    exports.yellow = yellow;
-    exports.yellowBright = yellowBright;
+    exports2.bgBlack = bgBlack;
+    exports2.bgBlackBright = bgBlackBright;
+    exports2.bgBlue = bgBlue;
+    exports2.bgBlueBright = bgBlueBright;
+    exports2.bgCyan = bgCyan;
+    exports2.bgCyanBright = bgCyanBright;
+    exports2.bgGreen = bgGreen;
+    exports2.bgGreenBright = bgGreenBright;
+    exports2.bgMagenta = bgMagenta;
+    exports2.bgMagentaBright = bgMagentaBright;
+    exports2.bgRed = bgRed;
+    exports2.bgRedBright = bgRedBright;
+    exports2.bgWhite = bgWhite;
+    exports2.bgWhiteBright = bgWhiteBright;
+    exports2.bgYellow = bgYellow;
+    exports2.bgYellowBright = bgYellowBright;
+    exports2.black = black;
+    exports2.blackBright = blackBright;
+    exports2.blue = blue;
+    exports2.blueBright = blueBright;
+    exports2.bold = bold;
+    exports2.createColors = createColors;
+    exports2.cyan = cyan;
+    exports2.cyanBright = cyanBright;
+    exports2.dim = dim;
+    exports2.gray = gray;
+    exports2.green = green;
+    exports2.greenBright = greenBright;
+    exports2.hidden = hidden;
+    exports2.inverse = inverse;
+    exports2.isColorSupported = isColorSupported;
+    exports2.italic = italic;
+    exports2.magenta = magenta;
+    exports2.magentaBright = magentaBright;
+    exports2.red = red;
+    exports2.redBright = redBright;
+    exports2.reset = reset;
+    exports2.strikethrough = strikethrough;
+    exports2.underline = underline;
+    exports2.white = white;
+    exports2.whiteBright = whiteBright;
+    exports2.yellow = yellow;
+    exports2.yellowBright = yellowBright;
   }
 });
 
 // node_modules/wrappy/wrappy.js
 var require_wrappy = __commonJS({
-  "node_modules/wrappy/wrappy.js"(exports, module) {
-    module.exports = wrappy;
+  "node_modules/wrappy/wrappy.js"(exports2, module2) {
+    module2.exports = wrappy;
     function wrappy(fn, cb) {
       if (fn && cb) return wrappy(fn)(cb);
       if (typeof fn !== "function")
@@ -4547,10 +4542,10 @@ var require_wrappy = __commonJS({
 
 // node_modules/once/once.js
 var require_once = __commonJS({
-  "node_modules/once/once.js"(exports, module) {
+  "node_modules/once/once.js"(exports2, module2) {
     var wrappy = require_wrappy();
-    module.exports = wrappy(once);
-    module.exports.strict = wrappy(onceStrict);
+    module2.exports = wrappy(once);
+    module2.exports.strict = wrappy(onceStrict);
     once.proto = once(function() {
       Object.defineProperty(Function.prototype, "once", {
         value: function() {
@@ -4591,7 +4586,7 @@ var require_once = __commonJS({
 
 // node_modules/end-of-stream/index.js
 var require_end_of_stream = __commonJS({
-  "node_modules/end-of-stream/index.js"(exports, module) {
+  "node_modules/end-of-stream/index.js"(exports2, module2) {
     var once = require_once();
     var noop = function() {
     };
@@ -4668,18 +4663,18 @@ var require_end_of_stream = __commonJS({
         stream.removeListener("close", onclose);
       };
     };
-    module.exports = eos;
+    module2.exports = eos;
   }
 });
 
 // node_modules/pump/index.js
 var require_pump = __commonJS({
-  "node_modules/pump/index.js"(exports, module) {
+  "node_modules/pump/index.js"(exports2, module2) {
     var once = require_once();
     var eos = require_end_of_stream();
     var fs;
     try {
-      fs = __require("fs");
+      fs = require("fs");
     } catch (e) {
     }
     var noop = function() {
@@ -4743,16 +4738,16 @@ var require_pump = __commonJS({
       });
       return streams.reduce(pipe);
     };
-    module.exports = pump;
+    module2.exports = pump;
   }
 });
 
 // node_modules/split2/index.js
 var require_split2 = __commonJS({
-  "node_modules/split2/index.js"(exports, module) {
+  "node_modules/split2/index.js"(exports2, module2) {
     "use strict";
-    var { Transform } = __require("stream");
-    var { StringDecoder } = __require("string_decoder");
+    var { Transform } = require("stream");
+    var { StringDecoder } = require("string_decoder");
     var kLast = Symbol("last");
     var kDecoder = Symbol("decoder");
     function transform(chunk, enc, cb) {
@@ -4844,18 +4839,18 @@ var require_split2 = __commonJS({
       };
       return stream;
     }
-    module.exports = split;
+    module2.exports = split;
   }
 });
 
 // node_modules/pino-abstract-transport/index.js
 var require_pino_abstract_transport = __commonJS({
-  "node_modules/pino-abstract-transport/index.js"(exports, module) {
+  "node_modules/pino-abstract-transport/index.js"(exports2, module2) {
     "use strict";
     var metadata = Symbol.for("pino.metadata");
     var split = require_split2();
-    var { Duplex } = __require("stream");
-    var { parentPort, workerData } = __require("worker_threads");
+    var { Duplex } = require("stream");
+    var { parentPort, workerData } = require("worker_threads");
     function createDeferred() {
       let resolve;
       let reject;
@@ -4867,7 +4862,7 @@ var require_pino_abstract_transport = __commonJS({
       promise.reject = reject;
       return promise;
     }
-    module.exports = function build(fn, opts = {}) {
+    module2.exports = function build(fn, opts = {}) {
       const waitForConfig = opts.expectPinoConfig === true && workerData?.workerData?.pinoWillSendConfig === true;
       const parseLines = opts.parse === "lines";
       const parseLine = typeof opts.parseLine === "function" ? opts.parseLine : JSON.parse;
@@ -4968,9 +4963,9 @@ var require_pino_abstract_transport = __commonJS({
 
 // node_modules/pino-pretty/lib/constants.js
 var require_constants2 = __commonJS({
-  "node_modules/pino-pretty/lib/constants.js"(exports, module) {
+  "node_modules/pino-pretty/lib/constants.js"(exports2, module2) {
     "use strict";
-    module.exports = {
+    module2.exports = {
       DATE_FORMAT: "yyyy-mm-dd HH:MM:ss.l o",
       DATE_FORMAT_SIMPLE: "HH:MM:ss.l",
       /**
@@ -5014,9 +5009,9 @@ var require_constants2 = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/get-level-label-data.js
 var require_get_level_label_data = __commonJS({
-  "node_modules/pino-pretty/lib/utils/get-level-label-data.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/get-level-label-data.js"(exports2, module2) {
     "use strict";
-    module.exports = getLevelLabelData;
+    module2.exports = getLevelLabelData;
     var { LEVELS, LEVEL_NAMES } = require_constants2();
     function getLevelLabelData(useOnlyCustomProps, customLevels, customLevelNames) {
       const levels = useOnlyCustomProps ? customLevels || LEVELS : Object.assign({}, LEVELS, customLevels);
@@ -5036,7 +5031,7 @@ var require_get_level_label_data = __commonJS({
 
 // node_modules/pino-pretty/lib/colors.js
 var require_colors = __commonJS({
-  "node_modules/pino-pretty/lib/colors.js"(exports, module) {
+  "node_modules/pino-pretty/lib/colors.js"(exports2, module2) {
     "use strict";
     var nocolor = (input) => input;
     var plain = {
@@ -5117,7 +5112,7 @@ var require_colors = __commonJS({
       customColoredColorizer.greyMessage = customColoredColorizer.greyMessage || customColored.greyMessage;
       return customColoredColorizer;
     }
-    module.exports = function getColorizer(useColors = false, customColors, useOnlyCustomProps) {
+    module2.exports = function getColorizer(useColors = false, customColors, useOnlyCustomProps) {
       if (useColors && customColors !== void 0) {
         return customColoredColorizerFactory(customColors, useOnlyCustomProps);
       } else if (useColors) {
@@ -5130,19 +5125,19 @@ var require_colors = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/noop.js
 var require_noop = __commonJS({
-  "node_modules/pino-pretty/lib/utils/noop.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/noop.js"(exports2, module2) {
     "use strict";
-    module.exports = function noop() {
+    module2.exports = function noop() {
     };
   }
 });
 
 // node_modules/pino-pretty/lib/utils/build-safe-sonic-boom.js
 var require_build_safe_sonic_boom = __commonJS({
-  "node_modules/pino-pretty/lib/utils/build-safe-sonic-boom.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/build-safe-sonic-boom.js"(exports2, module2) {
     "use strict";
-    module.exports = buildSafeSonicBoom;
-    var { isMainThread } = __require("node:worker_threads");
+    module2.exports = buildSafeSonicBoom;
+    var { isMainThread } = require("node:worker_threads");
     var SonicBoom = require_sonic_boom();
     var noop = require_noop();
     function buildSafeSonicBoom(opts) {
@@ -5190,9 +5185,9 @@ var require_build_safe_sonic_boom = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/is-valid-date.js
 var require_is_valid_date = __commonJS({
-  "node_modules/pino-pretty/lib/utils/is-valid-date.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/is-valid-date.js"(exports2, module2) {
     "use strict";
-    module.exports = isValidDate;
+    module2.exports = isValidDate;
     function isValidDate(date) {
       return date instanceof Date && !Number.isNaN(date.getTime());
     }
@@ -5201,9 +5196,9 @@ var require_is_valid_date = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/create-date.js
 var require_create_date = __commonJS({
-  "node_modules/pino-pretty/lib/utils/create-date.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/create-date.js"(exports2, module2) {
     "use strict";
-    module.exports = createDate;
+    module2.exports = createDate;
     var isValidDate = require_is_valid_date();
     function createDate(epoch) {
       let date = new Date(epoch);
@@ -5218,9 +5213,9 @@ var require_create_date = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/split-property-key.js
 var require_split_property_key = __commonJS({
-  "node_modules/pino-pretty/lib/utils/split-property-key.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/split-property-key.js"(exports2, module2) {
     "use strict";
-    module.exports = splitPropertyKey;
+    module2.exports = splitPropertyKey;
     function splitPropertyKey(key) {
       const result = [];
       let backslash = false;
@@ -5253,9 +5248,9 @@ var require_split_property_key = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/get-property-value.js
 var require_get_property_value = __commonJS({
-  "node_modules/pino-pretty/lib/utils/get-property-value.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/get-property-value.js"(exports2, module2) {
     "use strict";
-    module.exports = getPropertyValue;
+    module2.exports = getPropertyValue;
     var splitPropertyKey = require_split_property_key();
     function getPropertyValue(obj, property) {
       const props = Array.isArray(property) ? property : splitPropertyKey(property);
@@ -5272,9 +5267,9 @@ var require_get_property_value = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/delete-log-property.js
 var require_delete_log_property = __commonJS({
-  "node_modules/pino-pretty/lib/utils/delete-log-property.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/delete-log-property.js"(exports2, module2) {
     "use strict";
-    module.exports = deleteLogProperty;
+    module2.exports = deleteLogProperty;
     var getPropertyValue = require_get_property_value();
     var splitPropertyKey = require_split_property_key();
     function deleteLogProperty(log, property) {
@@ -5290,7 +5285,7 @@ var require_delete_log_property = __commonJS({
 
 // node_modules/fast-copy/dist/cjs/index.cjs
 var require_cjs = __commonJS({
-  "node_modules/fast-copy/dist/cjs/index.cjs"(exports) {
+  "node_modules/fast-copy/dist/cjs/index.cjs"(exports2) {
     "use strict";
     var toStringFunction = Function.prototype.toString;
     var toStringObject = Object.prototype.toString;
@@ -5524,17 +5519,17 @@ var require_cjs = __commonJS({
     }
     var copyStrict = createCopier({ strict: true });
     var copy = createCopier();
-    exports.copy = copy;
-    exports.copyStrict = copyStrict;
-    exports.createCopier = createCopier;
+    exports2.copy = copy;
+    exports2.copyStrict = copyStrict;
+    exports2.createCopier = createCopier;
   }
 });
 
 // node_modules/pino-pretty/lib/utils/filter-log.js
 var require_filter_log = __commonJS({
-  "node_modules/pino-pretty/lib/utils/filter-log.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/filter-log.js"(exports2, module2) {
     "use strict";
-    module.exports = filterLog;
+    module2.exports = filterLog;
     var { createCopier } = require_cjs();
     var fastCopy = createCopier({});
     var deleteLogProperty = require_delete_log_property();
@@ -5558,7 +5553,7 @@ var require_filter_log = __commonJS({
 
 // node_modules/dateformat/lib/dateformat.js
 var require_dateformat = __commonJS({
-  "node_modules/dateformat/lib/dateformat.js"(exports, module) {
+  "node_modules/dateformat/lib/dateformat.js"(exports2, module2) {
     "use strict";
     function _typeof(obj) {
       "@babel/helpers - typeof";
@@ -5800,8 +5795,8 @@ var require_dateformat = __commonJS({
         define(function() {
           return dateFormat;
         });
-      } else if ((typeof exports === "undefined" ? "undefined" : _typeof(exports)) === "object") {
-        module.exports = dateFormat;
+      } else if ((typeof exports2 === "undefined" ? "undefined" : _typeof(exports2)) === "object") {
+        module2.exports = dateFormat;
       } else {
         global2.dateFormat = dateFormat;
       }
@@ -5811,9 +5806,9 @@ var require_dateformat = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/format-time.js
 var require_format_time = __commonJS({
-  "node_modules/pino-pretty/lib/utils/format-time.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/format-time.js"(exports2, module2) {
     "use strict";
-    module.exports = formatTime;
+    module2.exports = formatTime;
     var {
       DATE_FORMAT,
       DATE_FORMAT_SIMPLE
@@ -5850,9 +5845,9 @@ var require_format_time = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/handle-custom-levels-names-opts.js
 var require_handle_custom_levels_names_opts = __commonJS({
-  "node_modules/pino-pretty/lib/utils/handle-custom-levels-names-opts.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/handle-custom-levels-names-opts.js"(exports2, module2) {
     "use strict";
-    module.exports = handleCustomLevelsNamesOpts;
+    module2.exports = handleCustomLevelsNamesOpts;
     function handleCustomLevelsNamesOpts(cLevels) {
       if (!cLevels) return {};
       if (typeof cLevels === "string") {
@@ -5875,9 +5870,9 @@ var require_handle_custom_levels_names_opts = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/handle-custom-levels-opts.js
 var require_handle_custom_levels_opts = __commonJS({
-  "node_modules/pino-pretty/lib/utils/handle-custom-levels-opts.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/handle-custom-levels-opts.js"(exports2, module2) {
     "use strict";
-    module.exports = handleCustomLevelsOpts;
+    module2.exports = handleCustomLevelsOpts;
     function handleCustomLevelsOpts(cLevels) {
       if (!cLevels) return {};
       if (typeof cLevels === "string") {
@@ -5903,9 +5898,9 @@ var require_handle_custom_levels_opts = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/interpret-conditionals.js
 var require_interpret_conditionals = __commonJS({
-  "node_modules/pino-pretty/lib/utils/interpret-conditionals.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/interpret-conditionals.js"(exports2, module2) {
     "use strict";
-    module.exports = interpretConditionals;
+    module2.exports = interpretConditionals;
     var getPropertyValue = require_get_property_value();
     function interpretConditionals(messageFormat, log) {
       messageFormat = messageFormat.replace(/{if (.*?)}(.*?){end}/g, replacer);
@@ -5926,9 +5921,9 @@ var require_interpret_conditionals = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/is-object.js
 var require_is_object = __commonJS({
-  "node_modules/pino-pretty/lib/utils/is-object.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/is-object.js"(exports2, module2) {
     "use strict";
-    module.exports = isObject;
+    module2.exports = isObject;
     function isObject(input) {
       return Object.prototype.toString.apply(input) === "[object Object]";
     }
@@ -5937,9 +5932,9 @@ var require_is_object = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/join-lines-with-indentation.js
 var require_join_lines_with_indentation = __commonJS({
-  "node_modules/pino-pretty/lib/utils/join-lines-with-indentation.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/join-lines-with-indentation.js"(exports2, module2) {
     "use strict";
-    module.exports = joinLinesWithIndentation;
+    module2.exports = joinLinesWithIndentation;
     function joinLinesWithIndentation({ input, ident = "    ", eol = "\n" }) {
       const lines = input.split(/\r?\n/);
       for (let i = 1; i < lines.length; i += 1) {
@@ -5952,9 +5947,9 @@ var require_join_lines_with_indentation = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/parse-factory-options.js
 var require_parse_factory_options = __commonJS({
-  "node_modules/pino-pretty/lib/utils/parse-factory-options.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/parse-factory-options.js"(exports2, module2) {
     "use strict";
-    module.exports = parseFactoryOptions;
+    module2.exports = parseFactoryOptions;
     var {
       LEVEL_NAMES
     } = require_constants2();
@@ -6050,8 +6045,8 @@ var require_parse_factory_options = __commonJS({
 
 // node_modules/fast-safe-stringify/index.js
 var require_fast_safe_stringify = __commonJS({
-  "node_modules/fast-safe-stringify/index.js"(exports, module) {
-    module.exports = stringify;
+  "node_modules/fast-safe-stringify/index.js"(exports2, module2) {
+    module2.exports = stringify;
     stringify.default = stringify;
     stringify.stable = deterministicStringify;
     stringify.stableStringify = deterministicStringify;
@@ -6244,9 +6239,9 @@ var require_fast_safe_stringify = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/prettify-error.js
 var require_prettify_error = __commonJS({
-  "node_modules/pino-pretty/lib/utils/prettify-error.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/prettify-error.js"(exports2, module2) {
     "use strict";
-    module.exports = prettifyError;
+    module2.exports = prettifyError;
     var joinLinesWithIndentation = require_join_lines_with_indentation();
     function prettifyError({ keyName, lines, eol, ident }) {
       let result = "";
@@ -6276,9 +6271,9 @@ var require_prettify_error = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/prettify-object.js
 var require_prettify_object = __commonJS({
-  "node_modules/pino-pretty/lib/utils/prettify-object.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/prettify-object.js"(exports2, module2) {
     "use strict";
-    module.exports = prettifyObject;
+    module2.exports = prettifyObject;
     var {
       LOGGER_KEYS
     } = require_constants2();
@@ -6341,9 +6336,9 @@ var require_prettify_object = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/prettify-error-log.js
 var require_prettify_error_log = __commonJS({
-  "node_modules/pino-pretty/lib/utils/prettify-error-log.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/prettify-error-log.js"(exports2, module2) {
     "use strict";
-    module.exports = prettifyErrorLog;
+    module2.exports = prettifyErrorLog;
     var {
       LOGGER_KEYS
     } = require_constants2();
@@ -6393,9 +6388,9 @@ var require_prettify_error_log = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/prettify-level.js
 var require_prettify_level = __commonJS({
-  "node_modules/pino-pretty/lib/utils/prettify-level.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/prettify-level.js"(exports2, module2) {
     "use strict";
-    module.exports = prettifyLevel;
+    module2.exports = prettifyLevel;
     var getPropertyValue = require_get_property_value();
     function prettifyLevel({ log, context }) {
       const {
@@ -6420,9 +6415,9 @@ var require_prettify_level = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/prettify-message.js
 var require_prettify_message = __commonJS({
-  "node_modules/pino-pretty/lib/utils/prettify-message.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/prettify-message.js"(exports2, module2) {
     "use strict";
-    module.exports = prettifyMessage;
+    module2.exports = prettifyMessage;
     var {
       LEVELS
     } = require_constants2();
@@ -6467,9 +6462,9 @@ var require_prettify_message = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/prettify-metadata.js
 var require_prettify_metadata = __commonJS({
-  "node_modules/pino-pretty/lib/utils/prettify-metadata.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/prettify-metadata.js"(exports2, module2) {
     "use strict";
-    module.exports = prettifyMetadata;
+    module2.exports = prettifyMetadata;
     function prettifyMetadata({ log, context }) {
       const { customPrettifiers: prettifiers, colorizer } = context;
       let line = "";
@@ -6507,9 +6502,9 @@ var require_prettify_metadata = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/prettify-time.js
 var require_prettify_time = __commonJS({
-  "node_modules/pino-pretty/lib/utils/prettify-time.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/prettify-time.js"(exports2, module2) {
     "use strict";
-    module.exports = prettifyTime;
+    module2.exports = prettifyTime;
     var formatTime = require_format_time();
     function prettifyTime({ log, context }) {
       const {
@@ -6532,9 +6527,9 @@ var require_prettify_time = __commonJS({
 
 // node_modules/pino-pretty/lib/utils/index.js
 var require_utils = __commonJS({
-  "node_modules/pino-pretty/lib/utils/index.js"(exports, module) {
+  "node_modules/pino-pretty/lib/utils/index.js"(exports2, module2) {
     "use strict";
-    module.exports = {
+    module2.exports = {
       buildSafeSonicBoom: require_build_safe_sonic_boom(),
       createDate: require_create_date(),
       deleteLogProperty: require_delete_log_property(),
@@ -6564,7 +6559,7 @@ var require_utils = __commonJS({
 
 // node_modules/secure-json-parse/index.js
 var require_secure_json_parse = __commonJS({
-  "node_modules/secure-json-parse/index.js"(exports, module) {
+  "node_modules/secure-json-parse/index.js"(exports2, module2) {
     "use strict";
     var hasBuffer = typeof Buffer !== "undefined";
     var suspectProtoRx = /"(?:_|\\u005[Ff])(?:_|\\u005[Ff])(?:p|\\u0070)(?:r|\\u0072)(?:o|\\u006[Ff])(?:t|\\u0074)(?:o|\\u006[Ff])(?:_|\\u005[Ff])(?:_|\\u005[Ff])"\s*:/;
@@ -6658,19 +6653,19 @@ var require_secure_json_parse = __commonJS({
         Error.stackTraceLimit = stackTraceLimit;
       }
     }
-    module.exports = parse;
-    module.exports.default = parse;
-    module.exports.parse = parse;
-    module.exports.safeParse = safeParse;
-    module.exports.scan = filter;
+    module2.exports = parse;
+    module2.exports.default = parse;
+    module2.exports.parse = parse;
+    module2.exports.safeParse = safeParse;
+    module2.exports.scan = filter;
   }
 });
 
 // node_modules/pino-pretty/lib/pretty.js
 var require_pretty = __commonJS({
-  "node_modules/pino-pretty/lib/pretty.js"(exports, module) {
+  "node_modules/pino-pretty/lib/pretty.js"(exports2, module2) {
     "use strict";
-    module.exports = pretty;
+    module2.exports = pretty;
     var sjs = require_secure_json_parse();
     var isObject = require_is_object();
     var prettifyErrorLog = require_prettify_error_log();
@@ -6803,11 +6798,11 @@ var require_pretty = __commonJS({
 
 // node_modules/pino-pretty/index.js
 var require_pino_pretty = __commonJS({
-  "node_modules/pino-pretty/index.js"(exports, module) {
+  "node_modules/pino-pretty/index.js"(exports2, module2) {
     "use strict";
     var { isColorSupported } = require_colorette();
     var pump = require_pump();
-    var { Transform } = __require("node:stream");
+    var { Transform } = require("node:stream");
     var abstractTransport = require_pino_abstract_transport();
     var colors = require_colors();
     var {
@@ -6897,21 +6892,21 @@ var require_pino_pretty = __commonJS({
         }
       });
     }
-    module.exports = build;
-    module.exports.build = build;
-    module.exports.PinoPretty = build;
-    module.exports.prettyFactory = prettyFactory;
-    module.exports.colorizerFactory = colors;
-    module.exports.isColorSupported = isColorSupported;
-    module.exports.default = build;
+    module2.exports = build;
+    module2.exports.build = build;
+    module2.exports.PinoPretty = build;
+    module2.exports.prettyFactory = prettyFactory;
+    module2.exports.colorizerFactory = colors;
+    module2.exports.isColorSupported = isColorSupported;
+    module2.exports.default = build;
   }
 });
 
 // scripts/migrate-journal-entries.ts
-import { PrismaClient as PrismaClient2 } from "@prisma/client";
+var import_client2 = require("@prisma/client");
 
 // lib/core/prisma.ts
-import { PrismaClient } from "@prisma/client";
+var import_client = require("@prisma/client");
 
 // node_modules/zod/v3/external.js
 var external_exports = {};
@@ -10998,7 +10993,7 @@ var env = validateEnv();
 
 // lib/core/prisma.ts
 function createClient() {
-  return new PrismaClient();
+  return new import_client.PrismaClient();
 }
 function getPrisma() {
   if (!globalThis.__prisma__) {
@@ -11425,7 +11420,7 @@ function getJournalEntryAccessService() {
 }
 
 // scripts/migrate-journal-entries.ts
-var prisma2 = new PrismaClient2();
+var prisma2 = new import_client2.PrismaClient();
 async function migrate(options) {
   const stats = {
     totalEntries: 0,

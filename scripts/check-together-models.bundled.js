@@ -1,16 +1,11 @@
+"use strict";
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
-}) : x)(function(x) {
-  if (typeof require !== "undefined") return require.apply(this, arguments);
-  throw Error('Dynamic require of "' + x + '" is not supported');
-});
-var __commonJS = (cb, mod) => function __require2() {
+var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
 var __copyProps = (to, from, except, desc) => {
@@ -32,8 +27,8 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 
 // node_modules/dotenv/package.json
 var require_package = __commonJS({
-  "node_modules/dotenv/package.json"(exports, module) {
-    module.exports = {
+  "node_modules/dotenv/package.json"(exports2, module2) {
+    module2.exports = {
       name: "dotenv",
       version: "17.2.3",
       description: "Loads environment variables from .env file",
@@ -100,11 +95,11 @@ var require_package = __commonJS({
 
 // node_modules/dotenv/lib/main.js
 var require_main = __commonJS({
-  "node_modules/dotenv/lib/main.js"(exports, module) {
-    var fs = __require("fs");
-    var path3 = __require("path");
-    var os = __require("os");
-    var crypto = __require("crypto");
+  "node_modules/dotenv/lib/main.js"(exports2, module2) {
+    var fs = require("fs");
+    var path3 = require("path");
+    var os = require("os");
+    var crypto = require("crypto");
     var packageJson = require_package();
     var version = packageJson.version;
     var TIPS = [
@@ -416,14 +411,14 @@ var require_main = __commonJS({
       parse,
       populate
     };
-    module.exports.configDotenv = DotenvModule.configDotenv;
-    module.exports._configVault = DotenvModule._configVault;
-    module.exports._parseVault = DotenvModule._parseVault;
-    module.exports.config = DotenvModule.config;
-    module.exports.decrypt = DotenvModule.decrypt;
-    module.exports.parse = DotenvModule.parse;
-    module.exports.populate = DotenvModule.populate;
-    module.exports = DotenvModule;
+    module2.exports.configDotenv = DotenvModule.configDotenv;
+    module2.exports._configVault = DotenvModule._configVault;
+    module2.exports._parseVault = DotenvModule._parseVault;
+    module2.exports.config = DotenvModule.config;
+    module2.exports.decrypt = DotenvModule.decrypt;
+    module2.exports.parse = DotenvModule.parse;
+    module2.exports.populate = DotenvModule.populate;
+    module2.exports = DotenvModule;
   }
 });
 
@@ -2713,13 +2708,13 @@ var readlineMethod;
 var isUtf8Method;
 var readFileMethod;
 try {
-  statMethod = __require("fs/promises").stat;
-  createReadStreamMethod = __require("fs").createReadStream;
-  extnameMethod = __require("path").extname;
-  readlineMethod = __require("readline");
-  isUtf8Method = __require("buffer").isUtf8;
-  resolveMethod = __require("path").resolve;
-  readFileMethod = __require("fs/promises").readFile;
+  statMethod = require("fs/promises").stat;
+  createReadStreamMethod = require("fs").createReadStream;
+  extnameMethod = require("path").extname;
+  readlineMethod = require("readline");
+  isUtf8Method = require("buffer").isUtf8;
+  resolveMethod = require("path").resolve;
+  readFileMethod = require("fs/promises").readFile;
 } catch {
 }
 
@@ -4081,8 +4076,8 @@ Together.Evals = Evals;
 
 // scripts/check-together-models.ts
 var dotenv = __toESM(require_main(), 1);
-import path2 from "path";
-dotenv.config({ path: path2.resolve(process.cwd(), ".env") });
+var import_path8 = __toESM(require("path"), 1);
+dotenv.config({ path: import_path8.default.resolve(process.cwd(), ".env") });
 async function listModels() {
   const apiKey = process.env.TOGETHER_API_KEY;
   if (!apiKey) {
