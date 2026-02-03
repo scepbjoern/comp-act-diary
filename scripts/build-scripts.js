@@ -43,16 +43,16 @@ async function bundleScripts() {
   const results = await Promise.allSettled(
     tsFiles.map(async (file) => {
       const entryPoint = join(scriptsDir, file)
-      const outfile = join(scriptsDir, file.replace('.ts', '.bundled.js'))
+      const outfile = join(scriptsDir, file.replace('.ts', '.bundled.cjs'))
       
       await build({
         entryPoints: [entryPoint],
         bundle: true,
         platform: 'node',
-        format: 'cjs', // Changed from 'esm' to support dynamic requires
+        format: 'cjs',
         outfile,
-        external: ['@prisma/client'], // Prisma must use runtime client
-        minify: false, // Keep readable for debugging
+        external: ['@prisma/client'],
+        minify: false,
         sourcemap: false,
         logLevel: 'error',
       })

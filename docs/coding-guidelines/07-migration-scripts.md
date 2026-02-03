@@ -53,7 +53,7 @@ This helper script automatically finds and bundles all `.ts` files in the `scrip
 
 - Scans for all `.ts` files (excluding `.d.ts` and `.bundled.ts`)
 - Bundles each file separately with esbuild
-- Creates `{name}.bundled.js` for each `{name}.ts` (CommonJS format)
+- Creates `{name}.bundled.cjs` for each `{name}.ts` (CommonJS format)
 - Marks `@prisma/client` as external (must use runtime client)
 - Uses CommonJS format to support libraries with dynamic requires (e.g., pino)
 - Reports success/failure for each script
@@ -156,8 +156,8 @@ npx tsx scripts/migrate-journal-entries.ts
 npm run build:scripts
 
 # Run bundled version
-node scripts/migrate-journal-entries.bundled.js --dry-run
-node scripts/migrate-journal-entries.bundled.js
+node scripts/migrate-journal-entries.bundled.cjs --dry-run
+node scripts/migrate-journal-entries.bundled.cjs
 ```
 
 ### Docker (TEST/PROD)
@@ -184,17 +184,17 @@ docker compose up -d --build app
 **Step 3: Run any script**
 ```bash
 # Example: journal migration
-docker compose exec app node scripts/migrate-journal-entries.bundled.js --dry-run
-docker compose exec app node scripts/migrate-journal-entries.bundled.js
+docker compose exec app node scripts/migrate-journal-entries.bundled.cjs --dry-run
+docker compose exec app node scripts/migrate-journal-entries.bundled.cjs
 
 # Example: timebox registration
-docker compose exec app node scripts/register-timeboxes-as-entities.bundled.js
+docker compose exec app node scripts/register-timeboxes-as-entities.bundled.cjs
 
 # Example: Diarium import
-docker compose exec app node scripts/import-diarium.bundled.js
+docker compose exec app node scripts/import-diarium.bundled.cjs
 ```
 
-**Note:** All bundled `.js` files run with plain `node` - no `tsx`, TypeScript, or other dependencies needed!
+**Note:** All bundled `.cjs` files run with plain `node` - no `tsx`, TypeScript, or other dependencies needed!
 
 ## Best Practices
 
@@ -300,7 +300,7 @@ echo "console.log('Hello')" > scripts/my-new-script.ts
 npm run build:scripts
 
 # 3. Commit both files
-git add scripts/my-new-script.ts scripts/my-new-script.bundled.js
+git add scripts/my-new-script.ts scripts/my-new-script.bundled.cjs
 git commit -m "feat: add my-new-script"
 
 # 4. Deploy
