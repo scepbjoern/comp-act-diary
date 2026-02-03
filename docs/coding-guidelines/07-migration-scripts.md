@@ -26,6 +26,17 @@ Scripts can use:
 - ✅ All `node_modules` - Available via build stage
 - ❌ Development-only packages not in production dependencies
 
+**IMPORTANT:** Files in `lib/` that are imported by scripts **MUST use relative imports**, not `@/` path aliases:
+```typescript
+// ❌ BAD - Will fail in Docker
+import { getPrisma } from '@/lib/core/prisma'
+
+// ✅ GOOD - Works in Docker
+import { getPrisma } from '../core/prisma.js'
+```
+
+Reason: `tsx` in Docker doesn't resolve TypeScript path aliases (`@/`). Use relative paths with `.js` extensions.
+
 ### 3. Dockerfile Setup
 The `lib/` directory is copied into the Docker image:
 
