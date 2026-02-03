@@ -4,9 +4,9 @@
  */
 
 import { PrismaClient, JournalEntryAccessRole } from '@prisma/client'
-import { getPrisma } from '../core/prisma'
-import { logger } from '../core/logger'
-import type { SharingDefaults } from '../validators/journalEntryAccess'
+import { getPrisma } from '@/lib/core/prisma'
+import { logger } from '@/lib/core/logger'
+import type { SharingDefaults } from '@/lib/validators/journalEntryAccess'
 
 // =============================================================================
 // TYPES

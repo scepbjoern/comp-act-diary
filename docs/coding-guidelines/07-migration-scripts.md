@@ -8,43 +8,56 @@ Migration scripts ensure data consistency when schema or business logic changes.
 - **Naming:** `migrate-{feature-name}.ts`
 - **Example:** `scripts/migrate-journal-entries.ts`
 
-## Docker Compatibility Requirements
+## Automatic Bundle Approach (Recommended)
 
-### 1. Import Paths (ESM)
-Migration scripts run with `tsx` in Docker containers using ESM.
+All scripts in `scripts/` are **automatically bundled with esbuild** during build. This solves all dependency and path resolution issues in Docker.
 
-**Required:**
-- Use `.js` extension for local imports
-- Example: `import { getService } from '../lib/services/myService.js'`
+### How It Works
 
-**Why:** Node.js ESM requires explicit file extensions in Docker
+1. **Write TypeScript** files in `scripts/` with normal imports (including `@/` path aliases)
+2. **Run `npm run build`** (or `npm run build:scripts` standalone)
+3. **All `.ts` files** are automatically bundled to `.bundled.js`
+4. **Deploy bundled files** to Docker
+5. **Run with node** (no tsx needed!)
 
-### 2. Dependencies in Docker
-Scripts can use:
-- ✅ `@prisma/client` - Always available
-- ✅ `lib/` services - Copied to Docker image (see Dockerfile line 143)
-- ✅ All `node_modules` - Available via build stage
-- ❌ Development-only packages not in production dependencies
+### Advantages
 
-**IMPORTANT:** Files in `lib/` that are imported by scripts **MUST use relative imports**, not `@/` path aliases:
-```typescript
-// ❌ BAD - Will fail in Docker (tsx can't resolve @/ aliases)
-import { getPrisma } from '@/lib/core/prisma'
+✅ **Fully automatic:** All scripts bundled on every build  
+✅ **Zero configuration:** Just add a `.ts` file to `scripts/`  
+✅ All dependencies bundled (including `zod`, `lib/` services, etc.)  
+✅ No path resolution issues (`@/` aliases work)  
+✅ No external dependencies needed in Docker  
+✅ Fast execution (pre-compiled JavaScript)  
+✅ Works identically in development and production
 
-// ✅ GOOD - Works everywhere
-import { getPrisma } from '../core/prisma'
+### Setup in package.json
+
+```json
+{
+  "scripts": {
+    "prebuild": "node scripts/build-scripts.js",
+    "build": "next build",
+    "build:scripts": "node scripts/build-scripts.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2"
+  }
+}
 ```
 
-**Note:** Do NOT use `.js` extensions in `lib/` file imports - Next.js build will fail. The `.js` extension is only needed in the script's import statement itself (e.g., `import { getService } from '../lib/services/myService.js'`), where `tsx` will resolve it to the `.ts` file.
+The `prebuild` hook automatically bundles all scripts before each build. You can also manually bundle with `npm run build:scripts`.
 
-### 3. Dockerfile Setup
-The `lib/` directory is copied into the Docker image:
+### scripts/build-scripts.js
 
-```dockerfile
-COPY --from=build --chown=node:node /app/lib ./lib
-```
+This helper script automatically finds and bundles all `.ts` files in the `scripts/` directory:
 
-If you add new directories needed by scripts, update the Dockerfile accordingly.
+- Scans for all `.ts` files (excluding `.d.ts` and `.bundled.ts`)
+- Bundles each file separately with esbuild
+- Creates `{name}.bundled.js` for each `{name}.ts`
+- Marks `@prisma/client` as external (must use runtime client)
+- Reports success/failure for each script
+
+**Result:** Any new script you add is automatically bundled on the next build.
 
 ## Script Structure
 
@@ -126,43 +139,61 @@ async function main() {
 main()
 ```
 
-## Running in Docker
+## Running Scripts
 
 ### Local Development
+
+**Option 1: Direct TypeScript execution (tsx)**
 ```bash
-npx tsx scripts/migrate-{feature}.ts --dry-run
-npx tsx scripts/migrate-{feature}.ts
+npx tsx scripts/migrate-journal-entries.ts --dry-run
+npx tsx scripts/migrate-journal-entries.ts
 ```
 
-### Docker (TEST)
+**Option 2: Test bundled version**
 ```bash
-cd /opt/stacks/comp-act-diary-test/deploy
-docker compose exec app npx tsx scripts/migrate-{feature}.ts --dry-run
-docker compose exec app npx tsx scripts/migrate-{feature}.ts
+# Bundle all scripts
+npm run build:scripts
+
+# Run bundled version
+node scripts/migrate-journal-entries.bundled.js --dry-run
+node scripts/migrate-journal-entries.bundled.js
 ```
 
-### Docker (PROD)
+### Docker (TEST/PROD)
+
+**Step 1: Bundle and deploy**
 ```bash
-cd /opt/stacks/comp-act-diary/deploy
-docker compose exec app npx tsx scripts/migrate-{feature}.ts --dry-run
-docker compose exec app npx tsx scripts/migrate-{feature}.ts
+# Bundle all scripts automatically
+npm run build
+
+# Commit bundled files
+git add scripts/*.bundled.js
+git commit -m "build: bundle production scripts"
+git push origin main
 ```
 
-## Deployment Workflow
+**Step 2: Deploy to server**
+```bash
+cd /opt/stacks/comp-act-diary-test  # or comp-act-diary for PROD
+git pull origin main
+cd deploy
+docker compose up -d --build app
+```
 
-1. **Develop locally** with `--dry-run`
-2. **Test locally** without dry-run on dev database
-3. **Deploy to TEST**:
-   ```bash
-   cd /opt/stacks/comp-act-diary-test
-   git pull origin main
-   cd deploy
-   docker compose up -d --build app
-   docker compose exec app npx tsx scripts/migrate-{feature}.ts --dry-run
-   docker compose exec app npx tsx scripts/migrate-{feature}.ts
-   ```
-4. **Verify results** in TEST environment
-5. **Deploy to PROD** following same steps
+**Step 3: Run any script**
+```bash
+# Example: journal migration
+docker compose exec app node scripts/migrate-journal-entries.bundled.js --dry-run
+docker compose exec app node scripts/migrate-journal-entries.bundled.js
+
+# Example: timebox registration
+docker compose exec app node scripts/register-timeboxes-as-entities.bundled.js
+
+# Example: Diarium import
+docker compose exec app node scripts/import-diarium.bundled.js
+```
+
+**Note:** All bundled `.js` files run with plain `node` - no `tsx`, TypeScript, or other dependencies needed!
 
 ## Best Practices
 
@@ -223,19 +254,73 @@ if (!options.dryRun) {
 
 ## Troubleshooting
 
-### "Cannot find module" in Docker
-- ✅ Check import path has `.js` extension
-- ✅ Verify `lib/` is copied in Dockerfile
-- ✅ Rebuild Docker image: `docker compose up -d --build app`
+### Bundle fails during build
+```bash
+npm run build:scripts
+```
 
-### Script works locally but fails in Docker
-- ✅ Check for development-only dependencies
-- ✅ Verify all imports use `.js` extensions
-- ✅ Test in Docker container shell: `docker compose exec app sh`
+**Common issues:**
+- ❌ **Syntax errors in TypeScript:** Fix in source `.ts` file
+- ❌ **Missing imports:** Add to TypeScript file, rebuild
+- ❌ **TypeScript errors:** Run `npm run lint` to check
+- ❌ **esbuild not installed:** Run `npm install`
 
-### Permission errors
-- ✅ Ensure script is executed as `node` user in container
-- ✅ Check file permissions in Docker image
+The bundle script reports which files failed - fix those and rerun.
+
+### Script fails in Docker
+```bash
+docker compose exec app node scripts/{script-name}.bundled.js
+```
+
+**Common issues:**
+- ❌ **Bundle missing:** Run `npm run build` locally, commit `*.bundled.js`
+- ❌ **Forgot to deploy:** `git pull` on server, `docker compose up -d --build app`
+- ❌ **Prisma connection error:** Check DATABASE_URL in .env
+- ❌ **Permission errors:** Scripts run as `node` user in container
+
+### Bundle file is outdated
+Bundles are automatically rebuilt on every `npm run build`. If you changed a TypeScript source:
+
+```bash
+npm run build:scripts  # or npm run build
+git add scripts/*.bundled.js
+git commit -m "build: update script bundles"
+git push
+```
+
+### Adding a new script
+Just create a new `.ts` file in `scripts/`:
+
+```bash
+# 1. Create script
+echo "console.log('Hello')" > scripts/my-new-script.ts
+
+# 2. Bundle automatically
+npm run build:scripts
+
+# 3. Commit both files
+git add scripts/my-new-script.ts scripts/my-new-script.bundled.js
+git commit -m "feat: add my-new-script"
+
+# 4. Deploy
+git push
+```
+
+The bundle is created automatically - no configuration needed!
+
+### Testing locally before deployment
+```bash
+# Bundle all scripts
+npm run build:scripts
+
+# Test bundled version locally (mimics production)
+node scripts/migrate-journal-entries.bundled.js --dry-run
+
+# If successful, commit and deploy
+git add scripts/*.bundled.js
+git commit -m "build: update script bundles"
+git push
+```
 
 ## References
 - [Docker Operations Guide](../setup-and-testing_docs/DOCKER_OPERATIONS.md)
