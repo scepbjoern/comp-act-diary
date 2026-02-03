@@ -12,7 +12,7 @@
  */
 
 import { PrismaClient } from '@prisma/client'
-import { getJournalEntryAccessService } from '../lib/services/journalEntryAccessService'
+import { getJournalEntryAccessService } from '../lib/services/journalEntryAccessService.js'
 
 const prisma = new PrismaClient()
 
