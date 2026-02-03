@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import '@/lib/config/env' // Validate environment variables on import
+import '../config/env' // Validate environment variables on import
 
 declare global {
   var __prisma__: PrismaClient | undefined

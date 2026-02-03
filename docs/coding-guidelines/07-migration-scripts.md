@@ -28,14 +28,14 @@ Scripts can use:
 
 **IMPORTANT:** Files in `lib/` that are imported by scripts **MUST use relative imports**, not `@/` path aliases:
 ```typescript
-// ❌ BAD - Will fail in Docker
+// ❌ BAD - Will fail in Docker (tsx can't resolve @/ aliases)
 import { getPrisma } from '@/lib/core/prisma'
 
-// ✅ GOOD - Works in Docker
-import { getPrisma } from '../core/prisma.js'
+// ✅ GOOD - Works everywhere
+import { getPrisma } from '../core/prisma'
 ```
 
-Reason: `tsx` in Docker doesn't resolve TypeScript path aliases (`@/`). Use relative paths with `.js` extensions.
+**Note:** Do NOT use `.js` extensions in `lib/` file imports - Next.js build will fail. The `.js` extension is only needed in the script's import statement itself (e.g., `import { getService } from '../lib/services/myService.js'`), where `tsx` will resolve it to the `.ts` file.
 
 ### 3. Dockerfile Setup
 The `lib/` directory is copied into the Docker image:
