@@ -4,6 +4,7 @@
 **Skills und Workflows**: Sich einarbeiten in https://docs.windsurf.com/windsurf/cascade/skills und https://agentskills.io/home und https://docs.windsurf.com/windsurf/cascade/workflows und überlegen, wann skills und wann workflows. Gutes Video: https://youtu.be/-iTNOaCmLcw?si=4uPQO8PInh88UddT
 **Agents**: Sich einarbeiten in https://docs.windsurf.com/windsurf/cascade/agents-md
 **Plan MOde**: Pro tip: Type megaplan in the Cascade input box to trigger an advanced form that asks clarifying questions to create a more aligned, comprehensive plan.
+**Claude Best Practices**: https://code.claude.com/docs/en/best-practices
 
 ## MCP
 **Playwright oder Puppeteer**: Könnte spannend sein.

@@ -140,6 +140,7 @@ COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public
 COPY --from=build --chown=node:node /app/prisma ./prisma
 COPY --from=build --chown=node:node /app/scripts ./scripts
+COPY --from=build --chown=node:node /app/lib ./lib
 COPY --from=build --chown=node:node /app/deploy/entrypoint.sh ./entrypoint.sh
 
 # Copy Prisma CLI and all dependencies for migrations (not included in standalone)
