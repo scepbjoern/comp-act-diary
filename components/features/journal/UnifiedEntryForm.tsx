@@ -71,10 +71,10 @@ export interface FormData {
 // =============================================================================
 
 export function UnifiedEntryForm({
-  timeBoxId,
-  date,
-  typeId,
-  templateId,
+  timeBoxId: _timeBoxId,
+  date: _date,
+  typeId: _typeId,
+  templateId: _templateId,
   templateFields,
   entry,
   onSubmit,
@@ -83,7 +83,7 @@ export function UnifiedEntryForm({
   isSaving = false,
   compact = false,
   placeholder = 'Schreibe etwas...',
-  autoFocus = false,
+  autoFocus: _autoFocus = false,
 }: UnifiedEntryFormProps) {
   // Form state
   const [content, setContent] = useState(entry?.content || '')
@@ -191,11 +191,12 @@ export function UnifiedEntryForm({
     }
   }, [onRunPipeline, isRunningPipeline])
 
-  const handleAudioFileAdded = useCallback((assetId: string) => {
+  // Media handlers - available for future media component integration
+  const _handleAudioFileAdded = useCallback((assetId: string) => {
     setAudioFileIds((prev) => [...prev, assetId])
   }, [])
 
-  const handleAudioTranscript = useCallback((assetId: string, transcript: string, model: string | null) => {
+  const _handleAudioTranscript = useCallback((assetId: string, transcript: string, model: string | null) => {
     setAudioTranscripts((prev) => {
       const next = new Map(prev)
       next.set(assetId, { transcript, model })
@@ -208,7 +209,7 @@ export function UnifiedEntryForm({
     })
   }, [])
 
-  const handleOcrResult = useCallback((assetIds: string[], text: string) => {
+  const _handleOcrResult = useCallback((assetIds: string[], text: string) => {
     setOcrAssetIds((prev) => [...prev, ...assetIds])
     // Append OCR text to content
     setContent((prev) => {

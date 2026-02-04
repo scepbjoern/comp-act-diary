@@ -1,9 +1,42 @@
 # Unified JournalEntry Analysis and Concept
 
-> **Status**: Konzept / Analyse  
+> **Status**: ✅ Teilweise implementiert  
 > **Erstellt**: 2026-02-02  
-> **Letzte Aktualisierung**: 2026-02-03  
+> **Letzte Aktualisierung**: 2026-02-04  
 > **Ziel**: Dokumentation der aktuellen Unterschiede zwischen Day-Ansicht (Startseite) und Journal-Seite, sowie Vorschläge zur Vereinheitlichung.
+
+---
+
+## Implementierungsstatus
+
+### ✅ Abgeschlossen
+
+| Phase | Beschreibung | Dateien |
+|-------|--------------|---------|
+| 1.1 | JournalService Types | `lib/services/journal/types.ts` |
+| 1.2 | JournalService Implementation | `lib/services/journal/journalService.ts` |
+| 1.3 | API GET/POST `/api/journal-entries` | `app/api/journal-entries/route.ts` |
+| 1.4 | API GET/PATCH/DELETE `/api/journal-entries/[id]` | `app/api/journal-entries/[id]/route.ts` |
+| 1.5 | Media API Routes | `app/api/journal-entries/[id]/media/route.ts`, `[attachmentId]/route.ts` |
+| 1.6 | Migrationsskript | `scripts/migrate-journal-entries.ts` |
+| 2.1 | useJournalEntries Hook | `hooks/useJournalEntries.ts` |
+| 2.2 | JournalEntryCard Component | `components/features/journal/JournalEntryCard.tsx` |
+| 2.3 | UnifiedEntryForm Component | `components/features/journal/UnifiedEntryForm.tsx` |
+| 3.1 | Journal-Seite umgestellt | `app/journal/page.tsx` |
+| 3.2 | Detail-Seite umgestellt | `app/journal/[id]/page.tsx` |
+
+### ⏸️ Ausstehend / Später
+
+| Phase | Beschreibung | Grund |
+|-------|--------------|-------|
+| 3.3 | Startseite Migration | Stark mit Day-System verknüpft, separates Projekt |
+| 4.1-4.2 | Legacy-APIs entfernen | Startseite nutzt sie noch |
+
+### Hinweise zur Nutzung
+
+- **Journal-Seite** (`/journal`): Nutzt neue unified API `/api/journal-entries`
+- **Detail-Seite** (`/journal/[id]`): Nutzt neue unified API
+- **Startseite** (`/`): Nutzt weiterhin Legacy `/api/day` System
 
 ---
 

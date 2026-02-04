@@ -1,7 +1,8 @@
 /**
  * app/journal/page.tsx
  * Journal overview page - displays entries by type/template with filtering.
- * Replaces the old /reflections page with a unified journal view.
+ * Uses the unified JournalService via /api/journal-entries.
+ * Integrates DynamicJournalForm for full-featured entry creation.
  */
 
 'use client'
@@ -11,23 +12,29 @@ import { useRouter } from 'next/navigation'
 import {
   IconPlus,
   IconFilter,
-  IconSearch,
-  IconCalendar,
   IconChevronDown,
+  IconChevronUp,
   IconBook2,
+  IconLoader2,
+  IconX,
 } from '@tabler/icons-react'
-import { DynamicJournalForm } from '@/components/features/journal'
-import { TemplateField, TemplateAIConfig, JournalEntryWithRelations } from '@/types/journal'
-import { format } from 'date-fns'
-import { de } from 'date-fns/locale'
+import { JournalEntryCard } from '@/components/features/journal'
+import { DynamicJournalForm } from '@/components/features/journal/DynamicJournalForm'
+import { useJournalEntries } from '@/hooks/useJournalEntries'
+import type { TemplateField, TemplateAIConfig } from '@/types/journal'
+import { TablerIcon } from '@/components/ui/TablerIcon'
+import { Toasts, useToasts } from '@/components/ui/Toast'
+import { ymd } from '@/lib/utils/date-utils'
 
-// Types
+// =============================================================================
+// TYPES
+// =============================================================================
+
 interface JournalEntryType {
   id: string
   code: string
   name: string
   icon: string | null
-  bgColorClass: string | null
 }
 
 interface JournalTemplate {
@@ -38,133 +45,93 @@ interface JournalTemplate {
   typeId: string | null
 }
 
-interface TimeBox {
-  id: string
-  localDate: string
-}
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 /**
- * Journal overview page component.
+ * Journal overview page using the unified JournalService.
  */
 export default function JournalPage() {
   const router = useRouter()
+  const { toasts, push, dismiss } = useToasts()
 
-  // Data state
-  const [entries, setEntries] = useState<JournalEntryWithRelations[]>([])
+  // Filter state
+  const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined)
+  
+  // Metadata state
   const [types, setTypes] = useState<JournalEntryType[]>([])
   const [templates, setTemplates] = useState<JournalTemplate[]>([])
-  const [timeBoxes, setTimeBoxes] = useState<TimeBox[]>([])
+  const [isMetadataLoading, setIsMetadataLoading] = useState(true)
 
-  // Loading and error state
-  const [isLoading, setIsLoading] = useState(true)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  // Pagination
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  const [hasMore, setHasMore] = useState(false)
-
-  // Filters
-  const [typeFilter, setTypeFilter] = useState<string>('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  // Use the unified hook for entries
+  const {
+    entries,
+    total,
+    isLoading,
+    error,
+    createEntry,
+    deleteEntry,
+    runPipeline,
+    generateTitle,
+    loadMore,
+    refetch,
+  } = useJournalEntries({
+    typeId: typeFilter,
+    limit: 20,
+    autoFetch: true,
+  })
 
   // New entry form state
-  const [isCreating, setIsCreating] = useState(false)
+  const [isFormOpen, setIsFormOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Current date for audio persistence
+  const today = ymd(new Date())
 
   // Refs for infinite scroll
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
-  // Fetch initial data
-  const fetchData = useCallback(async (cursor?: string) => {
-    try {
-      if (cursor) {
-        setIsLoadingMore(true)
-      } else {
-        setIsLoading(true)
-      }
-      setError(null)
+  // ---------------------------------------------------------------------------
+  // LOAD METADATA
+  // ---------------------------------------------------------------------------
 
-      // Build query params
-      const params = new URLSearchParams()
-      if (typeFilter) params.set('typeCode', typeFilter)
-      if (searchQuery) params.set('search', searchQuery)
-      if (dateFrom) params.set('dateFrom', dateFrom)
-      if (dateTo) params.set('dateTo', dateTo)
-      if (cursor) params.set('cursor', cursor)
-      params.set('limit', '20')
-
-      // Fetch entries
-      const entriesRes = await fetch(`/api/journal?${params.toString()}`)
-      if (!entriesRes.ok) throw new Error('Fehler beim Laden der Einträge')
-      const entriesData = await entriesRes.json()
-
-      if (cursor) {
-        // Append to existing entries
-        setEntries((prev) => [...prev, ...(entriesData.entries || [])])
-      } else {
-        setEntries(entriesData.entries || [])
-      }
-
-      setNextCursor(entriesData.nextCursor)
-      setHasMore(entriesData.hasMore)
-
-      // Fetch types and templates only on initial load
-      if (!cursor) {
-        const [typesRes, templatesRes, timeBoxesRes] = await Promise.all([
+  useEffect(() => {
+    async function loadMetadata() {
+      try {
+        const [typesRes, templatesRes] = await Promise.all([
           fetch('/api/journal-entry-types'),
           fetch('/api/templates'),
-          fetch('/api/day?limit=30'), // Get recent days for timeBox selection
         ])
 
         if (typesRes.ok) {
-          const typesData = await typesRes.json()
-          setTypes(typesData.types || [])
+          const data = await typesRes.json()
+          setTypes(data.types || [])
         }
 
         if (templatesRes.ok) {
-          const templatesData = await templatesRes.json()
-          setTemplates(templatesData.templates || [])
+          const data = await templatesRes.json()
+          setTemplates(data.templates || [])
         }
-
-        if (timeBoxesRes.ok) {
-          const timeBoxesData = await timeBoxesRes.json()
-          setTimeBoxes(
-            (timeBoxesData.days || []).map((d: { id: string; localDate: string }) => ({
-              id: d.id,
-              localDate: d.localDate,
-            }))
-          )
-        }
+      } catch (err) {
+        console.error('Failed to load metadata:', err)
+      } finally {
+        setIsMetadataLoading(false)
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unbekannter Fehler')
-    } finally {
-      setIsLoading(false)
-      setIsLoadingMore(false)
     }
-  }, [typeFilter, searchQuery, dateFrom, dateTo])
 
-  // Initial fetch
-  useEffect(() => {
-    void fetchData()
-  }, [fetchData])
+    void loadMetadata()
+  }, [])
 
-  // Load more entries
-  const loadMore = useCallback(() => {
-    if (nextCursor && !isLoadingMore) {
-      void fetchData(nextCursor)
-    }
-  }, [nextCursor, isLoadingMore, fetchData])
+  // ---------------------------------------------------------------------------
+  // INFINITE SCROLL
+  // ---------------------------------------------------------------------------
 
-  // Intersection observer for infinite scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
-          loadMore()
+      (observerEntries) => {
+        if (observerEntries[0].isIntersecting && entries.length < total && !isLoading) {
+          void loadMore()
         }
       },
       { threshold: 0.1 }
@@ -175,84 +142,112 @@ export default function JournalPage() {
     }
 
     return () => observer.disconnect()
-  }, [hasMore, isLoadingMore, loadMore])
+  }, [entries.length, total, isLoading, loadMore])
 
-  // Handle filter changes
-  const handleFilterChange = useCallback(() => {
-    setNextCursor(null)
-    void fetchData()
-  }, [fetchData])
+  // ---------------------------------------------------------------------------
+  // HANDLERS
+  // ---------------------------------------------------------------------------
 
-  // Handle create entry
-  const handleCreateEntry = useCallback(
-    async (data: {
-      typeId: string
-      templateId: string | null
-      content: string
-      fieldValues: Record<string, string>
-      audioFileIds?: string[]
-      audioTranscripts?: Record<string, string>
-    }) => {
-      try {
-        setIsSubmitting(true)
+  /** Handle form submission from DynamicJournalForm */
+  const handleFormSubmit = useCallback(async (data: {
+    typeId: string
+    templateId: string | null
+    content: string
+    fieldValues: Record<string, string>
+    audioFileIds?: string[]
+    audioTranscripts?: Record<string, string>
+  }) => {
+    setIsSubmitting(true)
+    try {
+      const result = await createEntry({
+        typeId: data.typeId,
+        templateId: data.templateId || undefined,
+        content: data.content,
+        // Audio files are attached separately after entry creation
+      })
 
-        // Get or create today's timeBox via GET (auto-creates if missing)
-        let timeBoxId = timeBoxes[0]?.id
-        if (!timeBoxId) {
-          const today = format(new Date(), 'yyyy-MM-dd')
-          const dayRes = await fetch(`/api/day?date=${today}`)
-          if (dayRes.ok) {
-            const dayData = await dayRes.json()
-            timeBoxId = dayData.day.timeBoxId
+      if (result) {
+        setIsFormOpen(false)
+        push('Eintrag erstellt', 'success')
+        
+        // If audio files were recorded, attach them
+        if (data.audioFileIds && data.audioFileIds.length > 0) {
+          for (const assetId of data.audioFileIds) {
+            const transcript = data.audioTranscripts?.[assetId]
+            try {
+              await fetch(`/api/journal-entries/${result.id}/media`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  assetId,
+                  role: 'SOURCE',
+                  transcript: transcript || null,
+                }),
+              })
+            } catch (err) {
+              console.error('Failed to attach audio:', err)
+            }
           }
+          await refetch()
         }
-
-        if (!timeBoxId) {
-          throw new Error('Kein TimeBox verfügbar')
-        }
-
-        const res = await fetch('/api/journal', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            typeId: data.typeId,
-            templateId: data.templateId,
-            content: data.content,
-            fieldValues: data.fieldValues,
-            audioFileIds: data.audioFileIds,
-            audioTranscripts: data.audioTranscripts,
-            timeBoxId,
-          }),
-        })
-
-        if (!res.ok) {
-          const errorData = await res.json()
-          throw new Error(errorData.error || 'Fehler beim Erstellen')
-        }
-
-        // Refresh entries and close form
-        await fetchData()
-        setIsCreating(false)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Fehler beim Erstellen')
-      } finally {
-        setIsSubmitting(false)
       }
-    },
-    [timeBoxes, fetchData]
-  )
+    } catch (err) {
+      console.error('Failed to create entry:', err)
+      push('Fehler beim Erstellen', 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [createEntry, push, refetch])
 
-  // Loading state
-  if (isLoading && entries.length === 0) {
+  const handleDeleteEntry = useCallback(async (entryId: string) => {
+    if (!confirm('Eintrag wirklich löschen?')) return
+    await deleteEntry(entryId)
+    push('Eintrag gelöscht', 'success')
+  }, [deleteEntry, push])
+
+  const handleRunPipeline = useCallback(async (entryId: string) => {
+    try {
+      await runPipeline(entryId)
+      push('KI-Pipeline abgeschlossen', 'success')
+    } catch (err) {
+      console.error('Pipeline failed:', err)
+      push('KI-Pipeline fehlgeschlagen', 'error')
+    }
+  }, [runPipeline, push])
+
+  const handleGenerateTitle = useCallback(async (entryId: string) => {
+    try {
+      const title = await generateTitle(entryId)
+      if (title) {
+        push('Titel generiert', 'success')
+      }
+    } catch (err) {
+      console.error('Title generation failed:', err)
+      push('Titel-Generierung fehlgeschlagen', 'error')
+    }
+  }, [generateTitle, push])
+
+  const handleTypeFilterChange = useCallback((typeId: string | undefined) => {
+    setTypeFilter(typeId)
+  }, [])
+
+  // ---------------------------------------------------------------------------
+  // RENDER
+  // ---------------------------------------------------------------------------
+
+  // Initial loading
+  if (isLoading && entries.length === 0 && isMetadataLoading) {
     return (
       <div className="flex min-h-96 items-center justify-center">
-        <span className="loading loading-spinner loading-lg" />
+        <IconLoader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
 
   return (
     <div className="container mx-auto max-w-4xl p-4">
+      <Toasts toasts={toasts} dismiss={dismiss} />
+
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -260,17 +255,26 @@ export default function JournalPage() {
           <div>
             <h1 className="text-2xl font-bold">Journal</h1>
             <p className="text-sm text-base-content/60">
-              Deine Tagebucheinträge und Reflexionen
+              {total} Einträge
             </p>
           </div>
         </div>
 
         <button
-          onClick={() => setIsCreating(true)}
+          onClick={() => setIsFormOpen(!isFormOpen)}
           className="btn btn-primary btn-sm gap-1"
         >
-          <IconPlus className="h-4 w-4" />
-          Neuer Eintrag
+          {isFormOpen ? (
+            <>
+              <IconX className="h-4 w-4" />
+              Schliessen
+            </>
+          ) : (
+            <>
+              <IconPlus className="h-4 w-4" />
+              Neuer Eintrag
+            </>
+          )}
         </button>
       </div>
 
@@ -278,44 +282,43 @@ export default function JournalPage() {
       {error && (
         <div className="alert alert-error mb-4">
           <span>{error}</span>
-          <button onClick={() => setError(null)} className="btn btn-ghost btn-sm">
-            ×
+          <button onClick={() => refetch()} className="btn btn-ghost btn-sm">
+            Erneut versuchen
           </button>
         </div>
       )}
 
-      {/* New entry form */}
-      {isCreating && (
+      {/* New entry form - Full-featured DynamicJournalForm */}
+      {isFormOpen && types.length > 0 && (
         <div className="mb-6 rounded-lg border border-base-300 bg-base-100 p-4">
-          <h2 className="mb-4 text-lg font-medium">Neuer Eintrag</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium">Neuer Eintrag</h2>
+            <button
+              onClick={() => setIsFormOpen(false)}
+              className="btn btn-ghost btn-sm btn-circle"
+            >
+              <IconX className="h-4 w-4" />
+            </button>
+          </div>
+          
           <DynamicJournalForm
             types={types}
             templates={templates}
-            onSubmit={handleCreateEntry}
+            onSubmit={handleFormSubmit}
             isSubmitting={isSubmitting}
             showMediaButtons={true}
-            date={format(new Date(), 'yyyy-MM-dd')}
+            date={today}
           />
-          <div className="mt-4 flex justify-end">
-            <button
-              onClick={() => setIsCreating(false)}
-              disabled={isSubmitting}
-              className="btn btn-ghost btn-sm"
-            >
-              Abbrechen
-            </button>
-          </div>
         </div>
       )}
 
-      {/* Filters */}
+      {/* Type filter */}
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        {/* Type filter */}
         <div className="dropdown">
           <label tabIndex={0} className="btn btn-ghost btn-sm gap-1">
             <IconFilter className="h-4 w-4" />
             {typeFilter
-              ? types.find((t) => t.code === typeFilter)?.name || 'Typ'
+              ? types.find((t) => t.id === typeFilter)?.name || 'Typ'
               : 'Alle Typen'}
             <IconChevronDown className="h-3 w-3" />
           </label>
@@ -324,14 +327,14 @@ export default function JournalPage() {
             className="menu dropdown-content z-10 w-52 rounded-box bg-base-200 p-2 shadow"
           >
             <li>
-              <button onClick={() => { setTypeFilter(''); handleFilterChange(); }}>
+              <button onClick={() => handleTypeFilterChange(undefined)}>
                 Alle Typen
               </button>
             </li>
             {types.map((type) => (
               <li key={type.id}>
-                <button onClick={() => { setTypeFilter(type.code); handleFilterChange(); }}>
-                  {type.icon && <span>{type.icon}</span>}
+                <button onClick={() => handleTypeFilterChange(type.id)}>
+                  {type.icon && <TablerIcon name={type.icon} className="h-4 w-4" />}
                   {type.name}
                 </button>
               </li>
@@ -339,36 +342,10 @@ export default function JournalPage() {
           </ul>
         </div>
 
-        {/* Search */}
-        <div className="relative flex-1">
-          <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/40" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleFilterChange()}
-            placeholder="Suchen..."
-            className="input input-bordered input-sm w-full pl-9"
-          />
-        </div>
-
-        {/* Date filters */}
-        <div className="flex items-center gap-2">
-          <IconCalendar className="h-4 w-4 text-base-content/40" />
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => { setDateFrom(e.target.value); handleFilterChange(); }}
-            className="input input-bordered input-sm"
-          />
-          <span className="text-base-content/40">–</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => { setDateTo(e.target.value); handleFilterChange(); }}
-            className="input input-bordered input-sm"
-          />
-        </div>
+        {/* Entry count */}
+        <span className="text-sm text-base-content/60">
+          {entries.length} von {total} geladen
+        </span>
       </div>
 
       {/* Entries list */}
@@ -376,99 +353,40 @@ export default function JournalPage() {
         <div className="rounded-lg border border-dashed border-base-300 p-8 text-center">
           <IconBook2 className="mx-auto h-12 w-12 text-base-content/30" />
           <p className="mt-2 text-base-content/60">
-            {typeFilter || searchQuery || dateFrom || dateTo
-              ? 'Keine Einträge gefunden'
+            {typeFilter
+              ? 'Keine Einträge dieses Typs gefunden'
               : 'Noch keine Einträge vorhanden'}
           </p>
-          {!isCreating && (
-            <button onClick={() => setIsCreating(true)} className="btn btn-primary btn-sm mt-4">
+          {!isFormOpen && (
+            <button onClick={() => setIsFormOpen(true)} className="btn btn-primary btn-sm mt-4">
               <IconPlus className="h-4 w-4" />
               Ersten Eintrag erstellen
             </button>
           )}
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {entries.map((entry) => (
             <JournalEntryCard
               key={entry.id}
               entry={entry}
-              onClick={() => router.push(`/journal/${entry.id}`)}
+              mode="expanded"
+              onEdit={() => router.push(`/journal/${entry.id}`)}
+              onDelete={() => handleDeleteEntry(entry.id)}
+              onRunPipeline={() => handleRunPipeline(entry.id)}
             />
           ))}
 
           {/* Load more trigger */}
           <div ref={loadMoreRef} className="h-10">
-            {isLoadingMore && (
+            {isLoading && entries.length > 0 && (
               <div className="flex justify-center">
-                <span className="loading loading-spinner loading-sm" />
+                <IconLoader2 className="h-5 w-5 animate-spin text-base-content/40" />
               </div>
             )}
           </div>
         </div>
       )}
     </div>
-  )
-}
-
-/**
- * Journal entry card component.
- */
-function JournalEntryCard({
-  entry,
-  onClick,
-}: {
-  entry: JournalEntryWithRelations
-  onClick: () => void
-}) {
-  // Format date
-  const formattedDate = entry.occurredAt
-    ? format(new Date(entry.occurredAt), 'dd. MMM yyyy, HH:mm', { locale: de })
-    : format(new Date(entry.createdAt), 'dd. MMM yyyy, HH:mm', { locale: de })
-
-  // Get preview text (first 200 chars without markdown)
-  const previewText = entry.content
-    .replace(/^#+ .*/gm, '') // Remove headers
-    .replace(/\*\*|__/g, '') // Remove bold
-    .replace(/\*|_/g, '') // Remove italic
-    .replace(/\n+/g, ' ') // Replace newlines with spaces
-    .trim()
-    .slice(0, 200)
-
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full rounded-lg border border-base-300 p-4 text-left transition-colors hover:bg-base-200 ${
-        entry.type.bgColorClass || ''
-      }`}
-    >
-      {/* Header */}
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {entry.type.icon && <span className="text-lg">{entry.type.icon}</span>}
-          <span className="font-medium">{entry.type.name}</span>
-          {entry.template && (
-            <span className="text-sm text-base-content/60">• {entry.template.name}</span>
-          )}
-        </div>
-        <span className="text-sm text-base-content/60">{formattedDate}</span>
-      </div>
-
-      {/* Title */}
-      {entry.title && <h3 className="mb-1 font-medium">{entry.title}</h3>}
-
-      {/* Preview */}
-      <p className="text-sm text-base-content/70">
-        {previewText}
-        {entry.content.length > 200 && '...'}
-      </p>
-
-      {/* Summary badge */}
-      {entry.aiSummary && (
-        <div className="mt-2">
-          <span className="badge badge-ghost badge-sm">Zusammenfassung vorhanden</span>
-        </div>
-      )}
-    </button>
   )
 }

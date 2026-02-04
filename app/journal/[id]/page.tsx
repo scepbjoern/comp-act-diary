@@ -1,6 +1,7 @@
 /**
  * app/journal/[id]/page.tsx
  * Detail view for a single journal entry with editing capabilities.
+ * Uses the unified JournalService via /api/journal-entries.
  */
 
 'use client'
@@ -11,39 +12,11 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { TablerIcon } from '@/components/ui/TablerIcon'
-import { IconArrowLeft, IconEdit, IconTrash, IconDeviceFloppy } from '@tabler/icons-react'
+import { IconArrowLeft, IconEdit, IconTrash, IconDeviceFloppy, IconLoader2 } from '@tabler/icons-react'
 import { Toasts, useToasts } from '@/components/ui/Toast'
 import { TemplateField } from '@/types/journal'
 import { parseContentToFields, buildContentFromFields, extractFieldValues } from '@/lib/services/journal/contentService'
-
-interface JournalEntryDetail {
-  id: string
-  title: string | null
-  content: string
-  createdAt: string
-  updatedAt: string
-  type: {
-    id: string
-    code: string
-    name: string
-    icon: string | null
-    bgColorClass: string | null
-  } | null
-  template: {
-    id: string
-    name: string
-    fields: TemplateField[]
-  } | null
-  timeBox: {
-    id: string
-    localDate: string
-    kind: string
-  } | null
-  location: {
-    id: string
-    name: string
-  } | null
-}
+import type { EntryWithRelations } from '@/lib/services/journal/types'
 
 export default function JournalEntryPage() {
   const params = useParams()
@@ -51,7 +24,7 @@ export default function JournalEntryPage() {
   const { toasts, push, dismiss } = useToasts()
   const entryId = params.id as string
 
-  const [entry, setEntry] = useState<JournalEntryDetail | null>(null)
+  const [entry, setEntry] = useState<EntryWithRelations | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -63,14 +36,16 @@ export default function JournalEntryPage() {
   const [editContent, setEditContent] = useState('')
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
 
-  // Fetch entry data
+  // Fetch entry data via unified API
   const fetchEntry = useCallback(async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/journal/${entryId}`)
+      const response = await fetch(`/api/journal-entries/${entryId}`)
       if (!response.ok) {
         if (response.status === 404) {
           setError('Eintrag nicht gefunden')
+        } else if (response.status === 403) {
+          setError('Kein Zugriff auf diesen Eintrag')
         } else {
           setError('Fehler beim Laden des Eintrags')
         }
@@ -83,7 +58,7 @@ export default function JournalEntryPage() {
 
       // Parse content to field values if template exists
       if (data.entry.template?.fields) {
-        const parsed = parseContentToFields(data.entry.content, data.entry.template.fields)
+        const parsed = parseContentToFields(data.entry.content, data.entry.template.fields as TemplateField[])
         setFieldValues(extractFieldValues(parsed.fields))
       }
     } catch (err) {
@@ -111,17 +86,17 @@ export default function JournalEntryPage() {
     try {
       // Build content from fields if template exists
       let content = editContent
-      if (entry.template?.fields && entry.template.fields.length > 0) {
-        content = buildContentFromFields(entry.template.fields, fieldValues)
+      const fields = entry.template?.fields as TemplateField[] | undefined
+      if (fields && fields.length > 0) {
+        content = buildContentFromFields(fields, fieldValues)
       }
 
-      const response = await fetch(`/api/journal/${entryId}`, {
+      const response = await fetch(`/api/journal-entries/${entryId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: editTitle || null,
           content,
-          fieldValues,
         }),
       })
 
@@ -147,7 +122,7 @@ export default function JournalEntryPage() {
 
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/journal/${entryId}`, {
+      const response = await fetch(`/api/journal-entries/${entryId}`, {
         method: 'DELETE',
       })
 
@@ -171,7 +146,7 @@ export default function JournalEntryPage() {
       setEditTitle(entry.title || '')
       setEditContent(entry.content || '')
       if (entry.template?.fields) {
-        const parsed = parseContentToFields(entry.content, entry.template.fields)
+        const parsed = parseContentToFields(entry.content, entry.template.fields as TemplateField[])
         setFieldValues(extractFieldValues(parsed.fields))
       }
     }
@@ -200,9 +175,13 @@ export default function JournalEntryPage() {
     )
   }
 
-  const formattedDate = entry.timeBox?.localDate
-    ? format(new Date(entry.timeBox.localDate), 'EEEE, d. MMMM yyyy', { locale: de })
+  // Use occurredAt for date display (timeBox is not included in EntryWithRelations)
+  const formattedDate = entry.occurredAt
+    ? format(new Date(entry.occurredAt), 'EEEE, d. MMMM yyyy', { locale: de })
     : format(new Date(entry.createdAt), 'EEEE, d. MMMM yyyy', { locale: de })
+
+  // Parse template fields from JSON
+  const templateFields = entry.template?.fields as TemplateField[] | undefined
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
@@ -258,7 +237,7 @@ export default function JournalEntryPage() {
           <div className="flex items-center gap-3">
             {entry.type && (
               <div
-                className={`flex items-center gap-2 rounded-full px-3 py-1 text-sm ${entry.type.bgColorClass || 'bg-base-200'}`}
+                className="flex items-center gap-2 rounded-full px-3 py-1 text-sm bg-base-200"
               >
                 {entry.type.icon && <TablerIcon name={entry.type.icon} size={16} />}
                 <span>{entry.type.name}</span>
@@ -289,10 +268,10 @@ export default function JournalEntryPage() {
 
           {/* Content */}
           {isEditing ? (
-            entry.template?.fields && entry.template.fields.length > 0 ? (
+            templateFields && templateFields.length > 0 ? (
               // Template-based editing
               <div className="space-y-4">
-                {entry.template.fields
+                {[...templateFields]
                   .sort((a, b) => a.order - b.order)
                   .map((field) => (
                     <div key={field.id} className="form-control">

@@ -4,14 +4,38 @@
  * components/features/journal/JournalEntryCard.tsx
  * Unified card component for displaying journal entries.
  * Supports compact (list), expanded (day view), and detail (full page) modes.
+ * 
+ * Features:
+ * - Type badge with icon
+ * - Template name display
+ * - Title display
+ * - Content/Fields display
+ * - Audio player (multiple)
+ * - Photo gallery
+ * - Time display (occurredAt)
+ * - Edit/Delete/Share/Pipeline buttons
  */
 
 import { useState, memo, useCallback } from 'react'
 import Link from 'next/link'
-import { formatDistanceToNow } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { TablerIcon } from '@/components/ui/TablerIcon'
-import { IconChevronDown, IconChevronUp, IconEdit, IconTrash, IconShare, IconLock, IconMicrophone, IconPhoto, IconSparkles } from '@tabler/icons-react'
+import { 
+  IconChevronDown, 
+  IconChevronUp, 
+  IconEdit, 
+  IconTrash, 
+  IconShare, 
+  IconLock, 
+  IconMicrophone, 
+  IconPhoto, 
+  IconSparkles,
+  IconPlayerPlay,
+  IconPlayerPause,
+  IconClock,
+  IconCalendar,
+} from '@tabler/icons-react'
 import type { EntryWithRelations, EntryMediaAttachment } from '@/lib/services/journal/types'
 import clsx from 'clsx'
 
@@ -48,7 +72,7 @@ function EntryTypeTag({ type }: { type: EntryWithRelations['type'] }) {
   )
 }
 
-/** Displays media attachment indicators */
+/** Displays media attachment indicators (for compact mode) */
 function MediaIndicators({ attachments }: { attachments: EntryMediaAttachment[] }) {
   if (!attachments || attachments.length === 0) return null
 
@@ -73,10 +97,97 @@ function MediaIndicators({ attachments }: { attachments: EntryMediaAttachment[] 
   )
 }
 
+/** Audio player component for attachments */
+function AudioPlayer({ attachment }: { attachment: EntryMediaAttachment }) {
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null)
+
+  const togglePlay = useCallback(() => {
+    if (!audioElement) {
+      const audio = new Audio(attachment.asset.filePath)
+      audio.onended = () => setIsPlaying(false)
+      audio.play()
+      setAudioElement(audio)
+      setIsPlaying(true)
+    } else if (isPlaying) {
+      audioElement.pause()
+      setIsPlaying(false)
+    } else {
+      audioElement.play()
+      setIsPlaying(true)
+    }
+  }, [audioElement, isPlaying, attachment.asset.filePath])
+
+  const duration = attachment.asset.duration 
+    ? `${Math.floor(attachment.asset.duration / 60)}:${String(Math.floor(attachment.asset.duration % 60)).padStart(2, '0')}`
+    : null
+
+  return (
+    <div className="flex items-start gap-2 p-2 rounded-lg bg-base-200/50 border border-base-300">
+      <button
+        onClick={togglePlay}
+        className="btn btn-circle btn-sm btn-ghost"
+        title={isPlaying ? 'Pause' : 'Abspielen'}
+      >
+        {isPlaying ? (
+          <IconPlayerPause className="h-4 w-4" />
+        ) : (
+          <IconPlayerPlay className="h-4 w-4" />
+        )}
+      </button>
+      <div className="flex-1 min-w-0">
+        {attachment.transcript && (
+          <p className="text-sm text-base-content/80 whitespace-pre-wrap">
+            {attachment.transcript}
+          </p>
+        )}
+        <div className="flex items-center gap-2 mt-1 text-xs text-base-content/50">
+          <IconMicrophone className="h-3 w-3" />
+          {duration && <span>{duration}</span>}
+          {attachment.transcriptModel && (
+            <span className="badge badge-xs">{attachment.transcriptModel}</span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Photo gallery for image attachments */
+function PhotoGallery({ attachments }: { attachments: EntryMediaAttachment[] }) {
+  const images = attachments.filter((a) => a.asset.mimeType?.startsWith('image/'))
+  if (images.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap gap-2 mt-3">
+      {images.map((img) => (
+        <a
+          key={img.id}
+          href={img.asset.filePath}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block w-20 h-20 rounded-lg overflow-hidden bg-base-200 hover:ring-2 hover:ring-primary transition-all"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={img.asset.filePath}
+            alt="Foto"
+            className="w-full h-full object-cover"
+          />
+        </a>
+      ))}
+    </div>
+  )
+}
+
 /** Formats the occurred date for display */
-function formatOccurredAt(date: Date | null): string {
+function formatOccurredAt(date: Date | null, mode: 'relative' | 'full'): string {
   if (!date) return ''
-  return formatDistanceToNow(new Date(date), { addSuffix: true, locale: de })
+  const d = new Date(date)
+  if (mode === 'relative') {
+    return formatDistanceToNow(d, { addSuffix: true, locale: de })
+  }
+  return format(d, 'EEEE, d. MMMM yyyy, HH:mm', { locale: de })
 }
 
 /** Truncates content for preview */
@@ -151,7 +262,7 @@ function JournalEntryCardComponent({
           {/* Meta info */}
           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
             {entry.title && <EntryTypeTag type={entry.type} />}
-            <span>{formatOccurredAt(entry.occurredAt)}</span>
+            <span>{formatOccurredAt(entry.occurredAt, 'relative')}</span>
             <MediaIndicators attachments={entry.mediaAttachments} />
           </div>
         </div>
@@ -212,25 +323,47 @@ function JournalEntryCardComponent({
 
       {/* Content */}
       <div className={clsx('px-3 pb-3', !isExpanded && mode === 'compact' && 'hidden')}>
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          {/* Render content - could be enhanced with markdown rendering */}
-          <p className="whitespace-pre-wrap text-sm">{displayContent}</p>
-        </div>
+        {/* Template name if available */}
+        {entry.template && (
+          <div className="mb-2 text-xs text-base-content/50">
+            Template: {entry.template.name}
+          </div>
+        )}
 
-        {/* Template fields rendering would go here if entry.template?.fields exists */}
+        {/* Content text */}
+        {displayContent && (
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <p className="whitespace-pre-wrap text-sm text-base-content/90">{displayContent}</p>
+          </div>
+        )}
 
-        {/* Media attachments preview */}
-        {hasMedia && mode !== 'compact' && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {entry.mediaAttachments.map((attachment) => (
-              <MediaAttachmentPreview key={attachment.id} attachment={attachment} />
-            ))}
+        {/* Audio attachments with player */}
+        {hasMedia && (mode === 'expanded' || mode === 'detail') && (
+          <div className="mt-3 space-y-2">
+            {entry.mediaAttachments
+              .filter((a) => a.asset.mimeType?.startsWith('audio/'))
+              .map((attachment) => (
+                <AudioPlayer key={attachment.id} attachment={attachment} />
+              ))}
+          </div>
+        )}
+
+        {/* Photo gallery */}
+        {hasMedia && (mode === 'expanded' || mode === 'detail') && (
+          <PhotoGallery attachments={entry.mediaAttachments} />
+        )}
+
+        {/* Full date/time in expanded/detail mode */}
+        {(mode === 'expanded' || mode === 'detail') && entry.occurredAt && (
+          <div className="mt-3 flex items-center gap-2 text-xs text-base-content/50">
+            <IconCalendar className="h-3.5 w-3.5" />
+            <span>{formatOccurredAt(entry.occurredAt, 'full')}</span>
           </div>
         )}
 
         {/* Link to detail page in compact/expanded modes */}
         {mode !== 'detail' && (
-          <div className="mt-2">
+          <div className="mt-3 pt-2 border-t border-base-200">
             <Link
               href={`/journal/${entry.id}`}
               className="text-xs text-primary hover:underline"
