@@ -1,7 +1,8 @@
 # Phase 1: JournalEntryCard Erweiterung - Implementierungskonzept
 
-> **Status**: 📋 Konzept  
+> **Status**: ✅ Implementiert  
 > **Erstellt**: 2026-02-05  
+> **Implementiert**: 2026-02-05  
 > **Bezug**: [Unified JournalEntry Implementation Plan](2026-02_Unified_JournalEntry_Implementation_Plan.md)  
 > **Ziel**: Feature-Parität zwischen `JournalEntryCard` und `DiaryEntriesAccordion` herstellen
 
@@ -654,6 +655,36 @@ Testen auf:
 **F5**: Soll der Delete-Button für Audios/Fotos einen Bestätigungsdialog zeigen?
 - ✅ **Ja** - um versehentliches Löschen zu vermeiden
 - *Relevant für Phase 4 (Edit via DynamicJournalForm)*
+
+---
+
+## 14. Implementierungs-Notizen
+
+### Abweichungen vom Konzept
+
+1. **JournalEntrySection Refactoring (Schritt 1)**: Die Komponente war bereits generisch implementiert und akzeptiert Props wie `title`, `content`, `icon` etc. Ein expliziter Refactor war nicht nötig - die Komponente funktioniert bereits mit beiden Entry-Typen.
+
+2. **MediaAttachmentPreview entfernt**: Die nicht mehr benötigte Helper-Komponente wurde aus `JournalEntryCard.tsx` entfernt.
+
+3. **AI Sections Styling**: Tailwind-Opacity-Modifier wie `bg-info/10` werden vom JIT-Compiler nicht zuverlässig erkannt. Lösung: Standard-Farbklassen ohne Opacity-Modifier: `bg-sky-100 dark:bg-sky-900/20` (blau für Summary) und `bg-amber-100 dark:bg-amber-900/20` (gelb für Analysis).
+
+4. **AudioSection als eigene Komponente**: Statt einer einfachen Liste wurde eine collapsible `AudioSection` Komponente implementiert, die standardmässig zugeklappt ist.
+
+5. **Bilder-URLs**: Die `filePath` aus der DB enthält bereits den vollständigen Pfad (z.B. `uploads/images/...`). Kein `/uploads/` Prefix nötig.
+
+### Geänderte/Neue Dateien
+
+| Datei | Änderung |
+|-------|----------|
+| `components/features/journal/JournalEntryCard.tsx` | Komplett erweitert mit AI-Sections (mit Wrapper-Div für Farben), Markdown-Content, AudioSection (collapsible), Foto-Galerie |
+| `components/features/journal/PhotoLightbox.tsx` | **Neu** - Einfaches Modal für Foto-Vollbildansicht |
+| `app/journal/page.tsx` | PhotoLightbox integriert, mode="compact", onViewPhoto Handler (URL-Fix) |
+
+### Nächste Schritte (Phase 4)
+
+- Edit-Button öffnet `DynamicJournalForm` inline (ersetzt Card)
+- Audio/Foto Delete-Funktionen im Edit-Form
+- Generate/Delete AI Sections Buttons
 
 ---
 

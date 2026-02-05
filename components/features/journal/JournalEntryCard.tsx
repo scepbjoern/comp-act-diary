@@ -5,14 +5,15 @@
  * Unified card component for displaying journal entries.
  * Supports compact (list), expanded (day view), and detail (full page) modes.
  * 
- * Features:
+ * Phase 1 Features (Read-Only):
  * - Type badge with icon
  * - Template name display
  * - Title display
- * - Content/Fields display
- * - Audio player (multiple)
- * - Photo gallery
- * - Time display (occurredAt)
+ * - AI Summary/Analysis sections (collapsible)
+ * - Content with Markdown rendering + @mentions
+ * - Multi-Audio player with expandable transcripts
+ * - Photo gallery with lightbox callback
+ * - Compact/Expanded mode toggle
  * - Edit/Delete/Share/Pipeline buttons
  */
 
@@ -31,13 +32,16 @@ import {
   IconMicrophone, 
   IconPhoto, 
   IconSparkles,
-  IconPlayerPlay,
-  IconPlayerPause,
-  IconClock,
   IconCalendar,
+  IconClipboard,
+  IconSearch,
+  IconFileText,
 } from '@tabler/icons-react'
 import type { EntryWithRelations, EntryMediaAttachment } from '@/lib/services/journal/types'
 import clsx from 'clsx'
+import { JournalEntrySection } from '@/components/features/diary/JournalEntrySection'
+import { DiaryContentWithMentions } from '@/components/features/diary/DiaryContentWithMentions'
+import { AudioPlayerH5 } from '@/components/features/media/AudioPlayerH5'
 
 // =============================================================================
 // TYPES
@@ -53,6 +57,8 @@ export interface JournalEntryCardProps {
   onDelete?: (entryId: string) => void
   onShare?: (entryId: string) => void
   onRunPipeline?: (entryId: string) => void
+  /** Callback when user clicks on a photo thumbnail (Phase 1: Lightbox) */
+  onViewPhoto?: (attachmentId: string, imageUrl: string) => void
   className?: string
 }
 
@@ -97,84 +103,125 @@ function MediaIndicators({ attachments }: { attachments: EntryMediaAttachment[] 
   )
 }
 
-/** Audio player component for attachments */
-function AudioPlayer({ attachment }: { attachment: EntryMediaAttachment }) {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null)
-
-  const togglePlay = useCallback(() => {
-    if (!audioElement) {
-      const audio = new Audio(attachment.asset.filePath)
-      audio.onended = () => setIsPlaying(false)
-      audio.play()
-      setAudioElement(audio)
-      setIsPlaying(true)
-    } else if (isPlaying) {
-      audioElement.pause()
-      setIsPlaying(false)
-    } else {
-      audioElement.play()
-      setIsPlaying(true)
-    }
-  }, [audioElement, isPlaying, attachment.asset.filePath])
-
-  const duration = attachment.asset.duration 
-    ? `${Math.floor(attachment.asset.duration / 60)}:${String(Math.floor(attachment.asset.duration % 60)).padStart(2, '0')}`
-    : null
+/** 
+ * Audio item with player and expandable transcript.
+ * Uses AudioPlayerH5 for playback and shows transcript in collapsible panel.
+ */
+function AudioItemWithTranscript({ attachment }: { attachment: EntryMediaAttachment }) {
+  const [isTranscriptExpanded, setIsTranscriptExpanded] = useState(false)
+  const hasTranscript = attachment.transcript && attachment.transcript.trim().length > 0
 
   return (
-    <div className="flex items-start gap-2 p-2 rounded-lg bg-base-200/50 border border-base-300">
-      <button
-        onClick={togglePlay}
-        className="btn btn-circle btn-sm btn-ghost"
-        title={isPlaying ? 'Pause' : 'Abspielen'}
-      >
-        {isPlaying ? (
-          <IconPlayerPause className="h-4 w-4" />
-        ) : (
-          <IconPlayerPlay className="h-4 w-4" />
-        )}
-      </button>
-      <div className="flex-1 min-w-0">
-        {attachment.transcript && (
-          <p className="text-sm text-base-content/80 whitespace-pre-wrap">
-            {attachment.transcript}
-          </p>
-        )}
-        <div className="flex items-center gap-2 mt-1 text-xs text-base-content/50">
-          <IconMicrophone className="h-3 w-3" />
-          {duration && <span>{duration}</span>}
-          {attachment.transcriptModel && (
-            <span className="badge badge-xs">{attachment.transcriptModel}</span>
+    <div className="rounded-lg bg-base-200/50 border border-base-300 overflow-hidden">
+      {/* Audio Player */}
+      <div className="p-2">
+        <AudioPlayerH5 audioFilePath={attachment.asset.filePath} compact />
+      </div>
+      
+      {/* Transcript Toggle & Content */}
+      {hasTranscript && (
+        <div className="border-t border-base-300">
+          <button
+            type="button"
+            onClick={() => setIsTranscriptExpanded(!isTranscriptExpanded)}
+            className="w-full px-3 py-1.5 text-left text-xs text-base-content/60 hover:bg-base-200 flex items-center gap-1"
+          >
+            {isTranscriptExpanded ? (
+              <IconChevronUp className="h-3 w-3" />
+            ) : (
+              <IconChevronDown className="h-3 w-3" />
+            )}
+            <span>Transkript {isTranscriptExpanded ? 'verbergen' : 'anzeigen'}</span>
+            {attachment.transcriptModel && (
+              <span className="badge badge-xs ml-auto">{attachment.transcriptModel}</span>
+            )}
+          </button>
+          {isTranscriptExpanded && (
+            <div className="px-3 pb-3 pt-1">
+              <p className="text-sm text-base-content/80 whitespace-pre-wrap">
+                {attachment.transcript}
+              </p>
+            </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   )
 }
 
-/** Photo gallery for image attachments */
-function PhotoGallery({ attachments }: { attachments: EntryMediaAttachment[] }) {
+/**
+ * Collapsible audio section containing all audio players.
+ * Default collapsed to reduce visual noise.
+ */
+function AudioSection({ attachments }: { attachments: EntryMediaAttachment[] }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  return (
+    <div className="rounded-lg border border-base-300 overflow-hidden">
+      {/* Header - always visible */}
+      <button
+        type="button"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full px-3 py-2 bg-base-200/50 hover:bg-base-200 flex items-center gap-2 text-sm font-medium"
+      >
+        {isExpanded ? (
+          <IconChevronUp className="h-4 w-4" />
+        ) : (
+          <IconChevronDown className="h-4 w-4" />
+        )}
+        <IconMicrophone size={16} />
+        <span>Audio ({attachments.length})</span>
+      </button>
+
+      {/* Content - collapsible */}
+      {isExpanded && (
+        <div className="p-2 space-y-2 border-t border-base-300">
+          {attachments.map((attachment) => (
+            <AudioItemWithTranscript key={attachment.id} attachment={attachment} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** 
+ * Photo gallery for image attachments.
+ * Clicking a photo triggers onViewPhoto callback for lightbox display.
+ */
+interface PhotoGalleryProps {
+  attachments: EntryMediaAttachment[]
+  onViewPhoto?: (attachmentId: string, imageUrl: string) => void
+}
+
+function PhotoGallery({ attachments, onViewPhoto }: PhotoGalleryProps) {
   const images = attachments.filter((a) => a.asset.mimeType?.startsWith('image/'))
   if (images.length === 0) return null
 
+  const handlePhotoClick = (img: EntryMediaAttachment, e: React.MouseEvent) => {
+    if (onViewPhoto) {
+      e.preventDefault()
+      onViewPhoto(img.id, img.asset.filePath)
+    }
+  }
+
   return (
-    <div className="flex flex-wrap gap-2 mt-3">
+    <div className="flex flex-wrap gap-2">
       {images.map((img) => (
-        <a
+        <button
           key={img.id}
-          href={img.asset.filePath}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block w-20 h-20 rounded-lg overflow-hidden bg-base-200 hover:ring-2 hover:ring-primary transition-all"
+          type="button"
+          onClick={(e) => handlePhotoClick(img, e)}
+          className="block w-20 h-20 rounded-lg overflow-hidden bg-base-200 hover:ring-2 hover:ring-primary transition-all cursor-pointer"
+          title="Foto ansehen"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={img.asset.filePath}
+            src={img.asset.filePath.startsWith('/') ? img.asset.filePath : `/${img.asset.filePath}`}
             alt="Foto"
             className="w-full h-full object-cover"
           />
-        </a>
+        </button>
       ))}
     </div>
   )
@@ -208,6 +255,7 @@ function JournalEntryCardComponent({
   onDelete,
   onShare,
   onRunPipeline,
+  onViewPhoto,
   className,
 }: JournalEntryCardProps) {
   const [isExpanded, setIsExpanded] = useState(mode === 'expanded' || mode === 'detail')
@@ -218,12 +266,21 @@ function JournalEntryCardComponent({
     }
   }, [mode])
 
-  // Determine content preview length based on mode
-  const previewLength = mode === 'compact' ? 150 : mode === 'expanded' ? 300 : Infinity
-  const displayContent = isExpanded ? entry.content : truncateContent(entry.content, previewLength)
-
-  // Check for media
-  const hasMedia = entry.mediaAttachments && entry.mediaAttachments.length > 0
+  // Filter media attachments by type
+  const audioAttachments = entry.mediaAttachments?.filter(
+    (a) => a.asset.mimeType?.startsWith('audio/')
+  ) || []
+  const imageAttachments = entry.mediaAttachments?.filter(
+    (a) => a.asset.mimeType?.startsWith('image/')
+  ) || []
+  
+  // Determine if we should show full content (expanded/detail mode or manually expanded in compact)
+  const showFullContent = isExpanded || mode === 'expanded' || mode === 'detail'
+  
+  // Content preview for compact mode (first ~100 chars)
+  const contentPreview = entry.content 
+    ? truncateContent(entry.content.replace(/\n/g, ' '), 100) 
+    : ''
 
   return (
     <article
@@ -239,18 +296,28 @@ function JournalEntryCardComponent({
       <div
         className={clsx(
           'flex items-start justify-between gap-2 p-3',
-          mode === 'compact' && 'cursor-pointer'
+          mode === 'compact' && !isExpanded && 'cursor-pointer'
         )}
-        onClick={mode === 'compact' ? handleToggleExpand : undefined}
+        onClick={mode === 'compact' && !isExpanded ? handleToggleExpand : undefined}
       >
         <div className="flex-1 min-w-0">
-          {/* Title or type */}
+          {/* Type badge and template */}
           <div className="flex items-center gap-2 flex-wrap">
-            {entry.title ? (
-              <h3 className="font-medium text-sm truncate">{entry.title}</h3>
-            ) : (
-              <EntryTypeTag type={entry.type} />
+            <EntryTypeTag type={entry.type} />
+            {entry.template && (
+              <span className="text-xs text-base-content/50">• {entry.template.name}</span>
             )}
+          </div>
+
+          {/* Title */}
+          {entry.title && (
+            <h3 className="font-medium text-base mt-1">{entry.title}</h3>
+          )}
+
+          {/* Meta info: timestamp, media indicators, badges */}
+          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+            <span>{formatOccurredAt(entry.occurredAt, 'relative')}</span>
+            <MediaIndicators attachments={entry.mediaAttachments} />
             {entry.isSensitive && (
               <IconLock className="h-3.5 w-3.5 text-amber-500" title="Sensibel" />
             )}
@@ -259,12 +326,12 @@ function JournalEntryCardComponent({
             )}
           </div>
 
-          {/* Meta info */}
-          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-            {entry.title && <EntryTypeTag type={entry.type} />}
-            <span>{formatOccurredAt(entry.occurredAt, 'relative')}</span>
-            <MediaIndicators attachments={entry.mediaAttachments} />
-          </div>
+          {/* Content preview in compact mode (when not expanded) */}
+          {mode === 'compact' && !isExpanded && contentPreview && (
+            <p className="mt-2 text-sm text-base-content/70 line-clamp-1">
+              {contentPreview}
+            </p>
+          )}
         </div>
 
         {/* Actions */}
@@ -307,7 +374,7 @@ function JournalEntryCardComponent({
           )}
           {mode === 'compact' && (
             <button
-              onClick={handleToggleExpand}
+              onClick={(e) => { e.stopPropagation(); handleToggleExpand() }}
               className="p-1.5 rounded hover:bg-muted"
               title={isExpanded ? 'Einklappen' : 'Aufklappen'}
             >
@@ -321,102 +388,95 @@ function JournalEntryCardComponent({
         </div>
       </div>
 
-      {/* Content */}
-      <div className={clsx('px-3 pb-3', !isExpanded && mode === 'compact' && 'hidden')}>
-        {/* Template name if available */}
-        {entry.template && (
-          <div className="mb-2 text-xs text-base-content/50">
-            Template: {entry.template.name}
-          </div>
-        )}
+      {/* Expanded Content Area */}
+      {showFullContent && (
+        <div className="px-3 pb-3 space-y-3">
+          {/* AI Summary Section (blue background) */}
+          {entry.aiSummary && (
+            <div className="bg-sky-100 dark:bg-sky-900/20 rounded-lg">
+              <JournalEntrySection
+                title="Zusammenfassung"
+                icon={<IconClipboard size={16} className="text-sky-600 dark:text-sky-400" />}
+                content={entry.aiSummary}
+                defaultCollapsed={false}
+                canGenerate={false}
+                canDelete={false}
+              />
+            </div>
+          )}
 
-        {/* Content text */}
-        {displayContent && (
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <p className="whitespace-pre-wrap text-sm text-base-content/90">{displayContent}</p>
-          </div>
-        )}
+          {/* AI Analysis Section (yellow background) */}
+          {entry.analysis && (
+            <div className="bg-amber-100 dark:bg-amber-900/20 rounded-lg">
+              <JournalEntrySection
+                title="Analyse"
+                icon={<IconSearch size={16} className="text-amber-600 dark:text-amber-400" />}
+                content={entry.analysis}
+                defaultCollapsed={false}
+                canGenerate={false}
+                canDelete={false}
+              />
+            </div>
+          )}
 
-        {/* Audio attachments with player */}
-        {hasMedia && (mode === 'expanded' || mode === 'detail') && (
-          <div className="mt-3 space-y-2">
-            {entry.mediaAttachments
-              .filter((a) => a.asset.mimeType?.startsWith('audio/'))
-              .map((attachment) => (
-                <AudioPlayer key={attachment.id} attachment={attachment} />
-              ))}
-          </div>
-        )}
-
-        {/* Photo gallery */}
-        {hasMedia && (mode === 'expanded' || mode === 'detail') && (
-          <PhotoGallery attachments={entry.mediaAttachments} />
-        )}
-
-        {/* Full date/time in expanded/detail mode */}
-        {(mode === 'expanded' || mode === 'detail') && entry.occurredAt && (
-          <div className="mt-3 flex items-center gap-2 text-xs text-base-content/50">
-            <IconCalendar className="h-3.5 w-3.5" />
-            <span>{formatOccurredAt(entry.occurredAt, 'full')}</span>
-          </div>
-        )}
-
-        {/* Link to detail page in compact/expanded modes */}
-        {mode !== 'detail' && (
-          <div className="mt-3 pt-2 border-t border-base-200">
-            <Link
-              href={`/journal/${entry.id}`}
-              className="text-xs text-primary hover:underline"
-              onClick={(e) => e.stopPropagation()}
+          {/* Content with Markdown rendering and @mentions */}
+          {entry.content && (
+            <JournalEntrySection
+              title="Inhalt"
+              icon={<IconFileText size={16} />}
+              content={entry.content}
+              canGenerate={false}
+              canDelete={false}
             >
-              Details anzeigen →
-            </Link>
-          </div>
-        )}
-      </div>
+              <DiaryContentWithMentions 
+                noteId={entry.id} 
+                markdown={entry.content} 
+              />
+            </JournalEntrySection>
+          )}
+
+          {/* Audio Section with players and transcripts - collapsible, default collapsed */}
+          {audioAttachments.length > 0 && (
+            <AudioSection attachments={audioAttachments} />
+          )}
+
+          {/* Photo Gallery */}
+          {imageAttachments.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium flex items-center gap-2">
+                <IconPhoto size={16} />
+                Fotos ({imageAttachments.length})
+              </h4>
+              <PhotoGallery 
+                attachments={entry.mediaAttachments} 
+                onViewPhoto={onViewPhoto} 
+              />
+            </div>
+          )}
+
+          {/* Full date/time */}
+          {entry.occurredAt && (
+            <div className="flex items-center gap-2 text-xs text-base-content/50 pt-2 border-t border-base-200">
+              <IconCalendar className="h-3.5 w-3.5" />
+              <span>{formatOccurredAt(entry.occurredAt, 'full')}</span>
+            </div>
+          )}
+
+          {/* Link to detail page (not in detail mode) */}
+          {mode !== 'detail' && (
+            <div className="pt-2">
+              <Link
+                href={`/journal/${entry.id}`}
+                className="text-xs text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Details anzeigen →
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
     </article>
-  )
-}
-
-/** Preview component for media attachments */
-function MediaAttachmentPreview({ attachment }: { attachment: EntryMediaAttachment }) {
-  const isAudio = attachment.asset.mimeType?.startsWith('audio/')
-  const isImage = attachment.asset.mimeType?.startsWith('image/')
-
-  if (isAudio) {
-    return (
-      <div className="flex items-center gap-2 p-2 rounded bg-muted text-xs">
-        <IconMicrophone className="h-4 w-4" />
-        <span className="truncate max-w-[150px]">
-          {attachment.transcript ? truncateContent(attachment.transcript, 50) : 'Audio'}
-        </span>
-        {attachment.asset.duration && (
-          <span className="text-muted-foreground">
-            {Math.round(attachment.asset.duration)}s
-          </span>
-        )}
-      </div>
-    )
-  }
-
-  if (isImage) {
-    return (
-      <div className="w-16 h-16 rounded overflow-hidden bg-muted">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={attachment.asset.filePath}
-          alt="Anhang"
-          className="w-full h-full object-cover"
-        />
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex items-center gap-2 p-2 rounded bg-muted text-xs">
-      <TablerIcon name="file" className="h-4 w-4" />
-      <span>Datei</span>
-    </div>
   )
 }
 

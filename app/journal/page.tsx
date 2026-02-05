@@ -13,13 +13,13 @@ import {
   IconPlus,
   IconFilter,
   IconChevronDown,
-  IconChevronUp,
   IconBook2,
   IconLoader2,
   IconX,
 } from '@tabler/icons-react'
 import { JournalEntryCard } from '@/components/features/journal'
 import { DynamicJournalForm } from '@/components/features/journal/DynamicJournalForm'
+import { PhotoLightbox } from '@/components/features/journal/PhotoLightbox'
 import { useJournalEntries } from '@/hooks/useJournalEntries'
 import type { TemplateField, TemplateAIConfig } from '@/types/journal'
 import { TablerIcon } from '@/components/ui/TablerIcon'
@@ -73,7 +73,6 @@ export default function JournalPage() {
     createEntry,
     deleteEntry,
     runPipeline,
-    generateTitle,
     loadMore,
     refetch,
   } = useJournalEntries({
@@ -85,6 +84,9 @@ export default function JournalPage() {
   // New entry form state
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Photo lightbox state
+  const [lightboxPhoto, setLightboxPhoto] = useState<{ url: string; alt?: string } | null>(null)
 
   // Current date for audio persistence
   const today = ymd(new Date())
@@ -215,20 +217,15 @@ export default function JournalPage() {
     }
   }, [runPipeline, push])
 
-  const handleGenerateTitle = useCallback(async (entryId: string) => {
-    try {
-      const title = await generateTitle(entryId)
-      if (title) {
-        push('Titel generiert', 'success')
-      }
-    } catch (err) {
-      console.error('Title generation failed:', err)
-      push('Titel-Generierung fehlgeschlagen', 'error')
-    }
-  }, [generateTitle, push])
-
   const handleTypeFilterChange = useCallback((typeId: string | undefined) => {
     setTypeFilter(typeId)
+  }, [])
+
+  /** Handle photo view for lightbox */
+  const handleViewPhoto = useCallback((attachmentId: string, imageUrl: string) => {
+    // Ensure URL starts with / but avoid double-prefixing
+    const fullUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`
+    setLightboxPhoto({ url: fullUrl, alt: `Foto ${attachmentId}` })
   }, [])
 
   // ---------------------------------------------------------------------------
@@ -370,10 +367,11 @@ export default function JournalPage() {
             <JournalEntryCard
               key={entry.id}
               entry={entry}
-              mode="expanded"
+              mode="compact"
               onEdit={() => router.push(`/journal/${entry.id}`)}
               onDelete={() => handleDeleteEntry(entry.id)}
               onRunPipeline={() => handleRunPipeline(entry.id)}
+              onViewPhoto={handleViewPhoto}
             />
           ))}
 
@@ -387,6 +385,14 @@ export default function JournalPage() {
           </div>
         </div>
       )}
+
+      {/* Photo Lightbox */}
+      <PhotoLightbox
+        isOpen={lightboxPhoto !== null}
+        onClose={() => setLightboxPhoto(null)}
+        imageUrl={lightboxPhoto?.url || ''}
+        alt={lightboxPhoto?.alt}
+      />
     </div>
   )
 }

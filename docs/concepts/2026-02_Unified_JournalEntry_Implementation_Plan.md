@@ -1,7 +1,8 @@
 # Unified JournalEntry Implementation Plan
 
-> **Status**: 🔄 In Arbeit  
+> **Status**: 🔄 In Arbeit (Phase 1 ✅ abgeschlossen)  
 > **Erstellt**: 2026-02-04  
+> **Phase 1 implementiert**: 2026-02-05  
 > **Basis**: [2026-02_Unified_JournalEntry_Analysis_and_Concept.md](./2026-02_Unified_JournalEntry_Analysis_and_Concept.md)  
 > **Ziel**: Konkreter Implementierungsplan zur Feature-Parität zwischen DiaryEntriesAccordion und JournalEntryCard
 
