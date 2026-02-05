@@ -15,8 +15,9 @@
 4. [Funktionale Anforderungen](#4-funktionale-anforderungen)
 5. [Nicht-Funktionale Anforderungen](#5-nicht-funktionale-anforderungen)
 6. [Code-Mapping: Wiederverwendung](#6-code-mapping-wiederverwendung)
-7. [Implementierungsreihenfolge](#7-implementierungsreihenfolge)
-8. [Offene Fragen](#8-offene-fragen)
+7. [Komponenten-Architektur](#7-komponenten-architektur)
+8. [Implementierungsreihenfolge](#8-implementierungsreihenfolge)
+9. [Entscheidungen](#9-entscheidungen)
 
 ---
 
@@ -174,7 +175,9 @@ Die **DiaryEntriesAccordion** auf der Startseite (`/`) bietet ein reichhaltiges 
 1. Alle Features aus Tabelle 2.1 sind verfügbar
 2. `mode` Prop steuert Detailgrad: `compact`, `expanded`, `detail`
 3. `isEditing` Prop aktiviert Inline-Bearbeitung
-4. Template-Felder werden strukturiert angezeigt (nicht nur als Plaintext)
+4. Content wird als Markdown gerendert (siehe [E2](#e2-template-felder-darstellung))
+
+**Props-Design**: Siehe [Anhang B](#anhang-b-props-design-für-journalentrycard)
 
 ### FR-02: Inline-Bearbeitung
 
@@ -242,12 +245,13 @@ Die **DiaryEntriesAccordion** auf der Startseite (`/`) bietet ein reichhaltiges 
 
 ### FR-08: Templates in Entry Display
 
-**Beschreibung**: Template-basierte Einträge zeigen Felder strukturiert an.
+**Beschreibung**: Template-basierte Einträge werden korrekt dargestellt.
 
 **Akzeptanzkriterien**:
 1. Template-Name wird angezeigt
-2. Felder werden mit Labels angezeigt (nicht als Markdown)
-3. Bearbeitung respektiert Template-Struktur
+2. Content wird als **Markdown gerendert** (Feld-Labels werden zu Überschriften)
+3. Bearbeitung erfolgt im RichTextEditor mit Markdown-Unterstützung
+4. Keine separate strukturierte Feld-Darstellung nötig
 
 ### FR-09: Sharing & Access Control
 
@@ -340,52 +344,162 @@ Die **DiaryEntriesAccordion** auf der Startseite (`/`) bietet ein reichhaltiges 
 | `useTasksForEntry` | `hooks/useTasksForEntry.ts` | Tasks laden |
 | `useReadMode` | `hooks/useReadMode.ts` | Read-Mode Status |
 
-### 6.3 API-Endpunkte (bereits vorhanden)
+### 6.3 API-Endpunkte (Unified Routes)
 
-| Endpunkt | Verwendung |
-|----------|------------|
-| `GET/POST /api/journal-entries` | Liste/Erstellen |
-| `GET/PATCH/DELETE /api/journal-entries/[id]` | Einzeln |
-| `POST /api/journal-entries/[id]/media` | Media hinzufügen |
-| `PATCH/DELETE /api/journal-entries/[id]/media/[attachmentId]` | Media bearbeiten/löschen |
-| `POST /api/journal-entries/[id]/audio` | Audio hochladen + transkribieren |
-| `POST /api/notes/[id]/photos` | Fotos hochladen |
-| `DELETE /api/photos/[id]` | Foto löschen |
-| `POST /api/journal-ai/pipeline` | AI-Pipeline |
-| `POST /api/journal-ai/generate-content` | Content generieren |
-| `POST /api/journal-ai/generate-summary` | Summary generieren |
-| `POST /api/generate-title` | Titel generieren |
-| `POST /api/diary/retranscribe` | Re-Transkription |
+**Ziel**: Alle Journal-Operationen nutzen die `/api/journal-entries/`-Routen. Legacy-Routen werden in Phase 6 entfernt.
+
+| Endpunkt | Verwendung | Status |
+|----------|------------|--------|
+| `GET/POST /api/journal-entries` | Liste/Erstellen | ✅ Vorhanden |
+| `GET/PATCH/DELETE /api/journal-entries/[id]` | Einzeln | ✅ Vorhanden |
+| `POST /api/journal-entries/[id]/media` | Media hinzufügen (role: ATTACHMENT, SOURCE, GALLERY) | ✅ Vorhanden |
+| `PATCH/DELETE /api/journal-entries/[id]/media/[attachmentId]` | Media bearbeiten/löschen | ✅ Vorhanden |
+| `POST /api/journal-entries/[id]/audio` | Audio hochladen + transkribieren | ✅ Vorhanden |
+| `POST /api/journal-ai/pipeline` | AI-Pipeline | ✅ Vorhanden |
+| `POST /api/journal-ai/generate-content` | Content generieren | ✅ Vorhanden |
+| `POST /api/journal-ai/generate-summary` | Summary generieren | ✅ Vorhanden |
+| `POST /api/generate-title` | Titel generieren | ✅ Vorhanden |
+
+**Legacy-Routen** (werden parallel betrieben bis Phase 6):
+
+| Legacy-Endpunkt | Unified-Ersatz | Entfernen in |
+|-----------------|----------------|--------------|
+| `POST /api/diary/upload-audio` | `/api/journal-entries/[id]/audio` | Phase 6 |
+| `POST /api/notes/[id]/photos` | `/api/journal-entries/[id]/media` mit `role=GALLERY` | Phase 6 |
+| `DELETE /api/photos/[id]` | `/api/journal-entries/[id]/media/[attachmentId]` | Phase 6 |
+| `POST /api/diary/retranscribe` | Prüfen: evtl. in unified Route integrieren | Phase 6 |
+
+**Hinweis**: Für Photos wird die generische `/media`-Route mit `role=GALLERY` verwendet, keine separate `/photos`-Route.
 
 ---
 
-## 7. Implementierungsreihenfolge
+## 7. Komponenten-Architektur
+
+### 7.1 Aktuelle Situation im `journal`-Ordner
+
+| Datei | Grösse | Funktion | Entscheidung |
+|-------|--------|----------|--------------|
+| `DynamicJournalForm.tsx` | 21 KB | Type/Template-Selektion, Field-Rendering | **Überarbeiten** |
+| `UnifiedEntryForm.tsx` | 14 KB | Vereinfachte Edit-Form | **Entfernen** (in DynamicJournalForm integrieren) |
+| `JournalEntryCard.tsx` | 14 KB | Entry-Anzeige | **Überarbeiten** |
+| `FieldRenderer.tsx` | 7 KB | Template-Feld-Rendering | **Beibehalten** |
+| `TemplateEditor.tsx` | 16 KB | Template-Verwaltung | **Beibehalten** (Admin) |
+| `TemplateFieldEditor.tsx` | 6 KB | Feld-Editor | **Beibehalten** (Admin) |
+| `TemplateAIConfigEditor.tsx` | 10 KB | AI-Config Editor | **Beibehalten** (Admin) |
+| `EmojiPickerButton.tsx` | 4 KB | Emoji-Auswahl | **Beibehalten** |
+| `index.ts` | 1 KB | Exports | **Anpassen** |
+
+### 7.2 Entscheidung: Überarbeiten statt Neu erstellen
+
+> Vollständige Dateien-Übersicht: Siehe [Anhang A](#anhang-a-dateien-übersicht)
+
+**Begründung**:
+1. `JournalEntryCard` (14 KB) hat bereits die Grundstruktur (modes, props, media indicators)
+2. `DynamicJournalForm` (21 KB) hat Type/Template-Selektion und Field-Rendering, die funktionieren
+3. Bestehender Code enthält getestete Logik (Content-Building, Field-Parsing)
+4. Neuschreiben würde mehr Zeit kosten und Regressionen riskieren
+
+**Vorgehen**:
+1. `JournalEntryCard` erweitern um alle Features aus DiaryEntriesAccordion
+2. `DynamicJournalForm` erweitern um OCR, Foto, vollständiges Audio
+3. `UnifiedEntryForm` entfernen und Logik in `DynamicJournalForm` integrieren
+4. `index.ts` anpassen (UnifiedEntryForm-Export entfernen)
+
+### 7.3 Aktuelle Situation im `diary`-Ordner
+
+| Datei | Grösse | Funktion | Entscheidung |
+|-------|--------|----------|--------------|
+| `DiaryEntriesAccordion.tsx` | 43 KB | Hauptkomponente Startseite | **Phase 6**: Ersetzen durch JournalEntryCard |
+| `DiarySection.tsx` | 20 KB | Formular + Liste Startseite | **Phase 6**: Refactoring |
+| `JournalEntrySection.tsx` | 6 KB | Wiederverwendbare Section | **Importieren** in JournalEntryCard |
+| `ShareEntryModal.tsx` | 10 KB | Sharing-Modal | **Importieren** in JournalEntryCard |
+| `SharedBadge.tsx` | 4 KB | Sharing-Badge | **Importieren** in JournalEntryCard |
+| `JournalEntryImage.tsx` | 4 KB | Generated Image | **Importieren** in JournalEntryCard |
+| `DiaryContentWithMentions.tsx` | 2 KB | Mention-Rendering | **Importieren** in JournalEntryCard |
+| `DiaryAccordion.tsx` | 7 KB | Generisches Akkordeon | **Beibehalten** (generisch) |
+| `DiaryInteractionPanel.tsx` | 7 KB | Interaction Panel | **Beibehalten** |
+| `ReflectionDueBanner.tsx` | 1 KB | Banner | **Beibehalten** |
+
+### 7.4 Ordnerstruktur-Strategie
+
+**Bis einschliesslich Phase 5**:
+- Dateien bleiben an ihren aktuellen Orten
+- Import-Pfade werden beibehalten
+- Keine Umstrukturierung, um Stabilität zu gewährleisten
+
+**In Phase 6** (nach erfolgreicher Journal-Migration):
+- Wiederverwendbare Komponenten aus `diary/` nach `journal/` oder `shared/` verschieben
+- `DiaryEntriesAccordion.tsx` und `DiarySection.tsx` entfernen
+- `diary/`-Ordner auf Startseiten-spezifische Komponenten reduzieren
+
+**Vorgeschlagene Zielstruktur** (Phase 6):
+```
+components/features/
+├── journal/
+│   ├── JournalEntryCard.tsx      # Unified Entry Display
+│   ├── DynamicJournalForm.tsx    # Unified Entry Form
+│   ├── JournalEntrySection.tsx   # (verschoben aus diary/)
+│   ├── FieldRenderer.tsx
+│   ├── index.ts
+│   └── ...
+├── shared/
+│   ├── ShareEntryModal.tsx       # (verschoben aus diary/)
+│   ├── SharedBadge.tsx           # (verschoben aus diary/)
+│   └── ContentWithMentions.tsx   # (umbenannt)
+├── diary/
+│   ├── DiarySection.tsx          # Stark vereinfacht oder entfernt
+│   └── ReflectionDueBanner.tsx
+└── ...
+```
+
+### 7.5 index.ts Anpassung
+
+**Aktuelle Exports** (`components/features/journal/index.ts`):
+```typescript
+export { EmojiPickerButton } from './EmojiPickerButton'
+export { FieldRenderer } from './FieldRenderer'
+export { DynamicJournalForm } from './DynamicJournalForm'
+export { TemplateFieldEditor } from './TemplateFieldEditor'
+export { TemplateAIConfigEditor } from './TemplateAIConfigEditor'
+export { TemplateEditor } from './TemplateEditor'
+export { JournalEntryCard } from './JournalEntryCard'
+export type { CardMode, JournalEntryCardProps } from './JournalEntryCard'
+export { UnifiedEntryForm } from './UnifiedEntryForm'
+export type { UnifiedEntryFormProps, FormData as EntryFormData } from './UnifiedEntryForm'
+```
+
+**Geplante Anpassung** (nach Phase 5):
+- `UnifiedEntryForm` Export entfernen
+- `EntryFormData` Type aus `DynamicJournalForm` exportieren
+- Dokumentation aktualisieren
+
+---
+
+## 8. Implementierungsreihenfolge
 
 ### Phase 1: JournalEntryCard erweitern (1-2 Tage)
 
-**Schritt 1.1**: Inline-Edit Mode
-- `isEditing` State hinzufügen
-- RichTextEditor für Content
-- Save/Cancel Buttons
-- API-Call via `useJournalEntries.updateEntry`
+> **Fokus**: Nur Anzeige-Features. Bearbeitung erfolgt via `DynamicJournalForm` inline (Phase 4).
+> **Details**: Siehe [Phase-1-Implementierungskonzept](2026-02_Phase1_JournalEntryCard_Erweiterung.md)
 
-**Schritt 1.2**: JournalEntrySection importieren
-- Summary Section (blau)
-- Analysis Section (gelb)
-- Content Section
-- Generieren/Löschen Callbacks
+**Schritt 1.1**: JournalEntrySection refactoren
+- `EntryWithRelations` Typ akzeptieren (zusätzlich zu `DayNote`)
+- Bestehende Verwendung in `DiaryEntriesAccordion` darf nicht brechen
 
-**Schritt 1.3**: Multi-Audio Support
-- `AudioPlayerH5` statt eigenem Player
-- Alle Audio-Attachments anzeigen
-- Delete Button pro Audio
-- Upload Button hinzufügen
+**Schritt 1.2**: Compact/Expanded Modes
+- Compact: Header + Title + Content-Preview + Media-Indikatoren
+- Expanded: Alle Sektionen (AI, Content, Audio, Fotos)
+- Toggle-Button zum Wechseln
 
-**Schritt 1.4**: Foto-Management
-- Foto-Galerie erweitern
-- Upload Button + CameraPicker
-- Delete Button
-- Lightbox (einfaches Modal)
+**Schritt 1.3**: Multi-Audio Support (Anzeige)
+- `AudioPlayerH5` für alle Audio-Attachments
+- Expandierbares Transkript pro Audio
+- Keine Upload/Delete Buttons (kommt in Phase 4)
+
+**Schritt 1.4**: Foto-Galerie (Anzeige)
+- Thumbnails für alle Foto-Attachments
+- Einfache Lightbox (Modal mit Vollbild)
+- Keine Upload/Delete Buttons (kommt in Phase 4)
 
 ### Phase 2: Panels integrieren (0.5-1 Tag)
 
@@ -416,7 +530,17 @@ Die **DiaryEntriesAccordion** auf der Startseite (`/`) bietet ein reichhaltiges 
 - AISettingsPopup integrieren
 - Button in Actions
 
-### Phase 4: DynamicJournalForm erweitern (0.5 Tag)
+### Phase 4: DynamicJournalForm erweitern + Inline-Edit (1.5-2 Tage)
+
+> Audio-Details: Siehe [Anhang C](#anhang-c-audio-konsolidierung)
+
+**Schritt 4.0**: Inline-Edit Konzept implementieren
+- `JournalEntryCard` erhält `onEdit` Callback
+- Klick auf Edit-Button → Parent-Komponente ersetzt Card durch `DynamicJournalForm`
+- `DynamicJournalForm` mit `existingEntry` Prop für Edit-Mode
+- `onCancel` → zurück zu `JournalEntryCard`
+- `onSubmit` → Update, dann zurück zu `JournalEntryCard`
+- Keine separate Page-Navigation nötig
 
 **Schritt 4.1**: OCR-Upload
 - OCRUploadButton importieren
@@ -426,96 +550,218 @@ Die **DiaryEntriesAccordion** auf der Startseite (`/`) bietet ein reichhaltiges 
 - Foto-Upload Button
 - CameraPicker
 
-**Schritt 4.3**: Audio-Upload vervollständigen
-- AudioUploadButton prüfen
-- Segmentierung sicherstellen
+**Schritt 4.3**: UnifiedEntryForm konsolidieren
+- Relevante Logik aus UnifiedEntryForm in DynamicJournalForm übernehmen
+- UnifiedEntryForm-Verwendungen ersetzen
+- UnifiedEntryForm.tsx entfernen
+- index.ts anpassen
 
-### Phase 5: Integration & Test (0.5 Tag)
+**Schritt 4.4**: Audio-Core erstellen
+- `lib/audio/audioUploadCore.ts` mit shared utilities erstellen
+- Types, Validation, Stage-Messages, formatElapsedTime extrahieren
+- Upload-Funktionen: `uploadAudioForEntry`, `uploadAudioStandalone`, `transcribeOnly`
 
-**Schritt 5.1**: Journal-Seite
-- JournalEntryCard mit allen Props
+**Schritt 4.5**: MicrophoneButton refactoren
+- Import audioUploadCore für Upload-Logik
+- Neuer einheitlicher Callback: `onResult: (result: AudioUploadResult) => void`
+- Legacy-Props `onAudioData`, `onText` als deprecated beibehalten (Backward-Compatibility)
+
+**Schritt 4.6**: AudioUploadButton refactoren
+- Import audioUploadCore für Upload-Logik
+- Neuer Prop: `existingEntryId?: string` (nutzt dann `/api/journal-entries/[id]/audio`)
+- Neuer Prop: `showCapturedAtInput?: boolean` (für manuelle capturedAt-Eingabe)
+- Neuer einheitlicher Callback: `onResult: (result: AudioUploadResult) => void`
+- Legacy-Prop `onAudioUploaded` als deprecated beibehalten
+
+**Schritt 4.7**: DynamicJournalForm Audio-Integration
+- AudioUploadButton mit Segmentierung integrieren (Multi-Feld-Templates)
+- Unified Callbacks nutzen
+- Für neue Einträge: Audio-IDs sammeln, nach Speichern MediaAttachments erstellen
+
+### Phase 5: Journal-Seite Integration & Test (0.5 Tag)
+
+**Schritt 5.1**: Journal-Seite vollständig integrieren
+- JournalEntryCard mit allen Props (siehe [Anhang B](#anhang-b-props-design-für-journalentrycard))
 - Alle Callbacks verbinden
+- DynamicJournalForm für Erstellung nutzen
 
-**Schritt 5.2**: Startseite (optional)
-- DiaryEntriesAccordion durch JournalEntryCard ersetzen
-- ODER: Template-Support zu DiaryEntriesAccordion
+**Schritt 5.2**: End-to-End Tests
+- Eintrag erstellen mit Audio, Foto, OCR
+- Eintrag bearbeiten inline
+- AI-Pipeline triggern
+- Sharing testen
+- Template-basierte Einträge testen
+
+### Phase 6: Startseiten-Migration (1-2 Tage)
+
+> **Voraussetzung**: Journal-Seite funktioniert vollständig (Phase 1-5 abgeschlossen)
+
+**Schritt 6.1**: DiarySection refactoren
+- DiarySection.tsx so anpassen, dass es DynamicJournalForm nutzt
+- Bestehende Formular-Logik durch DynamicJournalForm ersetzen
+
+**Schritt 6.2**: DiaryEntriesAccordion ersetzen
+- JournalEntryCard statt DiaryEntriesAccordion verwenden
+- Alle Callbacks aus DiaryEntriesAccordion in die neue Struktur übernehmen
+- Sicherstellen, dass alle Features funktionieren
+
+**Schritt 6.3**: Legacy-APIs entfernen
+- `POST /api/diary/upload-audio` entfernen
+- `POST /api/notes/[id]/photos` entfernen
+- `DELETE /api/photos/[id]` entfernen
+- Prüfen ob `/api/diary/retranscribe` noch benötigt wird
+
+**Schritt 6.4**: Komponenten verschieben und aufräumen
+- Wiederverwendbare Komponenten aus `diary/` verschieben (siehe [Kapitel 7.4](#74-ordnerstruktur-strategie))
+- `DiaryEntriesAccordion.tsx` entfernen
+- `index.ts` finalisieren
+
+**Schritt 6.5**: Finale Tests
+- E2E-Test: Eintrag auf Startseite erstellen → in Journal-Liste sichtbar
+- E2E-Test: Eintrag auf Journal-Seite erstellen → auf Startseite sichtbar
+- Prüfe: Keine Console-Errors, keine 404s auf alte APIs
 
 ---
 
-## 8. Offene Fragen
+## 9. Entscheidungen
 
-### Frage 1: Startseite migrieren oder nicht?
+Die folgenden Entscheidungen wurden getroffen:
 
-**Kontext**: Das Konzeptdokument sagt "Startseite Migration - separates Projekt".
+### E1: Startseiten-Migration
 
-**Optionen**:
-- A) Startseite bleibt bei DiaryEntriesAccordion (keine Migration)
-- B) JournalEntryCard ersetzt DiaryEntriesAccordion (volle Migration)
-- C) DiaryEntriesAccordion bekommt Template-Support (invertierte Migration)
+**Entscheidung**: **Option B** - JournalEntryCard ersetzt DiaryEntriesAccordion
 
-**Empfehlung**: Option A für jetzt, Option B später. Die Journal-Seite zuerst vollständig fertigstellen.
+**Umsetzung**: Als separate **Phase 6** nach erfolgreicher Journal-Seiten-Migration (Phase 1-5).
 
-### Frage 2: Template-Felder in JournalEntryCard
+**Begründung**: Eine einzige Komponenten-Hierarchie für beide Seiten reduziert Wartungsaufwand und garantiert Feature-Parität.
 
-**Kontext**: DiaryEntriesAccordion zeigt Content als Plaintext. Templates haben strukturierte Felder.
+### E2: Template-Felder-Darstellung (READ vs. CREATE/UPDATE)
 
-**Frage**: Wie sollen Template-Felder in der Ansicht dargestellt werden?
-- A) Als Plaintext (wie jetzt)
-- B) Als strukturierte Felder mit Labels
-- C) Beides, je nach Template-Einstellung
+**Entscheidung**: **Unterschiedliche Darstellung je nach Modus**
 
-**Empfehlung**: Option B - Strukturierte Darstellung, da Templates genau dafür gedacht sind.
+**READ-Modus** (Anzeige bestehender Einträge):
+- Ein einziges GUI-Element: Markdown-Rendering des gesamten `content`-Feldes
+- Feld-Labels erscheinen als Markdown-Überschriften (z.B. `## Feldname`)
+- Keine separate strukturierte Feld-Darstellung nötig
 
-### Frage 3: Audio-Upload API-Route
+**CREATE/UPDATE-Modus** (Neuerstellung und Bearbeitung):
+- Separate Eingabefelder mit Labels wie in `DynamicJournalForm`
+- Jedes Template-Feld hat ein eigenes Eingabefeld mit Label
+- Mikrofon-Button pro Feld für Spracheingabe
+- Beim Speichern werden Felder zu Markdown-Content aggregiert
 
-**Kontext**: `POST /api/journal-entries/[id]/audio` existiert bereits und funktioniert.
+**Begründung**: Dies entspricht dem aktuellen Verhalten in `DynamicJournalForm` (CREATE) und `DiaryEntriesAccordion` (READ) und bietet die beste User Experience für beide Use Cases.
 
-**Frage**: Soll MicrophoneButton diese Route nutzen statt `/api/diary/upload-audio`?
+### E3: Audio-Upload API-Route
 
-**Empfehlung**: Ja, für neue Einträge. MicrophoneButton hat bereits `existingEntryId` Prop.
+**Entscheidung**: **Unified Route nutzen** (`/api/journal-entries/[id]/audio`)
 
-### Frage 4: Foto-Upload API-Route
+**Umsetzung**: 
+- Für bestehende Einträge: `MicrophoneButton` mit `existingEntryId` nutzt `/api/journal-entries/[id]/audio`
+- Für neue Einträge: Audio-Upload erfolgt nach Speichern des Eintrags
+- Legacy-Route `/api/diary/upload-audio` bleibt bis Phase 6 parallel aktiv
 
-**Kontext**: `POST /api/notes/[id]/photos` existiert. Unified API wäre `/api/journal-entries/[id]/photos`.
+**Begründung**: Die neue Route bietet dieselbe Funktionalität (Transkription, MediaAttachment-Erstellung) und ist Teil der Unified API.
 
-**Frage**: Neue Route erstellen oder bestehende nutzen?
+### E4: Foto-Upload API-Route
 
-**Empfehlung**: Bestehende Route nutzen, später auf `/api/journal-entries/[id]/media` mit `role=GALLERY` migrieren.
+**Entscheidung**: **Generische `/media`-Route mit `role=GALLERY`**
+
+**Umsetzung**:
+- Neue Foto-Uploads nutzen `POST /api/journal-entries/[id]/media` mit `{ assetId, role: 'GALLERY' }`
+- Keine separate `/photos`-Route erstellen
+- Legacy-Route `/api/notes/[id]/photos` bleibt bis Phase 6 parallel aktiv
+
+**Begründung**: Eine generische Media-Route ist flexibler und vermeidet Route-Proliferation. Die `role`-Eigenschaft unterscheidet zwischen Audio (ATTACHMENT), OCR-Quellen (SOURCE) und Fotos (GALLERY).
+
+### E5: Komponenten neu erstellen vs. überarbeiten
+
+**Entscheidung**: **Überarbeiten**
+
+**Umsetzung**: 
+- `JournalEntryCard` erweitern (nicht neu schreiben)
+- `DynamicJournalForm` erweitern (nicht neu schreiben)
+- `UnifiedEntryForm` in `DynamicJournalForm` integrieren und dann entfernen
+
+**Begründung**: Siehe [Kapitel 7.2](#72-entscheidung-überarbeiten-statt-neu-erstellen)
 
 ---
 
 ## Anhang A: Dateien-Übersicht
 
-### Zu ändern
+> Referenziert in: [Kapitel 7](#7-komponenten-architektur), [Phase 4.4](#phase-4-dynamicjournalform-erweitern-05-tag), [Phase 6.4](#phase-6-startseiten-migration-1-2-tage)
+
+### Phase 1-5: Zu erstellen
+
+| Datei | Phase | Funktion |
+|-------|-------|----------|
+| `lib/audio/audioUploadCore.ts` | 4 | Shared Audio-Upload-Logik (siehe [Anhang C](#anhang-c-audio-konsolidierung)) |
+
+### Phase 1-5: Zu ändern
+
+| Datei | Phase | Änderungen |
+|-------|-------|------------|
+| `components/features/journal/JournalEntryCard.tsx` | 1-3 | Erweitern um alle Features aus DiaryEntriesAccordion |
+| `components/features/journal/DynamicJournalForm.tsx` | 4 | OCR, Foto, Audio vervollständigen; UnifiedEntryForm integrieren |
+| `components/features/journal/index.ts` | 4 | UnifiedEntryForm-Export entfernen |
+| `components/features/transcription/MicrophoneButton.tsx` | 4 | Refactoring: audioUploadCore nutzen, unified Callback |
+| `components/features/media/AudioUploadButton.tsx` | 4 | Refactoring: audioUploadCore nutzen, existingEntryId Support |
+| `app/journal/page.tsx` | 5 | Alle Callbacks verbinden |
+
+### Phase 1-5: Zu entfernen
+
+| Datei | Phase | Grund |
+|-------|-------|-------|
+| `components/features/journal/UnifiedEntryForm.tsx` | 4 | Logik in DynamicJournalForm integriert |
+
+### Phase 6: Zu ändern
 
 | Datei | Änderungen |
 |-------|------------|
-| `components/features/journal/JournalEntryCard.tsx` | Erweitern um alle Features |
-| `components/features/journal/DynamicJournalForm.tsx` | OCR, Foto, Audio vervollständigen |
-| `app/journal/page.tsx` | Alle Callbacks verbinden |
+| `components/features/diary/DiarySection.tsx` | DynamicJournalForm statt eigenem Formular nutzen |
+| `app/page.tsx` | JournalEntryCard statt DiaryEntriesAccordion |
+
+### Phase 6: Zu entfernen
+
+| Datei | Ersetzt durch |
+|-------|---------------|
+| `components/features/diary/DiaryEntriesAccordion.tsx` | JournalEntryCard |
+| `app/api/diary/upload-audio/route.ts` | `/api/journal-entries/[id]/audio` |
+| `app/api/notes/[noteId]/photos/route.ts` | `/api/journal-entries/[id]/media` |
+
+### Phase 6: Zu verschieben
+
+| Datei | Von | Nach |
+|-------|-----|------|
+| `JournalEntrySection.tsx` | `diary/` | `journal/` |
+| `ShareEntryModal.tsx` | `diary/` | `shared/` |
+| `SharedBadge.tsx` | `diary/` | `shared/` |
+| `DiaryContentWithMentions.tsx` | `diary/` | `shared/ContentWithMentions.tsx` |
 
 ### Zu importieren (nicht ändern)
 
-| Datei | Import in |
-|-------|-----------|
-| `JournalEntrySection.tsx` | JournalEntryCard |
-| `OriginalTranscriptPanel.tsx` | JournalEntryCard |
-| `OCRSourcePanel.tsx` | JournalEntryCard |
-| `AudioPlayerH5.tsx` | JournalEntryCard |
-| `RichTextEditor.tsx` | JournalEntryCard |
-| `MicrophoneButton.tsx` | JournalEntryCard, DynamicJournalForm |
-| `CameraPicker.tsx` | JournalEntryCard, DynamicJournalForm |
-| `ShareEntryModal.tsx` | JournalEntryCard |
-| `SharedBadge.tsx` | JournalEntryCard |
-| `AISettingsPopup.tsx` | JournalEntryCard |
-| `TimestampModal.tsx` | JournalEntryCard |
-| `JournalTasksPanel.tsx` | JournalEntryCard |
-| `JournalEntryImage.tsx` | JournalEntryCard |
-| `OCRUploadButton.tsx` | DynamicJournalForm |
+| Datei | Import in | Phase |
+|-------|-----------|-------|
+| `JournalEntrySection.tsx` | JournalEntryCard | 1 |
+| `OriginalTranscriptPanel.tsx` | JournalEntryCard | 2 |
+| `OCRSourcePanel.tsx` | JournalEntryCard | 2 |
+| `AudioPlayerH5.tsx` | JournalEntryCard | 1 |
+| `RichTextEditor.tsx` | JournalEntryCard | 1 |
+| `MicrophoneButton.tsx` | JournalEntryCard, DynamicJournalForm | 1, 4 |
+| `CameraPicker.tsx` | JournalEntryCard, DynamicJournalForm | 1, 4 |
+| `ShareEntryModal.tsx` | JournalEntryCard | 3 |
+| `SharedBadge.tsx` | JournalEntryCard | 3 |
+| `AISettingsPopup.tsx` | JournalEntryCard | 3 |
+| `TimestampModal.tsx` | JournalEntryCard | 3 |
+| `JournalTasksPanel.tsx` | JournalEntryCard | 2 |
+| `JournalEntryImage.tsx` | JournalEntryCard | 1 |
+| `OCRUploadButton.tsx` | DynamicJournalForm | 4 |
 
 ---
 
 ## Anhang B: Props-Design für JournalEntryCard
+
+> Referenziert in: [Phase 5.1](#phase-5-journal-seite-integration--test-05-tag), [FR-01](#fr-01-unified-entry-display-component)
 
 ```typescript
 interface JournalEntryCardProps {
@@ -559,6 +805,264 @@ interface JournalEntryCardProps {
   className?: string
 }
 ```
+
+---
+
+## Anhang C: Audio-Konsolidierung
+
+> Referenziert in: [Phase 4](#phase-4-dynamicjournalform-erweitern-05-tag), [E3](#e3-audio-upload-api-route)
+
+### C.1 Ist-Analyse: Audio-Komponenten und APIs
+
+#### API-Routen (aktueller Stand)
+
+| Route | Funktion | Erstellt MediaAsset | Erstellt MediaAttachment | Transkription |
+|-------|----------|---------------------|--------------------------|---------------|
+| `/api/transcribe` | Nur Transkription | ❌ | ❌ | ✅ |
+| `/api/diary/upload-audio` | Legacy Audio-Upload | ✅ | ❌ | ✅ |
+| `/api/journal-entries/[id]/audio` | Unified Audio-Upload | ✅ | ✅ | ✅ |
+| `/api/journal-ai/segment-audio` | Transkript-Segmentierung | ❌ | ❌ | ❌ (nutzt vorhandenes) |
+
+**Problem**: `/api/diary/upload-audio` erstellt **kein MediaAttachment**, nur ein loses MediaAsset. Die Verknüpfung zum JournalEntry erfolgt nicht automatisch.
+
+#### Komponenten (aktueller Stand)
+
+| Komponente | Verwendet von | APIs | Features |
+|------------|---------------|------|----------|
+| `MicrophoneButton` | DiarySection, DiaryEntriesAccordion, DynamicJournalForm, MealNotesSection, MealNotesAccordion, Coach, Reflections | `/api/journal-entries/[id]/audio`, `/api/diary/upload-audio`, `/api/transcribe` | Aufnahme, Pegel-Anzeige, Pause/Resume, Stop, Cancel, Modell-Auswahl |
+| `AudioUploadButton` | DiarySection | `/api/diary/upload-audio` | Datei-Upload, Stage-Anzeige, Timer |
+
+**Probleme identifiziert**:
+1. `AudioUploadButton` hat **keinen Support** für `/api/journal-entries/[id]/audio`
+2. `AudioUploadButton` hat **keine Segmentierung** für Multi-Feld-Templates
+3. **Code-Duplizierung** zwischen beiden Komponenten (Timer, Stage-Messages, File-Validation)
+4. **Inkonsistente Callbacks**: `onAudioUploaded` vs `onAudioData`
+5. `AudioUploadButton` fehlt **capturedAt-Eingabemöglichkeit** vom Benutzer
+
+#### Verwendungs-Matrix
+
+| Komponente | Verwendungsort | keepAudio | existingEntryId | Segmentierung |
+|------------|----------------|-----------|-----------------|---------------|
+| `MicrophoneButton` | DiarySection (neuer Eintrag) | ✅ | ❌ | ❌ |
+| `MicrophoneButton` | DiaryEntriesAccordion (bestehend) | ✅ | ✅ | ❌ |
+| `MicrophoneButton` | DynamicJournalForm (pro Feld) | ✅ (wenn date) | ❌ | ❌ (pro Feld) |
+| `MicrophoneButton` | MealNotesSection/Accordion | ❌ | ❌ | ❌ |
+| `MicrophoneButton` | Coach, Reflections | ❌ | ❌ | ❌ |
+| `AudioUploadButton` | DiarySection | ✅ | ❌ | ❌ |
+
+### C.2 Anforderungen an Audio-Funktionalität
+
+#### Kernfunktionen (alle Verwendungsorte)
+
+1. **Aufnahme** mit Pegel-Anzeige, Pause, Stop, Abbrechen
+2. **Transkriptionsmodell-Auswahl** (Zahnrad-Menü)
+3. **Status-Anzeige** während Upload (uploading, analyzing, transcribing) mit Timer
+4. **Transkribierter Text** wird an Callback übergeben
+
+#### JournalEntry-spezifisch
+
+5. **MediaAsset + MediaAttachment** erstellen und mit Entry verknüpfen
+6. **Für neue Einträge**: Audio-IDs sammeln, nach Speichern verknüpfen
+7. **Für bestehende Einträge**: Direkt via `/api/journal-entries/[id]/audio`
+
+#### Template-spezifisch (Multi-Feld)
+
+8. **Audio-Segmentierung** via `/api/journal-ai/segment-audio` wenn Template >1 Textarea-Feld hat
+
+#### Nur-Transkription (MealNotes, Coach, Reflections)
+
+9. **Keine Speicherung** der Audiodatei
+10. Nutzt `/api/transcribe`
+
+#### Audio-Upload-spezifisch
+
+11. **capturedAt** kann vom Benutzer angegeben werden (bei Upload unbekannt wann aufgenommen)
+12. **Datei-Upload** statt Live-Aufnahme
+
+### C.3 Konsolidierungs-Strategie
+
+#### Shared Core (`lib/audio/audioUploadCore.ts`) - NEU
+
+Gemeinsame Logik extrahieren:
+```typescript
+// Shared types
+export interface AudioUploadResult {
+  text: string
+  audioFileId?: string | null
+  audioFilePath?: string | null
+  capturedAt?: string
+  model?: string
+  attachmentId?: string // nur bei existingEntryId
+}
+
+// Shared utilities
+export function formatElapsedTime(seconds: number): string
+export function validateAudioFile(file: File): { valid: boolean; error?: string }
+export const STAGE_MESSAGES: Record<UploadStage, string>
+
+// Shared upload logic
+export async function uploadAudioForEntry(
+  file: File | Blob,
+  options: {
+    entryId: string
+    model: string
+    fieldId?: string
+    appendText?: boolean
+  }
+): Promise<AudioUploadResult>
+
+export async function uploadAudioStandalone(
+  file: File | Blob,
+  options: {
+    date: string
+    time?: string
+    model: string
+    keepAudio: boolean
+    capturedAt?: string
+  }
+): Promise<AudioUploadResult>
+
+export async function transcribeOnly(
+  file: File | Blob,
+  model: string
+): Promise<{ text: string }>
+```
+
+#### MicrophoneButton - Refactoring
+
+**Behalten**:
+- Aufnahme-Logik (MediaRecorder)
+- Level-Meter
+- Pause/Resume/Stop/Cancel UI
+- Modell-Auswahl Modal
+
+**Ändern**:
+- Nutzt `audioUploadCore` für Upload-Logik
+- Einheitlicher Callback: `onResult: (result: AudioUploadResult) => void`
+
+#### AudioUploadButton - Refactoring
+
+**Behalten**:
+- Datei-Auswahl UI
+- Stage-Anzeige
+
+**Ändern**:
+- Nutzt `audioUploadCore` für Upload-Logik
+- **Neuer Prop**: `existingEntryId?: string`
+- **Neuer Prop**: `showCapturedAtInput?: boolean`
+- Einheitlicher Callback: `onResult: (result: AudioUploadResult) => void`
+
+#### DynamicJournalForm - Anpassung
+
+**Für neue Einträge**:
+1. MicrophoneButton mit `keepAudio=true, date={date}` (wie jetzt)
+2. Audio-IDs werden gesammelt in `audioFileIds` State
+3. Nach Submit: `onSubmit` enthält `audioFileIds` und `audioTranscripts`
+4. Parent-Komponente erstellt MediaAttachments via `/api/journal-entries/[id]/media`
+
+**Für Audio-Upload mit Segmentierung**:
+1. AudioUploadButton transcribes file
+2. Wenn Template >1 Feld: Ruft `/api/journal-ai/segment-audio` auf
+3. Verteilt Segmente auf Felder
+
+### C.4 Implementierungsschritte (in Phase 4)
+
+**Schritt 4.5**: Audio-Core erstellen
+- `lib/audio/audioUploadCore.ts` mit shared utilities
+- Types, Validation, Stage-Messages
+
+**Schritt 4.6**: MicrophoneButton refactoren
+- Import audioUploadCore
+- Callback vereinheitlichen zu `onResult`
+- Backward-compatible Props beibehalten (deprecated)
+
+**Schritt 4.7**: AudioUploadButton refactoren
+- Import audioUploadCore
+- `existingEntryId` Prop hinzufügen
+- `showCapturedAtInput` Prop hinzufügen
+- Callback vereinheitlichen zu `onResult`
+
+**Schritt 4.8**: DynamicJournalForm Audio-Integration
+- AudioUploadButton mit Segmentierung integrieren
+- Unified Callbacks nutzen
+
+### C.5 Phase-6-Aufräumarbeiten
+
+| Aktion | Datei/Route |
+|--------|-------------|
+| Entfernen | `/api/diary/upload-audio/route.ts` |
+| Prüfen | `/api/diary/retranscribe` - evtl. in unified Route |
+| Anpassen | MicrophoneButton: Legacy-Props entfernen |
+| Anpassen | AudioUploadButton: Legacy-Props entfernen |
+
+### C.6 Migrations-Hinweise
+
+**Für bestehende Einträge** mit Audio via `/api/diary/upload-audio`:
+- Diese haben MediaAsset aber **kein MediaAttachment**
+- Migration-Script könnte nachträglich MediaAttachments erstellen
+- ODER: Beim Laden prüfen ob Entity.mediaAttachments existiert, sonst Legacy-Pfad nutzen
+
+### C.7 Erforderliches Migrationsskript
+
+> **WICHTIG**: Vor Phase 6 muss ein Migrationsskript erstellt und ausgeführt werden!
+
+**Ziel**: Bestehende Audio-MediaAssets, die über `/api/diary/upload-audio` erstellt wurden, nachträglich mit MediaAttachments verknüpfen.
+
+**Pfad**: `scripts/migrate-audio-attachments.ts`
+
+**Logik**:
+```typescript
+// Pseudo-Code für Migration
+async function migrateAudioAttachments() {
+  // 1. Finde alle JournalEntries mit Entity-Eintrag
+  const entries = await prisma.journalEntry.findMany({
+    where: { deletedAt: null },
+    include: { 
+      entity: true,
+      mediaAttachments: true 
+    }
+  })
+
+  // 2. Für jeden Eintrag: Prüfe ob Audio-MediaAssets existieren ohne MediaAttachment
+  for (const entry of entries) {
+    // Finde MediaAssets die im gleichen Zeitraum erstellt wurden
+    // und noch kein MediaAttachment haben
+    const orphanedAudioAssets = await prisma.mediaAsset.findMany({
+      where: {
+        userId: entry.userId,
+        mimeType: { startsWith: 'audio/' },
+        capturedAt: {
+          gte: subMinutes(entry.occurredAt, 5),
+          lte: addMinutes(entry.occurredAt, 5)
+        },
+        // Kein existierendes MediaAttachment
+        mediaAttachments: { none: {} }
+      }
+    })
+
+    // 3. Erstelle MediaAttachments für gefundene Assets
+    for (const asset of orphanedAudioAssets) {
+      await prisma.mediaAttachment.create({
+        data: {
+          entityId: entry.id,
+          userId: entry.userId,
+          assetId: asset.id,
+          timeBoxId: entry.timeBoxId,
+          role: 'ATTACHMENT',
+          displayOrder: 0
+        }
+      })
+    }
+  }
+}
+```
+
+**Ausführung**: 
+- Vor Phase 6 im Rahmen von Phase 5 (Testing)
+- Mit Backup der Datenbank
+- Im Dry-Run-Modus zuerst testen
+
+**Zeitpunkt im Plan**: Phase 5, nach erfolgreichem E2E-Testing der Journal-Seite
 
 ---
 

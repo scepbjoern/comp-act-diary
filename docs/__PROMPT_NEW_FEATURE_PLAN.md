@@ -2,10 +2,11 @@ Erstelle den Plan für das unten grob beschriebene Feature. Lass Dir für alles 
 
 Gehe hierzu schrittweise vor:
 1. Recherche
-2. Varianten vorschlagen und eine davon empfehlen
-3. Konzept erstellen
-4. Fragen überlegen an Auftraggeber
-5. Zusammenfassung
+2. Erstellung von funktionalen und nicht-funktionalen Anforderungen
+3. Varianten vorschlagen und eine davon empfehlen
+4. Konzept erstellen
+5. Fragen überlegen an Auftraggeber
+6. Zusammenfassung
 
 # Schritte
 ## Recherche
@@ -14,8 +15,13 @@ Gehe hierzu schrittweise vor:
 3. Überlege Dir, welche Recherche im Internet erforderlich ist, um dann den nächsten Schritt "Varianten vorschlagen und eine davon empfehlen" zu erreichen.
 4. Führe die Recherche durch und sammle die Ergebnisse.
 
+## Anforderungen
+1. Leite eine nummerierte Liste von funktionalen Anforderungen ab, die sich aus der Feature-Beschreibung und der Recherche ableiten.
+2. Leite eine nummerierte Liste von nicht-funktionalen Anforderungen ab, die sich aus der Feature-Beschreibung und der Recherche ableiten.
+3. Wo nötig erläutere einzelne Anforderungen.
+
 ## Varianten vorschlagen und eine davon empfehlen
-1. Überlege Dir aufgrund der Recherche, welche Varianten es gibt und welche davon am besten geeignet ist.
+1. Überlege Dir aufgrund der Recherche, welche Varianten es gibt, um die identifizierten Anforderungen zu erfüllen und welche davon am besten geeignet ist.
 2. Schlage eine Variante vor. Gehe dabei auf Punkte ein wie z.B. erforderliche Anpassungen an Datenmodell, APIs, UX, etc.
 3. Begründe warum du diese Variante vorgeschlagen hast und die anderen nicht.
 
@@ -25,6 +31,7 @@ Gehe hierzu schrittweise vor:
 3. Erstelle mindestens die folgenden Kapitel:
 - Inhaltsverzeichnis
 - Beschreibung des geplanten Features
+- Liste der Anforderungen
 - Architekturübersicht als ASCII-Art
 - Erläuterung der in der Architekturübersicht eingeführten Komponenten inkl. externer Anbieter, Datenbank, Backend und Frontend
 - Datenmodell inkl. Aufführen, welche Entitäten betroffen sind, wo noch Anpassungen vorzunehmen sind, usw.)
@@ -38,7 +45,7 @@ Gehe hierzu schrittweise vor:
 - Manuelles Testing (was muss der Mensch wie testen)
 
 ## Fragen an den Auftraggeber
-1. Überlege Dir, welche Fragen an den Auftraggeber gestellt werden müssen, um das Konzept zu verfeinern oder bei Unklarheit, welche Variante zu empfehlen ist respektive Annahmen zu validieren
+1. Überlege Dir, welche Fragen an den Auftraggeber gestellt werden müssen sei es zu den identifizierten Anforderungen oder allgemein, um das Konzept zu verfeinern oder bei Unklarheit, welche Variante zu empfehlen ist respektive um Annahmen zu validieren
 2. Nummeriere und strukturiere die Fragen.
 3. Stelle die Fragen an den Auftraggeber, indem Du diese am Ende des Konzepts als Kapitel "Fragen an den Auftraggeber" aufschreibst.
 
