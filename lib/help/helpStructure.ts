@@ -63,6 +63,14 @@ export const helpCategories: HelpCategory[] = [
         keywords: ['eintrag', 'tag', 'notiz', 'symptom', 'gewohnheit']
       },
       {
+        id: 'journal-view',
+        slug: 'journal-ansicht',
+        title: 'Journal-Ansicht',
+        description: 'Einträge mit Aufgaben, OCR-Quellen, Sharing und Zeitstempeln',
+        icon: 'book',
+        keywords: ['journal', 'aufgabe', 'task', 'teilen', 'ocr', 'zeitstempel', 'panel', 'ai-einstellungen', 'template']
+      },
+      {
         id: 'reflections',
         slug: 'reflexionen',
         title: 'Reflexionen',

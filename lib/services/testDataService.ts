@@ -435,6 +435,64 @@ async function generatePredefinedJournalEntries(userId: string): Promise<TestDat
       })
       created++
       details.push(`Eintrag: ${localDate}`)
+
+      // Phase 2+3 test data: enrich specific entries
+      try {
+        if (i === 0) {
+          // First entry: add JournalEntryAccess (sharing) for test
+          await prisma.journalEntryAccess.create({
+            data: {
+              journalEntryId: newEntry.id,
+              userId,
+              grantedByUserId: userId,
+              role: 'VIEWER',
+            }
+          })
+          details.push('  → JournalEntryAccess (Sharing) hinzugefügt')
+        }
+
+        if (i === 1) {
+          // Second entry: add a SOURCE MediaAttachment (OCR test data)
+          const ocrAsset = await prisma.mediaAsset.create({
+            data: {
+              userId,
+              filePath: 'uploads/test/ocr-sample.png',
+              mimeType: 'image/png',
+            }
+          })
+          await prisma.mediaAttachment.create({
+            data: {
+              entityId: newEntry.id,
+              assetId: ocrAsset.id,
+              userId,
+              role: 'SOURCE',
+              displayOrder: 0,
+            }
+          })
+          details.push('  → OCR SOURCE Attachment hinzugefügt')
+        }
+
+        if (i === 2) {
+          // Third entry: add linked Task
+          await prisma.task.create({
+            data: {
+              userId,
+              title: 'Arzttermin ausmachen',
+              description: 'Wegen Kopfschmerzen vom Tagebucheintrag',
+              status: 'PENDING',
+              taskType: 'IMMEDIATE',
+              priority: 'HIGH',
+              source: 'AI',
+              aiConfidence: 0.88,
+              journalEntryId: newEntry.id,
+            }
+          })
+          details.push('  → Task mit journalEntryId hinzugefügt')
+        }
+      } catch (enrichErr) {
+        // Non-critical: log but don't fail entry creation
+        details.push(`  → Anreicherung fehlgeschlagen: ${enrichErr instanceof Error ? enrichErr.message : 'Unbekannt'}`)
+      }
     }
   }
 

@@ -36,12 +36,18 @@ import {
   IconClipboard,
   IconSearch,
   IconFileText,
+  IconClock,
+  IconSettings,
 } from '@tabler/icons-react'
 import type { EntryWithRelations, EntryMediaAttachment } from '@/lib/services/journal/types'
+import type { TaskCardData } from '@/components/features/tasks/TaskCard'
 import clsx from 'clsx'
 import { JournalEntrySection } from '@/components/features/diary/JournalEntrySection'
 import { DiaryContentWithMentions } from '@/components/features/diary/DiaryContentWithMentions'
 import { AudioPlayerH5 } from '@/components/features/media/AudioPlayerH5'
+import { OCRSourcePanel } from '@/components/features/ocr/OCRSourcePanel'
+import JournalTasksPanel from '@/components/features/tasks/JournalTasksPanel'
+import { SharedBadge } from '@/components/features/diary/SharedBadge'
 
 // =============================================================================
 // TYPES
@@ -60,6 +66,30 @@ export interface JournalEntryCardProps {
   /** Callback when user clicks on a photo thumbnail (Phase 1: Lightbox) */
   onViewPhoto?: (attachmentId: string, imageUrl: string) => void
   className?: string
+
+  // Phase 2: Panels
+  /** Show OCR sources panel (default: true if OCR attachments exist) */
+  showOCRSources?: boolean
+  /** Show tasks panel (default: true) */
+  showTasks?: boolean
+  /** Tasks associated with this entry */
+  tasks?: TaskCardData[]
+  /** Contacts for task assignment suggestions */
+  contacts?: Array<{ id: string; name: string; slug: string }>
+  /** Called when tasks change (create/complete/delete) */
+  onTasksChange?: () => void
+
+  // Phase 3: Modals & Header
+  /** Whether the entry is shared with other users */
+  isShared?: boolean
+  /** Number of users this entry is shared with */
+  sharedWithCount?: number
+  /** Open share modal */
+  onOpenShareModal?: () => void
+  /** Open timestamp editing modal */
+  onOpenTimestampModal?: () => void
+  /** Open AI settings popup */
+  onOpenAISettings?: () => void
 }
 
 // =============================================================================
@@ -253,10 +283,22 @@ function JournalEntryCardComponent({
   isEditing = false,
   onEdit,
   onDelete,
-  onShare,
+  onShare: _onShare,
   onRunPipeline,
   onViewPhoto,
   className,
+  // Phase 2: Panels
+  showOCRSources,
+  showTasks = true,
+  tasks,
+  contacts,
+  onTasksChange,
+  // Phase 3: Modals & Header
+  isShared,
+  sharedWithCount = 0,
+  onOpenShareModal,
+  onOpenTimestampModal,
+  onOpenAISettings,
 }: JournalEntryCardProps) {
   const [isExpanded, setIsExpanded] = useState(mode === 'expanded' || mode === 'detail')
 
@@ -273,6 +315,10 @@ function JournalEntryCardComponent({
   const imageAttachments = entry.mediaAttachments?.filter(
     (a) => a.asset.mimeType?.startsWith('image/')
   ) || []
+
+  // Determine if OCR sources should be shown (auto-detect SOURCE attachments)
+  const hasOCRSources = entry.mediaAttachments?.some((a) => a.role === 'SOURCE') || false
+  const shouldShowOCR = showOCRSources !== false && hasOCRSources
   
   // Determine if we should show full content (expanded/detail mode or manually expanded in compact)
   const showFullContent = isExpanded || mode === 'expanded' || mode === 'detail'
@@ -321,8 +367,13 @@ function JournalEntryCardComponent({
             {entry.isSensitive && (
               <IconLock className="h-3.5 w-3.5 text-amber-500" title="Sensibel" />
             )}
-            {entry.accessCount > 0 && (
-              <IconShare className="h-3.5 w-3.5 text-blue-500" title={`Geteilt mit ${entry.accessCount} Person(en)`} />
+            {/* SharedBadge - Phase 3 */}
+            {(isShared || entry.accessCount > 0) && (
+              <SharedBadge
+                sharedStatus="owned"
+                sharedWithCount={sharedWithCount || entry.accessCount}
+                compact
+              />
             )}
           </div>
 
@@ -334,8 +385,9 @@ function JournalEntryCardComponent({
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Actions - all buttons always visible (Entscheidung F3)
+            Secondary actions hidden on mobile when collapsed for space */}
+        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
           {onRunPipeline && (
             <button
               onClick={(e) => { e.stopPropagation(); onRunPipeline(entry.id) }}
@@ -345,6 +397,33 @@ function JournalEntryCardComponent({
               <IconSparkles className="h-4 w-4" />
             </button>
           )}
+          {onOpenAISettings && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenAISettings() }}
+              className={clsx('p-1.5 rounded hover:bg-muted', !isExpanded && 'hidden sm:inline-flex')}
+              title="AI-Einstellungen"
+            >
+              <IconSettings className="h-4 w-4" />
+            </button>
+          )}
+          {onOpenTimestampModal && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenTimestampModal() }}
+              className={clsx('p-1.5 rounded hover:bg-muted', !isExpanded && 'hidden sm:inline-flex')}
+              title="Zeitpunkte bearbeiten"
+            >
+              <IconClock className="h-4 w-4" />
+            </button>
+          )}
+          {onOpenShareModal && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpenShareModal() }}
+              className={clsx('p-1.5 rounded hover:bg-muted', !isExpanded && 'hidden sm:inline-flex')}
+              title="Teilen"
+            >
+              <IconShare className="h-4 w-4" />
+            </button>
+          )}
           {onEdit && (
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(entry) }}
@@ -352,15 +431,6 @@ function JournalEntryCardComponent({
               title="Bearbeiten"
             >
               <IconEdit className="h-4 w-4" />
-            </button>
-          )}
-          {onShare && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onShare(entry.id) }}
-              className="p-1.5 rounded hover:bg-muted"
-              title="Teilen"
-            >
-              <IconShare className="h-4 w-4" />
             </button>
           )}
           {onDelete && (
@@ -452,6 +522,35 @@ function JournalEntryCardComponent({
                 onViewPhoto={onViewPhoto} 
               />
             </div>
+          )}
+
+          {/* OCR Source Panel - Phase 2 (lazy-loaded, collapsed by default) */}
+          {shouldShowOCR && (
+            <OCRSourcePanel
+              noteId={entry.id}
+              initialTranscript={entry.content}
+            />
+          )}
+
+          {/* Journal Tasks Panel - Phase 2 (always shown per Entscheidung F2) */}
+          {showTasks && (
+            tasks === undefined ? (
+              /* Loading state while tasks are being fetched */
+              <div className="rounded-lg border border-base-300 bg-base-200/30 p-3">
+                <div className="flex items-center gap-2 text-sm text-base-content/50">
+                  <span className="loading loading-spinner loading-xs" />
+                  Aufgaben werden geladen…
+                </div>
+              </div>
+            ) : (
+              <JournalTasksPanel
+                journalEntryId={entry.id}
+                tasks={tasks}
+                contacts={contacts}
+                onTasksChange={onTasksChange}
+                defaultExpanded={tasks.length > 0}
+              />
+            )
           )}
 
           {/* Full date/time */}

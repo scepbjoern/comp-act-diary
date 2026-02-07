@@ -55,6 +55,59 @@ POST /api/day/[date]/habits    → Gewohnheiten speichern</code></pre>
       <p>7-Tage-Verlauf mit Farbcodierung: Rot (schlecht) → Grau → Grün (gut)</p>
     `,
   },
+  'journal-ansicht': {
+    summary: `
+      <h3>Journal-Ansicht</h3>
+      <p>Die <strong>Journal-Ansicht</strong> (/journal) zeigt alle Einträge in einer kompakten Kartenansicht. Jede Karte kann aufgeklappt werden und bietet:</p>
+      <ul>
+        <li><strong>Aufgaben-Panel:</strong> Aufgaben zum Eintrag verwalten und KI-Extraktion triggern</li>
+        <li><strong>OCR-Quellen:</strong> Originalbilder und PDFs, aus denen Text extrahiert wurde</li>
+        <li><strong>Teilen:</strong> Eintrag mit anderen Benutzern teilen</li>
+        <li><strong>Zeitstempel:</strong> Bezugs- und Erfassungszeit bearbeiten</li>
+        <li><strong>AI-Einstellungen:</strong> Template-basierte KI-Konfiguration einsehen (Content, Analyse, Zusammenfassung, Titel, Audio-Segmentierung)</li>
+      </ul>
+    `,
+    instructions: `
+      <h3>So nutzt du die Journal-Ansicht</h3>
+      <h4>Aufgaben</h4>
+      <ol>
+        <li>Klappe einen Eintrag auf – das Aufgaben-Panel wird angezeigt</li>
+        <li>Klicke <strong>"Aufgabe hinzufügen"</strong> für eine neue Aufgabe</li>
+        <li>Klicke <strong>"Tasks erkennen"</strong> um KI-Vorschläge zu erhalten</li>
+        <li>Hake erledigte Aufgaben mit der Checkbox ab</li>
+      </ol>
+      <h4>OCR-Quellen</h4>
+      <ol>
+        <li>Einträge mit OCR-Quellen zeigen ein Panel "OCR-Quellen"</li>
+        <li>Klicke auf das Panel um die Original-Dateien zu sehen</li>
+        <li>Vorschau und Download sind möglich</li>
+      </ol>
+      <h4>Teilen und Zeitstempel</h4>
+      <ul>
+        <li><strong>🔗 Teilen:</strong> Klicke das Share-Icon um den Eintrag freizugeben</li>
+        <li><strong>🕐 Zeitstempel:</strong> Klicke das Uhr-Icon um Bezugs-/Erfassungszeit zu ändern</li>
+        <li><strong>⚙️ AI-Settings:</strong> Klicke das Zahnrad-Icon für die Template-KI-Konfiguration (Link zu /settings/templates)</li>
+      </ul>
+    `,
+    technical: `
+      <h3>Technische Details</h3>
+      <h4>Architektur</h4>
+      <p>Die Journal-Ansicht nutzt <code>JournalEntryCard</code> mit integrierten Panels und Modals:</p>
+      <ul>
+        <li><code>JournalTasksPanel</code> – Tasks pro Eintrag (lazy-loaded)</li>
+        <li><code>OCRSourcePanel</code> – OCR-Quellen (lazy-loaded bei Expand)</li>
+        <li><code>ShareEntryModal</code> – Freigabeverwaltung</li>
+        <li><code>TimestampModal</code> – Zeitstempel bearbeiten</li>
+        <li><code>AISettingsPopup</code> – KI-Konfiguration anzeigen</li>
+      </ul>
+      <h4>API-Endpunkte</h4>
+      <pre><code>GET  /api/journal-entries/[id]/tasks    → Tasks laden
+POST /api/journal-ai/extract-tasks       → KI-Task-Extraktion
+GET  /api/notes/[id]/ocr-sources         → OCR-Quellen laden
+POST /api/journal-entries/[id]/access     → Freigabe erteilen
+PATCH /api/journal-entries/[id]           → Zeitstempel aktualisieren</code></pre>
+    `,
+  },
   'reflexionen': {
     summary: `
       <h3>Reflexionen verstehen</h3>

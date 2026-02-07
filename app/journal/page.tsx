@@ -3,6 +3,7 @@
  * Journal overview page - displays entries by type/template with filtering.
  * Uses the unified JournalService via /api/journal-entries.
  * Integrates DynamicJournalForm for full-featured entry creation.
+ * Phase 2+3: Panels (OCR, Tasks) and Modals (Share, Timestamp, AISettings).
  */
 
 'use client'
@@ -20,7 +21,12 @@ import {
 import { JournalEntryCard } from '@/components/features/journal'
 import { DynamicJournalForm } from '@/components/features/journal/DynamicJournalForm'
 import { PhotoLightbox } from '@/components/features/journal/PhotoLightbox'
+import { ShareEntryModal } from '@/components/features/diary/ShareEntryModal'
+import { TimestampModal } from '@/components/features/day/TimestampModal'
+import { AISettingsPopup } from '@/components/features/ai/AISettingsPopup'
 import { useJournalEntries } from '@/hooks/useJournalEntries'
+import type { EntryWithRelations } from '@/lib/services/journal/types'
+import type { TaskCardData } from '@/components/features/tasks/TaskCard'
 import type { TemplateField, TemplateAIConfig } from '@/types/journal'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 import { Toasts, useToasts } from '@/components/ui/Toast'
@@ -88,6 +94,15 @@ export default function JournalPage() {
   // Photo lightbox state
   const [lightboxPhoto, setLightboxPhoto] = useState<{ url: string; alt?: string } | null>(null)
 
+  // Phase 3: Modal states
+  const [shareModalEntryId, setShareModalEntryId] = useState<string | null>(null)
+  const [timestampModalEntry, setTimestampModalEntry] = useState<EntryWithRelations | null>(null)
+  const [aiSettingsEntry, setAiSettingsEntry] = useState<EntryWithRelations | null>(null)
+
+  // Phase 2: Tasks per entry (loaded separately per Entscheidung F5)
+  const [tasksMap, setTasksMap] = useState<Record<string, TaskCardData[]>>({})
+  const [tasksLoadingSet, setTasksLoadingSet] = useState<Set<string>>(new Set())
+
   // Current date for audio persistence
   const today = ymd(new Date())
 
@@ -124,6 +139,56 @@ export default function JournalPage() {
 
     void loadMetadata()
   }, [])
+
+  // ---------------------------------------------------------------------------
+  // LOAD TASKS FOR VISIBLE ENTRIES (separate per Entscheidung F5)
+  // ---------------------------------------------------------------------------
+
+  /** Load tasks for a single entry on-demand (when card becomes visible/expanded) */
+  const loadTasksForEntry = useCallback(async (entryId: string) => {
+    // Skip if already loaded or currently loading
+    if (tasksMap[entryId] !== undefined || tasksLoadingSet.has(entryId)) return
+
+    setTasksLoadingSet((prev) => new Set(prev).add(entryId))
+    try {
+      const res = await fetch(`/api/journal-entries/${entryId}/tasks`)
+      if (res.ok) {
+        const data = await res.json()
+        setTasksMap((prev) => ({ ...prev, [entryId]: data.tasks || [] }))
+      } else {
+        // Entry may not have tasks endpoint - set empty
+        setTasksMap((prev) => ({ ...prev, [entryId]: [] }))
+      }
+    } catch {
+      setTasksMap((prev) => ({ ...prev, [entryId]: [] }))
+    } finally {
+      setTasksLoadingSet((prev) => {
+        const next = new Set(prev)
+        next.delete(entryId)
+        return next
+      })
+    }
+  }, [tasksMap, tasksLoadingSet])
+
+  /** Refetch tasks for a specific entry after task changes */
+  const refetchTasksForEntry = useCallback(async (entryId: string) => {
+    try {
+      const res = await fetch(`/api/journal-entries/${entryId}/tasks`)
+      if (res.ok) {
+        const data = await res.json()
+        setTasksMap((prev) => ({ ...prev, [entryId]: data.tasks || [] }))
+      }
+    } catch (err) {
+      console.error('Failed to refetch tasks:', err)
+    }
+  }, [])
+
+  // Load tasks for all visible entries when entries change
+  useEffect(() => {
+    for (const entry of entries) {
+      void loadTasksForEntry(entry.id)
+    }
+  }, [entries, loadTasksForEntry])
 
   // ---------------------------------------------------------------------------
   // INFINITE SCROLL
@@ -227,6 +292,34 @@ export default function JournalPage() {
     const fullUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`
     setLightboxPhoto({ url: fullUrl, alt: `Foto ${attachmentId}` })
   }, [])
+
+  /** Phase 3: Handle timestamp save via PATCH /api/journal-entries/[id] */
+  const handleTimestampSave = useCallback(async (
+    occurredAt: string,
+    capturedAt: string,
+    _audioFileId?: string | null
+  ) => {
+    if (!timestampModalEntry) return
+    try {
+      const res = await fetch(`/api/journal-entries/${timestampModalEntry.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ occurredAt, capturedAt }),
+      })
+      if (!res.ok) throw new Error('Fehler beim Speichern')
+      push('Zeitpunkte aktualisiert', 'success')
+      await refetch()
+    } catch (err) {
+      console.error('Failed to save timestamps:', err)
+      push('Fehler beim Speichern der Zeitpunkte', 'error')
+      throw err
+    }
+  }, [timestampModalEntry, push, refetch])
+
+  /** Phase 3: Handle access change from ShareEntryModal */
+  const handleAccessChange = useCallback(async () => {
+    await refetch()
+  }, [refetch])
 
   // ---------------------------------------------------------------------------
   // RENDER
@@ -372,6 +465,15 @@ export default function JournalPage() {
               onDelete={() => handleDeleteEntry(entry.id)}
               onRunPipeline={() => handleRunPipeline(entry.id)}
               onViewPhoto={handleViewPhoto}
+              // Phase 2: Tasks
+              tasks={tasksMap[entry.id]}
+              onTasksChange={() => refetchTasksForEntry(entry.id)}
+              // Phase 3: Modals
+              isShared={entry.accessCount > 0}
+              sharedWithCount={entry.accessCount}
+              onOpenShareModal={() => setShareModalEntryId(entry.id)}
+              onOpenTimestampModal={() => setTimestampModalEntry(entry)}
+              onOpenAISettings={() => setAiSettingsEntry(entry)}
             />
           ))}
 
@@ -393,6 +495,38 @@ export default function JournalPage() {
         imageUrl={lightboxPhoto?.url || ''}
         alt={lightboxPhoto?.alt}
       />
+
+      {/* Phase 3: ShareEntryModal */}
+      {shareModalEntryId && (
+        <ShareEntryModal
+          entryId={shareModalEntryId}
+          isOpen={true}
+          onClose={() => setShareModalEntryId(null)}
+          onAccessChange={handleAccessChange}
+        />
+      )}
+
+      {/* Phase 3: TimestampModal */}
+      {timestampModalEntry && (
+        <TimestampModal
+          isOpen={true}
+          onClose={() => setTimestampModalEntry(null)}
+          onSave={handleTimestampSave}
+          occurredAtIso={timestampModalEntry.occurredAt ? new Date(timestampModalEntry.occurredAt).toISOString() : undefined}
+          capturedAtIso={timestampModalEntry.capturedAt ? new Date(timestampModalEntry.capturedAt).toISOString() : undefined}
+        />
+      )}
+
+      {/* Phase 3: AISettingsPopup (template-based AI config) */}
+      {aiSettingsEntry && aiSettingsEntry.type && (
+        <AISettingsPopup
+          isOpen={true}
+          onClose={() => setAiSettingsEntry(null)}
+          typeName={aiSettingsEntry.type.name}
+          templateId={aiSettingsEntry.templateId}
+          templateName={aiSettingsEntry.template?.name}
+        />
+      )}
     </div>
   )
 }

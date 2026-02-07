@@ -1,8 +1,9 @@
 # Unified JournalEntry Implementation Plan
 
-> **Status**: 🔄 In Arbeit (Phase 1 ✅ abgeschlossen)  
+> **Status**: 🔄 In Arbeit (Phase 1–3 ✅ abgeschlossen)  
 > **Erstellt**: 2026-02-04  
 > **Phase 1 implementiert**: 2026-02-05  
+> **Phase 2+3 implementiert**: 2026-02-07  
 > **Basis**: [2026-02_Unified_JournalEntry_Analysis_and_Concept.md](./2026-02_Unified_JournalEntry_Analysis_and_Concept.md)  
 > **Ziel**: Konkreter Implementierungsplan zur Feature-Parität zwischen DiaryEntriesAccordion und JournalEntryCard
 
@@ -494,7 +495,8 @@ export type { UnifiedEntryFormProps, FormData as EntryFormData } from './Unified
 
 **Schritt 1.3**: Multi-Audio Support (Anzeige)
 - `AudioPlayerH5` für alle Audio-Attachments
-- Expandierbares Transkript pro Audio
+- Expandierbares **Original-Transkript** pro Audio (Toggle: ▶️ Transkript anzeigen)
+- Re-Transkription Button (🔄) → öffnet Modell-Auswahl Dialog
 - Keine Upload/Delete Buttons (kommt in Phase 4)
 
 **Schritt 1.4**: Foto-Galerie (Anzeige)
@@ -502,50 +504,62 @@ export type { UnifiedEntryFormProps, FormData as EntryFormData } from './Unified
 - Einfache Lightbox (Modal mit Vollbild)
 - Keine Upload/Delete Buttons (kommt in Phase 4)
 
-### Phase 2: Panels integrieren (0.5-1 Tag)
+### Phase 2: Panels integrieren (0.5-1 Tag) ✅
 
-**Schritt 2.1**: OriginalTranscriptPanel
-- Lazy-load wenn Audios vorhanden
-- onRestoreToContent Callback
-- onRetranscribe Callback
+> **Hinweis**: Original-Transkript-Anzeige bereits in Phase 1 umgesetzt (expandierbar in Audio-Sektion)
+> **Implementiert**: 2026-02-07
 
-**Schritt 2.2**: OCRSourcePanel
+**Schritt 2.1**: OCRSourcePanel ✅
 - Lazy-load wenn OCR-Quellen vorhanden
-- onRestoreToContent Callback
+- Anzeige und Download der Quell-Dateien
+- ⚠️ `onRestoreToContent` → erst in **Phase 4** (erfordert Edit-Mode)
 
-**Schritt 2.3**: Tasks Panel
+**Schritt 2.2**: Tasks Panel ✅
 - JournalTasksPanel importieren
-- useTasksForEntry Hook
+- useTasksForEntry Hook pro Entry in Journal-Page
+- Task-Verwaltung (CRUD) im Read-Mode möglich
+- Loading-State (Spinner) wenn Tasks noch geladen werden
 
-### Phase 3: Modals & Popups (0.5 Tag)
+### Phase 3: Modals & Popups (0.5 Tag) ✅
 
-**Schritt 3.1**: Sharing
+> **Implementiert**: 2026-02-07
+
+**Schritt 3.1**: Sharing ✅
 - ShareEntryModal integrieren
-- SharedBadge im Header
+- SharedBadge im Header (compact + full mode)
 
-**Schritt 3.2**: Timestamps
+**Schritt 3.2**: Timestamps ✅
 - TimestampModal integrieren
 - Button in Actions
 
-**Schritt 3.3**: AI Settings
-- AISettingsPopup integrieren
+**Schritt 3.3**: AI Settings ✅
+- AISettingsPopup integrieren (refactored: template-basierte AI-Config statt User-Level)
+- Zeigt alle 5 Config-Sections: Content, Analyse, Zusammenfassung, Titel, Audio-Segmentierung
+- Link zu `/settings/templates` für Bearbeitung
 - Button in Actions
+
+**Schritt 3.4**: Bugfixes & Polish ✅
+- Responsive: Sekundäre Actions auf Mobile ausgeblendet im Compact-Modus
+- Edge Cases: Entries ohne Audio/OCR/Tasks korrekt behandelt
+- Testdaten erweitert (Sharing, OCR, Tasks)
+- Unit Tests: SharedBadge (9 Tests), JournalEntryCard (18 Tests)
 
 ### Phase 4: DynamicJournalForm erweitern + Inline-Edit (1.5-2 Tage)
 
 > Audio-Details: Siehe [Anhang C](#anhang-c-audio-konsolidierung)
 
 **Schritt 4.0**: Inline-Edit Konzept implementieren
-- `JournalEntryCard` erhält `onEdit` Callback
-- Klick auf Edit-Button → Parent-Komponente ersetzt Card durch `DynamicJournalForm`
+- `JournalEntryCard` hat bereits `onEdit` Callback (Phase 2+3), navigiert aktuell zur Detail-Seite
+- Umstellen: Klick auf Edit-Button → Parent-Komponente ersetzt Card durch `DynamicJournalForm`
 - `DynamicJournalForm` mit `existingEntry` Prop für Edit-Mode
 - `onCancel` → zurück zu `JournalEntryCard`
 - `onSubmit` → Update, dann zurück zu `JournalEntryCard`
 - Keine separate Page-Navigation nötig
 
-**Schritt 4.1**: OCR-Upload
+**Schritt 4.1**: OCR-Upload + Restore-Funktion
 - OCRUploadButton importieren
 - onOcrComplete Callback
+- **OCR "Restore to Content"** (Phase 2 Read-Mode → jetzt mit Edit-Mode verfügbar)
 
 **Schritt 4.2**: Foto-Upload
 - Foto-Upload Button
@@ -700,14 +714,16 @@ Die folgenden Entscheidungen wurden getroffen:
 
 ### Phase 1-5: Zu ändern
 
-| Datei | Phase | Änderungen |
-|-------|-------|------------|
-| `components/features/journal/JournalEntryCard.tsx` | 1-3 | Erweitern um alle Features aus DiaryEntriesAccordion |
-| `components/features/journal/DynamicJournalForm.tsx` | 4 | OCR, Foto, Audio vervollständigen; UnifiedEntryForm integrieren |
-| `components/features/journal/index.ts` | 4 | UnifiedEntryForm-Export entfernen |
-| `components/features/transcription/MicrophoneButton.tsx` | 4 | Refactoring: audioUploadCore nutzen, unified Callback |
-| `components/features/media/AudioUploadButton.tsx` | 4 | Refactoring: audioUploadCore nutzen, existingEntryId Support |
-| `app/journal/page.tsx` | 5 | Alle Callbacks verbinden |
+| Datei | Phase | Änderungen | Status |
+|-------|-------|------------|--------|
+| `components/features/journal/JournalEntryCard.tsx` | 1-3 | Erweitern um alle Features aus DiaryEntriesAccordion | ✅ Phase 1-3 |
+| `components/features/ai/AISettingsPopup.tsx` | 3 | Refactored: Template-basierte AI-Config, alle 5 Sections | ✅ |
+| `app/journal/page.tsx` | 2-3, 5 | Modal-States, Task-Loading, Callbacks; Phase 5: Alle Callbacks verbinden | ✅ Phase 2-3 |
+| `lib/services/testDataService.ts` | 3 | Testdaten: Sharing, OCR-Attachments, Tasks mit journalEntryId | ✅ |
+| `components/features/journal/DynamicJournalForm.tsx` | 4 | OCR, Foto, Audio vervollständigen; UnifiedEntryForm integrieren | ⏳ |
+| `components/features/journal/index.ts` | 4 | UnifiedEntryForm-Export entfernen | ⏳ |
+| `components/features/transcription/MicrophoneButton.tsx` | 4 | Refactoring: audioUploadCore nutzen, unified Callback | ⏳ |
+| `components/features/media/AudioUploadButton.tsx` | 4 | Refactoring: audioUploadCore nutzen, existingEntryId Support | ⏳ |
 
 ### Phase 1-5: Zu entfernen
 
@@ -744,8 +760,6 @@ Die folgenden Entscheidungen wurden getroffen:
 | Datei | Import in | Phase |
 |-------|-----------|-------|
 | `JournalEntrySection.tsx` | JournalEntryCard | 1 |
-| `OriginalTranscriptPanel.tsx` | JournalEntryCard | 2 |
-| `OCRSourcePanel.tsx` | JournalEntryCard | 2 |
 | `AudioPlayerH5.tsx` | JournalEntryCard | 1 |
 | `RichTextEditor.tsx` | JournalEntryCard | 1 |
 | `MicrophoneButton.tsx` | JournalEntryCard, DynamicJournalForm | 1, 4 |

@@ -1,11 +1,11 @@
 /**
- * AISettingsPopup - Read-only popup showing current AI settings for a JournalEntryType.
- * Provides a link to the Settings page for editing.
+ * AISettingsPopup - Read-only popup showing current AI settings for a template.
+ * Fetches template AI config and provides a link to /settings/templates for editing.
  */
 
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import {
   IconX,
@@ -13,9 +13,11 @@ import {
   IconSearch,
   IconClipboard,
   IconSettings,
+  IconAlertCircle,
+  IconWaveSine,
 } from '@tabler/icons-react'
-import { useAISettings } from '@/hooks/useAISettings'
 import { useLlmModels, LlmModelData } from '@/hooks/useLlmModels'
+import type { TemplateAIConfig } from '@/types/journal'
 
 // =============================================================================
 // TYPES
@@ -24,8 +26,14 @@ import { useLlmModels, LlmModelData } from '@/hooks/useLlmModels'
 export interface AISettingsPopupProps {
   isOpen: boolean
   onClose: () => void
-  typeCode: string
+  /** Entry type name for the header display */
   typeName: string
+  /** Template ID to load AI config from (if assigned) */
+  templateId?: string | null
+  /** Template name for display */
+  templateName?: string | null
+  /** @deprecated Use templateId instead - kept for backward compatibility */
+  typeCode?: string
 }
 
 // =============================================================================
@@ -47,20 +55,96 @@ function truncatePrompt(prompt: string, maxLength = 320): string {
 }
 
 // =============================================================================
+// HELPER COMPONENT
+// =============================================================================
+
+/** Renders a single AI config row (model + prompt) */
+function AIConfigRow({
+  icon,
+  label,
+  modelId,
+  prompt,
+  models,
+}: {
+  icon: React.ReactNode
+  label: string
+  modelId?: string
+  prompt?: string
+  models: LlmModelData[]
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2 text-sm font-medium">
+        {icon}
+        {label}
+      </div>
+      <div className="text-sm text-base-content/70 pl-6">
+        {modelId && (() => {
+          const info = getModelInfo(modelId, models)
+          return (
+            <div>
+              <span className="font-medium">Modell:</span>{' '}
+              {info.name}{' '}
+              <span className="text-xs opacity-60">({info.inputCost} / {info.outputCost})</span>
+            </div>
+          )
+        })()}
+        {prompt && (
+          <div className="mt-1">
+            <span className="font-medium">Prompt:</span>{' '}
+            <span className="italic">
+              &quot;{truncatePrompt(prompt)}&quot;
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// =============================================================================
 // COMPONENT
 // =============================================================================
 
 export function AISettingsPopup({
   isOpen,
   onClose,
-  typeCode,
   typeName,
+  templateId,
+  templateName,
+  typeCode: _typeCode,
 }: AISettingsPopupProps) {
   const modalRef = useRef<HTMLDivElement>(null)
-  const { getSettingsForType, isLoading } = useAISettings()
   const { models } = useLlmModels()
+  const [aiConfig, setAiConfig] = useState<TemplateAIConfig | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
-  const settings = getSettingsForType(typeCode)
+  // Fetch template AI config when popup opens
+  const fetchTemplateConfig = useCallback(async () => {
+    if (!templateId) {
+      setAiConfig(null)
+      return
+    }
+    setIsLoading(true)
+    setFetchError(null)
+    try {
+      const res = await fetch(`/api/templates/${templateId}`)
+      if (!res.ok) throw new Error('Template nicht gefunden')
+      const data = await res.json()
+      setAiConfig(data.template?.aiConfig || null)
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Fehler beim Laden')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [templateId])
+
+  useEffect(() => {
+    if (isOpen && templateId) {
+      void fetchTemplateConfig()
+    }
+  }, [isOpen, templateId, fetchTemplateConfig])
 
   // Close on escape key
   useEffect(() => {
@@ -122,85 +206,95 @@ export function AISettingsPopup({
             <div className="flex justify-center py-8">
               <span className="loading loading-spinner loading-md" />
             </div>
+          ) : fetchError ? (
+            <div className="flex items-center gap-2 text-error text-sm py-4">
+              <IconAlertCircle size={18} />
+              {fetchError}
+            </div>
+          ) : !templateId ? (
+            <div className="text-sm text-base-content/60 py-4">
+              Kein Template zugewiesen. AI-Einstellungen werden über Templates konfiguriert.
+            </div>
+          ) : !aiConfig ? (
+            <div className="text-sm text-base-content/60 py-4">
+              Keine AI-Konfiguration für dieses Template hinterlegt.
+              Standard-Einstellungen werden verwendet.
+            </div>
           ) : (
             <>
+              {/* Template name */}
+              {templateName && (
+                <div className="text-sm text-base-content/60">
+                  Template: <span className="font-medium text-base-content">{templateName}</span>
+                </div>
+              )}
+
               {/* Content Generation */}
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <IconPencil size={16} className="text-primary" />
-                  Content-Generierung
-                </div>
-                <div className="text-sm text-base-content/70 pl-6">
-                  {(() => {
-                    const info = getModelInfo(settings.content.modelId, models)
-                    return (
-                      <div>
-                        <span className="font-medium">Modell:</span>{' '}
-                        {info.name}{' '}
-                        <span className="text-xs opacity-60">({info.inputCost} / {info.outputCost})</span>
-                      </div>
-                    )
-                  })()}
-                  <div className="mt-1">
-                    <span className="font-medium">Prompt:</span>{' '}
-                    <span className="italic">
-                      &quot;{truncatePrompt(settings.content.prompt)}&quot;
-                    </span>
-                  </div>
-                </div>
-              </div>
+              {(aiConfig.contentModel || aiConfig.contentPrompt) && (
+                <AIConfigRow
+                  icon={<IconPencil size={16} className="text-primary" />}
+                  label="Content-Generierung"
+                  modelId={aiConfig.contentModel}
+                  prompt={aiConfig.contentPrompt}
+                  models={models}
+                />
+              )}
 
               {/* Analysis */}
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <IconSearch size={16} className="text-warning" />
-                  Analyse
-                </div>
-                <div className="text-sm text-base-content/70 pl-6">
-                  {(() => {
-                    const info = getModelInfo(settings.analysis.modelId, models)
-                    return (
-                      <div>
-                        <span className="font-medium">Modell:</span>{' '}
-                        {info.name}{' '}
-                        <span className="text-xs opacity-60">({info.inputCost} / {info.outputCost})</span>
-                      </div>
-                    )
-                  })()}
-                  <div className="mt-1">
-                    <span className="font-medium">Prompt:</span>{' '}
-                    <span className="italic">
-                      &quot;{truncatePrompt(settings.analysis.prompt)}&quot;
-                    </span>
-                  </div>
-                </div>
-              </div>
+              {(aiConfig.analysisModel || aiConfig.analysisPrompt) && (
+                <AIConfigRow
+                  icon={<IconSearch size={16} className="text-warning" />}
+                  label="Analyse"
+                  modelId={aiConfig.analysisModel}
+                  prompt={aiConfig.analysisPrompt}
+                  models={models}
+                />
+              )}
 
               {/* Summary */}
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <IconClipboard size={16} className="text-info" />
-                  Zusammenfassung
+              {(aiConfig.summaryModel || aiConfig.summaryPrompt) && (
+                <AIConfigRow
+                  icon={<IconClipboard size={16} className="text-info" />}
+                  label="Zusammenfassung"
+                  modelId={aiConfig.summaryModel}
+                  prompt={aiConfig.summaryPrompt}
+                  models={models}
+                />
+              )}
+
+              {/* Title */}
+              {(aiConfig.titleModel || aiConfig.titlePrompt) && (
+                <AIConfigRow
+                  icon={<IconPencil size={16} className="text-success" />}
+                  label="Titel-Generierung"
+                  modelId={aiConfig.titleModel}
+                  prompt={aiConfig.titlePrompt}
+                  models={models}
+                />
+              )}
+
+              {/* Audio Segmentation */}
+              {(aiConfig.segmentationModel || aiConfig.segmentationPrompt) && (
+                <AIConfigRow
+                  icon={<IconWaveSine size={16} className="text-accent" />}
+                  label="Audio-Segmentierung"
+                  modelId={aiConfig.segmentationModel}
+                  prompt={aiConfig.segmentationPrompt}
+                  models={models}
+                />
+              )}
+
+              {/* Show fallback if no config sections are set */}
+              {!aiConfig.contentModel && !aiConfig.contentPrompt &&
+               !aiConfig.analysisModel && !aiConfig.analysisPrompt &&
+               !aiConfig.summaryModel && !aiConfig.summaryPrompt &&
+               !aiConfig.titleModel && !aiConfig.titlePrompt &&
+               !aiConfig.segmentationModel && !aiConfig.segmentationPrompt && (
+                <div className="text-sm text-base-content/60 py-2">
+                  Keine spezifischen Einstellungen konfiguriert.
+                  Standard-Einstellungen werden verwendet.
                 </div>
-                <div className="text-sm text-base-content/70 pl-6">
-                  {(() => {
-                    const info = getModelInfo(settings.summary.modelId, models)
-                    return (
-                      <div>
-                        <span className="font-medium">Modell:</span>{' '}
-                        {info.name}{' '}
-                        <span className="text-xs opacity-60">({info.inputCost} / {info.outputCost})</span>
-                      </div>
-                    )
-                  })()}
-                  <div className="mt-1">
-                    <span className="font-medium">Prompt:</span>{' '}
-                    <span className="italic">
-                      &quot;{truncatePrompt(settings.summary.prompt)}&quot;
-                    </span>
-                  </div>
-                </div>
-              </div>
+              )}
             </>
           )}
         </div>
@@ -208,7 +302,7 @@ export function AISettingsPopup({
         {/* Footer */}
         <div className="p-4 border-t border-base-300">
           <a
-            href="/settings#ai-config"
+            href="/settings/templates"
             className="btn btn-primary btn-block"
             onClick={onClose}
           >
