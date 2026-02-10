@@ -62,7 +62,7 @@ export function FieldRenderer({
   // Render input based on field type
   const renderInput = () => {
     const baseInputClass = 'input input-bordered w-full'
-    const baseTextareaClass = 'textarea textarea-bordered w-full min-h-32 resize-y'
+    const _baseTextareaClass = 'textarea textarea-bordered w-full min-h-32 resize-y'
 
     switch (field.type) {
       case 'textarea':

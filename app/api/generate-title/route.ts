@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     })
 
     let title = response.choices?.[0]?.message?.content?.trim() || ''
-    console.log('[generate-title] Model:', titleSettings.modelId, 'Provider:', provider, 'Raw:', JSON.stringify(title))
+    console.warn('[generate-title] Model:', titleSettings.modelId, 'Provider:', provider, 'Raw:', JSON.stringify(title))
 
     // Final fallback
     if (!title) title = 'Tagebucheintrag'

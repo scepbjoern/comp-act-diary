@@ -396,7 +396,6 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
         }
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [fields, selectedTemplateId, appendTranscriptToField]
   )
 
@@ -488,7 +487,7 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
   )
 
   // Track which field is being recorded
-  const [recordingFieldId, setRecordingFieldId] = useState<string | null>(null)
+  const [_recordingFieldId, setRecordingFieldId] = useState<string | null>(null)
   const [improvingFieldId, setImprovingFieldId] = useState<string | null>(null)
 
   // Handle microphone transcription for a field
@@ -894,6 +893,7 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
             <div className="flex flex-wrap gap-2 pt-1">
               {photoAssets.map((photo) => (
                 <div key={photo.assetId} className="relative w-16 h-16 rounded overflow-hidden border border-base-300">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- dynamic blob URLs not compatible with next/image loader */}
                   <img
                     src={photo.url}
                     alt="Vorschau"

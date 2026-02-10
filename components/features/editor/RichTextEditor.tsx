@@ -545,12 +545,13 @@ interface RichTextEditorProps {
 
 export const RichTextEditor = forwardRef<MDXEditorMethods, RichTextEditorProps>(
   (props, ref) => {
+    const { markdown, onChange } = props
     const [isFullscreen, setIsFullscreen] = React.useState(false)
     const editorRef = React.useRef<MDXEditorMethods>(null)
 
     // Track the last markdown value we know about (from prop or internal change)
     // so we only call setMarkdown() when the prop changes externally
-    const lastKnownMarkdown = React.useRef(props.markdown)
+    const lastKnownMarkdown = React.useRef(markdown)
 
     // Expose MDXEditor methods to parent via forwarded ref
     React.useImperativeHandle(ref, () => editorRef.current!, [])
@@ -559,17 +560,17 @@ export const RichTextEditor = forwardRef<MDXEditorMethods, RichTextEditorProps>(
     // MDXEditor only uses `markdown` as initial value – subsequent prop changes are ignored.
     // We detect external changes by comparing against lastKnownMarkdown.
     React.useEffect(() => {
-      if (props.markdown !== lastKnownMarkdown.current && editorRef.current) {
-        editorRef.current.setMarkdown(props.markdown)
+      if (markdown !== lastKnownMarkdown.current && editorRef.current) {
+        editorRef.current.setMarkdown(markdown)
       }
-      lastKnownMarkdown.current = props.markdown
-    }, [props.markdown])
+      lastKnownMarkdown.current = markdown
+    }, [markdown])
 
     // Wrap onChange to track internal edits (user typing)
     const handleChange = React.useCallback((md: string) => {
       lastKnownMarkdown.current = md
-      props.onChange(md)
-    }, [props.onChange])
+      onChange(md)
+    }, [onChange])
 
     const toggleFullscreen = () => {
       setIsFullscreen(prev => !prev)

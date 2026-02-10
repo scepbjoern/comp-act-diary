@@ -257,11 +257,11 @@ export async function POST(request: NextRequest) {
     })
 
     // Create MediaAttachments for audio files if provided
-    console.log('[journal/route] audioFileIds:', audioFileIds)
-    console.log('[journal/route] audioTranscripts:', audioTranscripts)
+    console.warn('[journal/route] audioFileIds:', audioFileIds)
+    console.warn('[journal/route] audioTranscripts:', audioTranscripts)
     
     if (audioFileIds && audioFileIds.length > 0) {
-      console.log('[journal/route] Creating MediaAttachments for', audioFileIds.length, 'audio files')
+      console.warn('[journal/route] Creating MediaAttachments for', audioFileIds.length, 'audio files')
       
       // Entity registry entry was created above
       for (let i = 0; i < audioFileIds.length; i++) {
@@ -273,7 +273,7 @@ export async function POST(request: NextRequest) {
           where: { id: assetId, userId },
         })
         
-        console.log('[journal/route] Asset', assetId, 'found:', !!asset)
+        console.warn('[journal/route] Asset', assetId, 'found:', Boolean(asset))
 
         if (asset) {
           try {
@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
                 transcriptModel: transcript ? 'gpt-4o-transcribe' : null,
               },
             })
-            console.log('[journal/route] Created MediaAttachment:', attachment.id)
+            console.warn('[journal/route] Created MediaAttachment:', attachment.id)
           } catch (attachmentError) {
             console.error('[journal/route] Failed to create MediaAttachment:', attachmentError)
           }

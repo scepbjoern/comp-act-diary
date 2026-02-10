@@ -18,7 +18,9 @@ const config = [
       'build/**',
       'coverage/**',
       'public/sw.js',
-      'node_modules/**'
+      'node_modules/**',
+      'scripts/**/*.cjs',
+      'scripts/**/*.js',
     ]
   },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),

@@ -286,7 +286,7 @@ export class JournalService {
    * Re-processes mentions if content changes.
    */
   async updateEntry(id: string, userId: string, params: UpdateEntryParams): Promise<EntryWithRelations> {
-    const { title, content, fieldValues, occurredAt, capturedAt, isSensitive, locationId } = params
+    const { title, content, fieldValues: _fieldValues, occurredAt, capturedAt, isSensitive, locationId } = params
 
     // Build update data dynamically to avoid overwriting with undefined
     const updateData: Record<string, unknown> = {

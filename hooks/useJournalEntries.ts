@@ -349,7 +349,7 @@ export function useJournalEntries(options: UseJournalEntriesOptions = {}): UseJo
 
   const runPipeline = useCallback(async (entryId: string): Promise<boolean> => {
     setError(null)
-    console.log('[runPipeline] Starting for entry:', entryId)
+    console.warn('[runPipeline] Starting for entry:', entryId)
 
     try {
       const response = await fetch('/api/journal-ai/pipeline', {
@@ -360,7 +360,7 @@ export function useJournalEntries(options: UseJournalEntriesOptions = {}): UseJo
       })
 
       const data = await response.json()
-      console.log('[runPipeline] Response:', response.status, data)
+      console.warn('[runPipeline] Response:', response.status, data)
 
       if (!response.ok) {
         throw new Error(data.error || 'AI-Pipeline fehlgeschlagen')

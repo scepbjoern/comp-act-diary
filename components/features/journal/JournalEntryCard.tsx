@@ -21,7 +21,6 @@ import { useState, memo, useCallback } from 'react'
 import Link from 'next/link'
 import { format, formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
-import { TablerIcon } from '@/components/ui/TablerIcon'
 import { 
   IconChevronDown, 
   IconChevronUp, 
@@ -274,12 +273,6 @@ function formatOccurredAt(date: Date | null, mode: 'relative' | 'full'): string 
   return format(d, 'EEEE, d. MMMM yyyy, HH:mm', { locale: de })
 }
 
-/** Truncates content for preview */
-function truncateContent(content: string, maxLength: number): string {
-  if (content.length <= maxLength) return content
-  return content.slice(0, maxLength).trim() + '...'
-}
-
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
@@ -335,11 +328,6 @@ function JournalEntryCardComponent({
   // Determine if we should show full content (expanded/detail mode or manually expanded in compact)
   const showFullContent = isExpanded || mode === 'expanded' || mode === 'detail'
   
-  // Content preview for compact mode (first ~100 chars)
-  const contentPreview = entry.content 
-    ? truncateContent(entry.content.replace(/\n/g, ' '), 100) 
-    : ''
-
   return (
     <article
       className={clsx(
