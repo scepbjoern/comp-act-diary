@@ -69,12 +69,12 @@ else
 fi
 
 # =============================================================================
-# SYSTEM TYPES SYNC (idempotent, runs on every start)
+# SYSTEM DATA SYNC (types + templates, idempotent, runs on every start)
 # =============================================================================
-log "Synchronisiere System-Typen..."
+log "Synchronisiere System-Typen und -Templates..."
 psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f scripts/sync-system-types.sql -q 2>/dev/null || \
-  log "Warnung: System-Typen-Sync fehlgeschlagen (nicht kritisch)."
-log "System-Typen synchronisiert."
+  log "Warnung: System-Daten-Sync fehlgeschlagen (nicht kritisch)."
+log "System-Typen und -Templates synchronisiert."
 
 log "DB-Schema sichergestellt. Starte App..."
 if [ "$#" -gt 0 ]; then
