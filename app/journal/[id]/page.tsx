@@ -14,6 +14,8 @@ import { de } from 'date-fns/locale'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 import { IconArrowLeft, IconEdit, IconTrash } from '@tabler/icons-react'
 import { Toasts, useToasts } from '@/components/ui/Toast'
+import { PipelineStepModal } from '@/components/features/journal/PipelineStepModal'
+import type { PipelineStepId } from '@/components/features/journal/PipelineStepModal'
 import { DynamicJournalForm } from '@/components/features/journal/DynamicJournalForm'
 import type { JournalEntryTypeOption, JournalTemplateOption, DynamicJournalFormHandle } from '@/components/features/journal/DynamicJournalForm'
 import { OCRSourcePanel } from '@/components/features/ocr/OCRSourcePanel'
@@ -33,6 +35,10 @@ export default function JournalEntryPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Pipeline modal state
+  const [showPipelineModal, setShowPipelineModal] = useState(false)
+  const [pipelineRunning, setPipelineRunning] = useState(false)
 
   // Metadata for DynamicJournalForm
   const [types, setTypes] = useState<JournalEntryTypeOption[]>([])
@@ -117,6 +123,7 @@ export default function JournalEntryPage() {
     isSensitive?: boolean
     occurredAt?: string
     capturedAt?: string | null
+    updatedTranscripts?: Record<string, { transcript: string; transcriptModel: string }>
   }) => {
     setIsSaving(true)
     try {
@@ -132,6 +139,22 @@ export default function JournalEntryPage() {
         }),
       })
       if (!res.ok) throw new Error('Update fehlgeschlagen')
+
+      // Update MediaAttachment transcripts if changed
+      if (data.updatedTranscripts) {
+        for (const [attachmentId, { transcript, transcriptModel }] of Object.entries(data.updatedTranscripts)) {
+          try {
+            await fetch(`/api/journal-entries/${entryId}/media/${attachmentId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ transcript, transcriptModel }),
+            })
+          } catch (err) {
+            console.error('Failed to update transcript for attachment:', attachmentId, err)
+          }
+        }
+      }
+
       const resData = await res.json()
       setEntry(resData.entry)
       setIsEditing(false)
@@ -144,21 +167,40 @@ export default function JournalEntryPage() {
     }
   }, [entryId, push])
 
-  /** W5: Save + AI pipeline on detail page */
+  /** W5: Save + open pipeline modal on detail page */
   const handleEditSubmitAndPipeline = useCallback(async (data: Parameters<typeof handleEditSubmit>[0]) => {
     await handleEditSubmit(data)
+    setShowPipelineModal(true)
+  }, [handleEditSubmit])
+
+  /** Execute pipeline with user-selected steps */
+  const executePipelineWithSteps = useCallback(async (steps: PipelineStepId[]) => {
+    setPipelineRunning(true)
     try {
-      await fetch('/api/journal-ai/pipeline', {
+      const response = await fetch('/api/journal-ai/pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ journalEntryId: entryId }),
+        body: JSON.stringify({ journalEntryId: entryId, steps }),
       })
-      push('KI-Pipeline abgeschlossen', 'success')
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'AI-Pipeline fehlgeschlagen')
+      }
+      const failedSteps = data.steps?.filter((s: { success: boolean }) => !s.success) || []
       await fetchEntry()
-    } catch {
-      push('KI-Pipeline fehlgeschlagen', 'error')
+      setShowPipelineModal(false)
+      if (failedSteps.length === 0) {
+        push('KI-Pipeline abgeschlossen', 'success')
+      } else {
+        push(`KI-Pipeline: ${data.steps.length - failedSteps.length}/${data.steps.length} Schritte erfolgreich`, 'success')
+      }
+    } catch (err) {
+      console.error('Pipeline failed:', err)
+      push(err instanceof Error ? err.message : 'KI-Pipeline fehlgeschlagen', 'error')
+    } finally {
+      setPipelineRunning(false)
     }
-  }, [handleEditSubmit, entryId, push, fetchEntry])
+  }, [entryId, fetchEntry, push])
 
   /** Delete entry and navigate back */
   const handleDelete = useCallback(async () => {
@@ -258,6 +300,7 @@ export default function JournalEntryPage() {
             onCancel={() => setIsEditing(false)}
             isSubmitting={isSaving}
             date={today}
+            onToast={push}
           />
 
           {/* OCR Source Panel with restore button */}
@@ -329,6 +372,14 @@ export default function JournalEntryPage() {
           </div>
         </div>
       )}
+
+      {/* Pipeline Step Selection Modal */}
+      <PipelineStepModal
+        isOpen={showPipelineModal}
+        onClose={() => setShowPipelineModal(false)}
+        onConfirm={executePipelineWithSteps}
+        isRunning={pipelineRunning}
+      />
     </div>
   )
 }

@@ -17,7 +17,20 @@ export function AudioPlayerH5({ audioFilePath, className = '', compact = false }
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
+  const [playbackRate, setPlaybackRate] = useState(1)
   const audioRef = useRef<HTMLAudioElement>(null)
+
+  // Playback speed cycle: 1 → 1.5 → 2 → 3 → 4 → 1
+  const speedSteps = [1, 1.5, 2, 3, 4]
+  const cycleSpeed = () => {
+    const currentIndex = speedSteps.indexOf(playbackRate)
+    const nextIndex = (currentIndex + 1) % speedSteps.length
+    const nextRate = speedSteps[nextIndex]
+    setPlaybackRate(nextRate)
+    if (audioRef.current) {
+      audioRef.current.playbackRate = nextRate
+    }
+  }
 
   useEffect(() => {
     const audio = audioRef.current
@@ -125,6 +138,14 @@ export function AudioPlayerH5({ audioFilePath, className = '', compact = false }
           </div>
           <span className="text-xs text-gray-400 tabular-nums">{formatTime(duration)}</span>
         </div>
+        {/* Playback speed toggle */}
+        <button
+          onClick={cycleSpeed}
+          className="text-xs font-medium tabular-nums min-w-[2.5rem] text-center rounded px-1 py-0.5 bg-base-300 hover:bg-base-200 text-base-content/70"
+          title="Abspieltempo ändern"
+        >
+          {playbackRate}x
+        </button>
       </div>
     )
   }
@@ -168,6 +189,14 @@ export function AudioPlayerH5({ audioFilePath, className = '', compact = false }
             <span>{formatTime(duration)}</span>
           </div>
         </div>
+        {/* Playback speed toggle */}
+        <button
+          onClick={cycleSpeed}
+          className="btn btn-ghost btn-sm text-xs font-medium tabular-nums min-w-[3rem]"
+          title="Abspieltempo ändern"
+        >
+          {playbackRate}x
+        </button>
       </div>
     </div>
   )

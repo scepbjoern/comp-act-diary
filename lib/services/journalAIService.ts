@@ -32,7 +32,7 @@ export interface GenerateResult {
 }
 
 export interface PipelineStepResult {
-  step: 'title' | 'content' | 'analysis' | 'summary'
+  step: 'title' | 'content' | 'analysis' | 'summary' | 'image'
   success: boolean
   error?: string
   tokensUsed?: number
@@ -373,12 +373,13 @@ export class JournalAIService {
   }
 
   /**
-   * Runs the full AI pipeline: content → analysis → summary.
+   * Runs the full AI pipeline: content → title → analysis → summary.
+   * Optionally includes 'image' (handled externally by caller).
    */
   async runPipeline(params: {
     journalEntryId: string
     userId: string
-    steps?: ('content' | 'analysis' | 'summary')[]
+    steps?: ('content' | 'title' | 'analysis' | 'summary')[]
   }): Promise<PipelineResult> {
     const { journalEntryId, userId, steps = ['content', 'analysis', 'summary'] } = params
 
@@ -407,7 +408,27 @@ export class JournalAIService {
       }
     }
 
-    // Step 2: Generate analysis (if requested)
+    // Step 2: Generate title (if requested)
+    if (steps.includes('title')) {
+      try {
+        const titleResult = await this.generateTitle({ journalEntryId, userId })
+        result.title = titleResult.text
+        result.totalTokensUsed += titleResult.tokensUsed
+        result.steps.push({
+          step: 'title',
+          success: true,
+          tokensUsed: titleResult.tokensUsed,
+        })
+      } catch (error) {
+        result.steps.push({
+          step: 'title',
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+      }
+    }
+
+    // Step 3: Generate analysis (if requested)
     if (steps.includes('analysis')) {
       try {
         const analysisResult = await this.generateAnalysis({ journalEntryId, userId })

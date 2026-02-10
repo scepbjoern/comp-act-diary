@@ -11,6 +11,8 @@ import { useState, useCallback, useMemo, useEffect, useRef, forwardRef, useImper
 import { IconAlertTriangle, IconLoader2, IconSparkles, IconX, IconDeviceFloppy } from '@tabler/icons-react'
 import { TablerIcon } from '@/components/ui/TablerIcon'
 import { FieldRenderer } from './FieldRenderer'
+import { AudioPlayerH5 } from '@/components/features/media/AudioPlayerH5'
+import { RetranscribeButton } from '@/components/features/transcription/RetranscribeButton'
 import { RichTextEditor } from '@/components/features/editor/RichTextEditor'
 import { MicrophoneButton } from '@/components/features/transcription/MicrophoneButton'
 import AudioUploadButton from '@/components/features/media/AudioUploadButton'
@@ -68,7 +70,8 @@ interface DynamicJournalFormProps {
     occurredAt?: string
     capturedAt?: string | null
     audioFileIds?: string[]
-    audioTranscripts?: Record<string, string>
+    audioTranscripts?: Record<string, { transcript: string; model: string }>
+    updatedTranscripts?: Record<string, { transcript: string; transcriptModel: string }>
     ocrAssetIds?: string[]
     photoAssetIds?: string[]
   }) => void
@@ -88,6 +91,8 @@ interface DynamicJournalFormProps {
   className?: string
   /** Date for new entries (ISO format YYYY-MM-DD) - enables audio persistence */
   date?: string
+  /** Toast callback for user feedback */
+  onToast?: (message: string, type: 'success' | 'error') => void
 }
 
 /** Handle exposed to parent via ref for external content manipulation */
@@ -117,6 +122,7 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
   showMediaButtons = true,
   className = '',
   date,
+  onToast,
 }: DynamicJournalFormProps, ref) {
   // Derive edit mode from existingEntry
   const isEditMode = Boolean(existingEntry)
@@ -172,6 +178,14 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
 
   // Fallback content for mismatch mode
   const [fallbackContent, setFallbackContent] = useState<string>('')
+
+  // Existing audio attachments (edit mode only)
+  const existingAudioAttachments = useMemo(() => {
+    if (!existingEntry) return []
+    return existingEntry.mediaAttachments.filter(
+      (ma) => ma.asset.mimeType?.startsWith('audio/')
+    )
+  }, [existingEntry])
 
   // OCR and photo asset IDs collected during form interaction
   const [ocrAssetIds, setOcrAssetIds] = useState<string[]>([])
@@ -280,7 +294,23 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
 
   // Track audio files for new entries (will be attached on save)
   const [audioFileIds, setAudioFileIds] = useState<string[]>([])
-  const [audioTranscripts, setAudioTranscripts] = useState<Record<string, string>>({})
+  const [audioTranscripts, setAudioTranscripts] = useState<Record<string, { transcript: string; model: string }>>({})
+
+  // Editable transcripts for existing audio attachments (edit mode)
+  // Key = MediaAttachment ID, value = { transcript, transcriptModel }
+  const [editableTranscripts, setEditableTranscripts] = useState<Record<string, { transcript: string; transcriptModel: string }>>(() => {
+    if (!existingEntry) return {}
+    const map: Record<string, { transcript: string; transcriptModel: string }> = {}
+    for (const ma of existingEntry.mediaAttachments) {
+      if (ma.asset.mimeType?.startsWith('audio/')) {
+        map[ma.id] = {
+          transcript: ma.transcript || '',
+          transcriptModel: ma.transcriptModel || '',
+        }
+      }
+    }
+    return map
+  })
 
   // Build submit data (shared by save and save+pipeline)
   const buildSubmitData = useCallback(() => {
@@ -302,10 +332,11 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
       capturedAt: capturedAt ? new Date(capturedAt).toISOString() : undefined,
       audioFileIds: audioFileIds.length > 0 ? audioFileIds : undefined,
       audioTranscripts: Object.keys(audioTranscripts).length > 0 ? audioTranscripts : undefined,
+      updatedTranscripts: Object.keys(editableTranscripts).length > 0 ? editableTranscripts : undefined,
       ocrAssetIds: ocrAssetIds.length > 0 ? ocrAssetIds : undefined,
       photoAssetIds: photoAssets.length > 0 ? photoAssets.map((p) => p.assetId) : undefined,
     }
-  }, [selectedTypeId, selectedTemplateId, selectedTemplate, fieldValues, audioFileIds, audioTranscripts, title, isSensitive, ocrAssetIds, photoAssets, occurredAt, capturedAt])
+  }, [selectedTypeId, selectedTemplateId, selectedTemplate, fieldValues, audioFileIds, audioTranscripts, editableTranscripts, title, isSensitive, ocrAssetIds, photoAssets, occurredAt, capturedAt])
 
   // Handle form submission
   const handleSubmit = useCallback(
@@ -356,7 +387,7 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
       // Track audio file ID
       if (result.audioFileId) {
         setAudioFileIds((prev) => [...prev, result.audioFileId!])
-        setAudioTranscripts((prev) => ({ ...prev, [result.audioFileId!]: transcript }))
+        setAudioTranscripts((prev) => ({ ...prev, [result.audioFileId!]: { transcript, model: result.model || '' } }))
       }
 
       // Always set transcript immediately so content is never empty
@@ -492,7 +523,7 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
 
   // Handle microphone transcription for a field
   const handleMicrophoneResult = useCallback(
-    (fieldId: string, result: { text: string; audioFileId?: string | null }) => {
+    (fieldId: string, result: { text: string; audioFileId?: string | null; model?: string }) => {
       const { text: transcript, audioFileId } = result
 
       // Update field value with transcript
@@ -504,7 +535,7 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
       // Track audio file ID for later attachment
       if (audioFileId) {
         setAudioFileIds((prev) => [...prev, audioFileId])
-        setAudioTranscripts((prev) => ({ ...prev, [audioFileId]: transcript }))
+        setAudioTranscripts((prev) => ({ ...prev, [audioFileId]: { transcript, model: result.model || '' } }))
       }
 
       setRecordingFieldId(null)
@@ -699,7 +730,7 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
                     time={currentTime}
                     keepAudio={getKeepAudio(field.id)}
                     existingEntryId={effectiveEntryId}
-                    onResult={(result) => handleMicrophoneResult(field.id, { text: result.text, audioFileId: result.audioFileId })}
+                    onResult={(result) => handleMicrophoneResult(field.id, { text: result.text, audioFileId: result.audioFileId, model: result.model })}
                     compact
                     disabled={isSubmitting}
                   />
@@ -752,7 +783,7 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
               time={currentTime}
               keepAudio={getKeepAudio('content')}
               existingEntryId={effectiveEntryId}
-              onResult={(result) => handleMicrophoneResult('content', { text: result.text, audioFileId: result.audioFileId })}
+              onResult={(result) => handleMicrophoneResult('content', { text: result.text, audioFileId: result.audioFileId, model: result.model })}
               compact
               disabled={isSubmitting}
             />
@@ -837,6 +868,67 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
           <span className="label-text text-sm">Sensibel</span>
         </label>
       </div>
+
+      {/* Existing Audio Attachments (edit mode) with editable transcript + re-transcribe */}
+      {isEditMode && existingAudioAttachments.length > 0 && (
+        <div className="space-y-2 border-t border-base-300 pt-4">
+          <h4 className="text-sm font-medium flex items-center gap-2">
+            <TablerIcon name="microphone" className="w-4 h-4" />
+            Audio ({existingAudioAttachments.length})
+          </h4>
+          <div className="space-y-2">
+            {existingAudioAttachments.map((att) => {
+              const editable = editableTranscripts[att.id]
+              return (
+                <div key={att.id} className="rounded-lg bg-base-200/50 border border-base-300 overflow-hidden">
+                  {/* Player row */}
+                  <div className="p-2 flex items-center gap-2">
+                    <div className="flex-1">
+                      <AudioPlayerH5 audioFilePath={att.asset.filePath} compact />
+                    </div>
+                    {(editable?.transcriptModel || att.transcriptModel) && (
+                      <span className="badge badge-xs badge-ghost shrink-0" title="Transkriptions-Modell">
+                        {editable?.transcriptModel || att.transcriptModel}
+                      </span>
+                    )}
+                    <RetranscribeButton
+                      audioFileId={att.asset.id}
+                      onRetranscribed={(text, model) => {
+                        // Overwrite the local editable transcript (not DB, not content field)
+                        setEditableTranscripts((prev) => ({
+                          ...prev,
+                          [att.id]: { transcript: text, transcriptModel: model || '' },
+                        }))
+                        onToast?.(`Re-Transkription mit ${model || 'neuem Modell'} abgeschlossen`, 'success')
+                      }}
+                      onError={(msg) => onToast?.(msg, 'error')}
+                    />
+                  </div>
+                  {/* Editable transcript textarea */}
+                  <div className="border-t border-base-300 p-2">
+                    <label className="text-xs text-base-content/60 mb-1 block">Original-Transkript</label>
+                    <textarea
+                      value={editable?.transcript ?? ''}
+                      onChange={(e) =>
+                        setEditableTranscripts((prev) => ({
+                          ...prev,
+                          [att.id]: {
+                            ...prev[att.id],
+                            transcript: e.target.value,
+                          },
+                        }))
+                      }
+                      disabled={isSubmitting}
+                      className="textarea textarea-bordered textarea-sm w-full min-h-16 resize-y text-sm font-mono"
+                      placeholder="Kein Transkript vorhanden"
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Media Upload Buttons (photo, camera, OCR – audio is in the field toolbar) */}
       {showMediaButtons && (

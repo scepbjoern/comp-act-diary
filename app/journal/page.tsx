@@ -26,6 +26,8 @@ import { PhotoLightbox } from '@/components/features/journal/PhotoLightbox'
 import { ShareEntryModal } from '@/components/features/diary/ShareEntryModal'
 import { TimestampModal } from '@/components/features/day/TimestampModal'
 import { AISettingsPopup } from '@/components/features/ai/AISettingsPopup'
+import { PipelineStepModal } from '@/components/features/journal/PipelineStepModal'
+import type { PipelineStepId } from '@/components/features/journal/PipelineStepModal'
 import { useJournalEntries } from '@/hooks/useJournalEntries'
 import type { EntryWithRelations } from '@/lib/services/journal/types'
 import type { TaskCardData } from '@/components/features/tasks/TaskCard'
@@ -72,20 +74,22 @@ interface EditModeWrapperProps {
     title?: string
     isSensitive?: boolean
     audioFileIds?: string[]
-    audioTranscripts?: Record<string, string>
+    audioTranscripts?: Record<string, { transcript: string; model: string }>
+    updatedTranscripts?: Record<string, { transcript: string; transcriptModel: string }>
     ocrAssetIds?: string[]
     photoAssetIds?: string[]
   }) => void
   onCancel: () => void
   onSaveAndRunPipeline?: (data: EditModeWrapperProps['onSubmit'] extends (data: infer D) => void ? D : never) => void
   onTasksChange: () => void
+  onToast?: (message: string, type: 'success' | 'error') => void
 }
 
 /**
  * Wrapper that renders DynamicJournalForm with OCR/Tasks panels below.
  * Solves MT-10: panels must remain visible during inline editing.
  */
-function EditModeWrapper({ entry, types, templates, today, isSubmitting, tasks, onSubmit, onCancel, onSaveAndRunPipeline, onTasksChange }: EditModeWrapperProps) {
+function EditModeWrapper({ entry, types, templates, today, isSubmitting, tasks, onSubmit, onCancel, onSaveAndRunPipeline, onTasksChange, onToast }: EditModeWrapperProps) {
   const formRef = useRef<DynamicJournalFormHandle>(null)
 
   // Check if entry has non-audio OCR sources
@@ -117,6 +121,7 @@ function EditModeWrapper({ entry, types, templates, today, isSubmitting, tasks, 
         onSaveAndRunPipeline={onSaveAndRunPipeline}
         isSubmitting={isSubmitting}
         date={today}
+        onToast={onToast}
       />
 
       {/* OCR Source Panel – visible in edit mode with restore button */}
@@ -187,6 +192,10 @@ export default function JournalPage() {
   const [shareModalEntryId, setShareModalEntryId] = useState<string | null>(null)
   const [timestampModalEntry, setTimestampModalEntry] = useState<EntryWithRelations | null>(null)
   const [aiSettingsEntry, setAiSettingsEntry] = useState<EntryWithRelations | null>(null)
+
+  // Pipeline step-selection modal state
+  const [pipelineModalEntryId, setPipelineModalEntryId] = useState<string | null>(null)
+  const [pipelineRunning, setPipelineRunning] = useState(false)
 
   // Phase 2: Tasks per entry (loaded separately per Entscheidung F5)
   const [tasksMap, setTasksMap] = useState<Record<string, TaskCardData[]>>({})
@@ -314,7 +323,7 @@ export default function JournalPage() {
     isSensitive?: boolean
     occurredAt?: string
     audioFileIds?: string[]
-    audioTranscripts?: Record<string, string>
+    audioTranscripts?: Record<string, { transcript: string; model: string }>
     ocrAssetIds?: string[]
     photoAssetIds?: string[]
   }) => {
@@ -336,7 +345,7 @@ export default function JournalPage() {
         // Attach audio files after entry creation
         if (data.audioFileIds && data.audioFileIds.length > 0) {
           for (const assetId of data.audioFileIds) {
-            const transcript = data.audioTranscripts?.[assetId]
+            const audioData = data.audioTranscripts?.[assetId]
             try {
               await fetch(`/api/journal-entries/${result.id}/media`, {
                 method: 'POST',
@@ -344,7 +353,8 @@ export default function JournalPage() {
                 body: JSON.stringify({
                   assetId,
                   role: 'SOURCE',
-                  transcript: transcript || null,
+                  transcript: audioData?.transcript || null,
+                  transcriptModel: audioData?.model || null,
                 }),
               })
             } catch (err) {
@@ -401,7 +411,7 @@ export default function JournalPage() {
     }
   }, [createEntry, push, refetch])
 
-  /** W3: Create entry and then run AI pipeline */
+  /** W3: Create entry and then open pipeline modal */
   const handleFormSubmitAndPipeline = useCallback(async (data: Parameters<typeof handleFormSubmit>[0]) => {
     setIsSubmitting(true)
     try {
@@ -415,9 +425,9 @@ export default function JournalPage() {
       })
       if (result) {
         setIsFormOpen(false)
-        push('Eintrag erstellt – Pipeline läuft…', 'success')
-        await runPipeline(result.id)
-        push('KI-Pipeline abgeschlossen', 'success')
+        push('Eintrag erstellt', 'success')
+        // Open pipeline modal instead of running immediately
+        setPipelineModalEntryId(result.id)
       }
     } catch (err) {
       console.error('Create+Pipeline failed:', err)
@@ -425,7 +435,7 @@ export default function JournalPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [createEntry, runPipeline, push])
+  }, [createEntry, push])
 
   /** Phase 5: Handle edit-submit from DynamicJournalForm (edit mode) */
   const handleEditSubmit = useCallback(async (entryId: string, data: {
@@ -437,6 +447,7 @@ export default function JournalPage() {
     isSensitive?: boolean
     occurredAt?: string
     capturedAt?: string | null
+    updatedTranscripts?: Record<string, { transcript: string; transcriptModel: string }>
   }) => {
     setIsSubmitting(true)
     try {
@@ -452,6 +463,22 @@ export default function JournalPage() {
         }),
       })
       if (!res.ok) throw new Error('Update fehlgeschlagen')
+
+      // Update MediaAttachment transcripts if changed
+      if (data.updatedTranscripts) {
+        for (const [attachmentId, { transcript, transcriptModel }] of Object.entries(data.updatedTranscripts)) {
+          try {
+            await fetch(`/api/journal-entries/${entryId}/media/${attachmentId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ transcript, transcriptModel }),
+            })
+          } catch (err) {
+            console.error('Failed to update transcript for attachment:', attachmentId, err)
+          }
+        }
+      }
+
       setEditingEntryId(null)
       await refetch()
       push('Eintrag aktualisiert', 'success')
@@ -463,16 +490,12 @@ export default function JournalPage() {
     }
   }, [refetch, push])
 
-  /** W5: Edit-submit + pipeline */
+  /** W5: Edit-submit + open pipeline modal */
   const handleEditSubmitAndPipeline = useCallback(async (entryId: string, data: Parameters<typeof handleEditSubmit>[1]) => {
     await handleEditSubmit(entryId, data)
-    try {
-      await runPipeline(entryId)
-      push('KI-Pipeline abgeschlossen', 'success')
-    } catch {
-      push('KI-Pipeline fehlgeschlagen', 'error')
-    }
-  }, [handleEditSubmit, runPipeline, push])
+    // Open pipeline modal instead of running immediately
+    setPipelineModalEntryId(entryId)
+  }, [handleEditSubmit])
 
   const handleDeleteEntry = useCallback(async (entryId: string) => {
     if (!confirm('Eintrag wirklich löschen?')) return
@@ -481,22 +504,50 @@ export default function JournalPage() {
   }, [deleteEntry, push])
 
   const [pipelineRunningId, setPipelineRunningId] = useState<string | null>(null)
-  const handleRunPipeline = useCallback(async (entryId: string) => {
+
+  /** Open pipeline modal when clicking the sparkle icon on a card */
+  const handleRunPipeline = useCallback((entryId: string) => {
+    setPipelineModalEntryId(entryId)
+  }, [])
+
+  /** Actually execute pipeline with user-selected steps */
+  const executePipelineWithSteps = useCallback(async (steps: PipelineStepId[]) => {
+    if (!pipelineModalEntryId) return
+    const entryId = pipelineModalEntryId
+    setPipelineRunning(true)
     setPipelineRunningId(entryId)
     try {
-      const success = await runPipeline(entryId)
-      if (success) {
+      const response = await fetch('/api/journal-ai/pipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ journalEntryId: entryId, steps }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'AI-Pipeline fehlgeschlagen')
+      }
+      // Log step results
+      const failedSteps = data.steps?.filter((s: { success: boolean }) => !s.success) || []
+      if (failedSteps.length > 0) {
+        console.warn('[Pipeline] Some steps failed:', failedSteps)
+      }
+      // Refetch entry
+      await refetch()
+      setPipelineModalEntryId(null)
+      if (failedSteps.length === 0) {
         push('KI-Pipeline abgeschlossen', 'success')
       } else {
-        push('KI-Pipeline: einige Schritte fehlgeschlagen – siehe Konsole', 'error')
+        push(`KI-Pipeline: ${data.steps.length - failedSteps.length}/${data.steps.length} Schritte erfolgreich`, 'success')
       }
     } catch (err) {
       console.error('Pipeline failed:', err)
       push(err instanceof Error ? err.message : 'KI-Pipeline fehlgeschlagen', 'error')
     } finally {
+      setPipelineRunning(false)
       setPipelineRunningId(null)
     }
-  }, [runPipeline, push])
+  }, [pipelineModalEntryId, refetch, push])
 
   const handleTypeFilterChange = useCallback((typeId: string | undefined) => {
     setTypeFilter(typeId)
@@ -688,6 +739,7 @@ export default function JournalPage() {
                 onSaveAndRunPipeline={(data) => handleEditSubmitAndPipeline(entry.id, data)}
                 onCancel={() => setEditingEntryId(null)}
                 onTasksChange={() => refetchTasksForEntry(entry.id)}
+                onToast={push}
               />
             ) : (
               <JournalEntryCard
@@ -762,6 +814,14 @@ export default function JournalPage() {
           templateName={aiSettingsEntry.template?.name}
         />
       )}
+
+      {/* Pipeline Step Selection Modal */}
+      <PipelineStepModal
+        isOpen={pipelineModalEntryId !== null}
+        onClose={() => setPipelineModalEntryId(null)}
+        onConfirm={executePipelineWithSteps}
+        isRunning={pipelineRunning}
+      />
     </div>
   )
 }

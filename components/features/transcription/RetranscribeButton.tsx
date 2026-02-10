@@ -8,10 +8,12 @@ interface RetranscribeButtonProps {
   audioFileId: string | null
   /** Called when re-transcription completes with the new text and model used */
   onRetranscribed: (text: string, model?: string) => void
+  /** Called on error instead of alert() */
+  onError?: (message: string) => void
   disabled?: boolean
 }
 
-export function RetranscribeButton({ audioFileId, onRetranscribed, disabled = false }: RetranscribeButtonProps) {
+export function RetranscribeButton({ audioFileId, onRetranscribed, onError, disabled = false }: RetranscribeButtonProps) {
   const [isRetranscribing, setIsRetranscribing] = useState(false)
   const [showModelSelector, setShowModelSelector] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
@@ -44,8 +46,9 @@ export function RetranscribeButton({ audioFileId, onRetranscribed, disabled = fa
       
       if (!response.ok) {
         const errorData = await response.json()
+        const msg = `Re-Transkription fehlgeschlagen: ${errorData.error || 'Unbekannter Fehler'}`
         console.error('Retranscription failed:', errorData)
-        alert(`Re-Transkription fehlgeschlagen: ${errorData.error || 'Unbekannter Fehler'}`)
+        onError?.(msg)
         return
       }
       
@@ -55,7 +58,7 @@ export function RetranscribeButton({ audioFileId, onRetranscribed, disabled = fa
       
     } catch (error) {
       console.error('Retranscription error:', error)
-      alert('Re-Transkription fehlgeschlagen: Netzwerkfehler')
+      onError?.('Re-Transkription fehlgeschlagen: Netzwerkfehler')
     } finally {
       setIsRetranscribing(false)
     }
@@ -68,13 +71,17 @@ export function RetranscribeButton({ audioFileId, onRetranscribed, disabled = fa
   return (
     <>
       <button
-        className="btn btn-ghost btn-xs text-gray-300 hover:text-gray-100"
+        type="button"
+        className="btn btn-ghost btn-xs btn-square"
         onClick={() => setShowModelSelector(!showModelSelector)}
         disabled={isRetranscribing || disabled}
-        title="Audio erneut transkribieren"
+        title="Re-Transkribieren"
       >
-        <TablerIcon name="language-hiragana" size={16} />
-        <span className="ml-1">{isRetranscribing ? '...' : 'Re-Transkribieren'}</span>
+        {isRetranscribing ? (
+          <span className="loading loading-spinner loading-xs" />
+        ) : (
+          <TablerIcon name="language-hiragana" size={16} />
+        )}
       </button>
       
       {showModelSelector && isMounted && createPortal(

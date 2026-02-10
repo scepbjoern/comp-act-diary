@@ -96,6 +96,7 @@ export interface JournalEntryCardProps {
   // Phase 5: Inline-Edit
   /** Callback to restore OCR text into content (E5) */
   onRestoreOcrToContent?: (text: string) => void
+
 }
 
 // =============================================================================
@@ -149,9 +150,18 @@ function AudioItemWithTranscript({ attachment }: { attachment: EntryMediaAttachm
 
   return (
     <div className="rounded-lg bg-base-200/50 border border-base-300 overflow-hidden">
-      {/* Audio Player */}
+      {/* Audio Player + Model badge */}
       <div className="p-2">
-        <AudioPlayerH5 audioFilePath={attachment.asset.filePath} compact />
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <AudioPlayerH5 audioFilePath={attachment.asset.filePath} compact />
+          </div>
+          {attachment.transcriptModel && (
+            <span className="badge badge-xs badge-ghost shrink-0" title="Transkriptions-Modell">
+              {attachment.transcriptModel}
+            </span>
+          )}
+        </div>
       </div>
       
       {/* Transcript Toggle & Content */}
@@ -168,9 +178,6 @@ function AudioItemWithTranscript({ attachment }: { attachment: EntryMediaAttachm
               <IconChevronDown className="h-3 w-3" />
             )}
             <span>Transkript {isTranscriptExpanded ? 'verbergen' : 'anzeigen'}</span>
-            {attachment.transcriptModel && (
-              <span className="badge badge-xs ml-auto">{attachment.transcriptModel}</span>
-            )}
           </button>
           {isTranscriptExpanded && (
             <div className="px-3 pb-3 pt-1">
