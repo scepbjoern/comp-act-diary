@@ -63,12 +63,15 @@ export async function GET(
     },
   })
 
-  const sources = attachments.map((a) => ({
-    id: a.asset.id,
-    filePath: a.asset.filePath,
-    mimeType: a.asset.mimeType,
-    createdAt: a.asset.createdAt.toISOString(),
-  }))
+  // Filter out audio files – they should never appear as OCR sources
+  const sources = attachments
+    .filter((a) => !a.asset.mimeType.startsWith('audio/'))
+    .map((a) => ({
+      id: a.asset.id,
+      filePath: a.asset.filePath,
+      mimeType: a.asset.mimeType,
+      createdAt: a.asset.createdAt.toISOString(),
+    }))
 
   return NextResponse.json({ sources })
 }

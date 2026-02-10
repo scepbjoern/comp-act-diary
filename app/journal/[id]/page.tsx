@@ -1,22 +1,25 @@
 /**
  * app/journal/[id]/page.tsx
  * Detail view for a single journal entry with editing capabilities.
- * Uses the unified JournalService via /api/journal-entries.
+ * Uses DynamicJournalForm for edit mode (Entscheidung E3).
  */
 
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { TablerIcon } from '@/components/ui/TablerIcon'
-import { IconArrowLeft, IconEdit, IconTrash, IconDeviceFloppy, IconLoader2 } from '@tabler/icons-react'
+import { IconArrowLeft, IconEdit, IconTrash } from '@tabler/icons-react'
 import { Toasts, useToasts } from '@/components/ui/Toast'
-import { TemplateField } from '@/types/journal'
-import { parseContentToFields, buildContentFromFields, extractFieldValues } from '@/lib/services/journal/contentService'
+import { DynamicJournalForm } from '@/components/features/journal/DynamicJournalForm'
+import type { JournalEntryTypeOption, JournalTemplateOption, DynamicJournalFormHandle } from '@/components/features/journal/DynamicJournalForm'
+import { OCRSourcePanel } from '@/components/features/ocr/OCRSourcePanel'
+import JournalTasksPanel from '@/components/features/tasks/JournalTasksPanel'
 import type { EntryWithRelations } from '@/lib/services/journal/types'
+import { ymd } from '@/lib/utils/date-utils'
 
 export default function JournalEntryPage() {
   const params = useParams()
@@ -31,12 +34,25 @@ export default function JournalEntryPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Editing state
-  const [editTitle, setEditTitle] = useState('')
-  const [editContent, setEditContent] = useState('')
-  const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
+  // Metadata for DynamicJournalForm
+  const [types, setTypes] = useState<JournalEntryTypeOption[]>([])
+  const [templates, setTemplates] = useState<JournalTemplateOption[]>([])
 
-  // Fetch entry data via unified API
+  const today = ymd(new Date())
+  const formRef = useRef<DynamicJournalFormHandle>(null)
+
+  // Check if entry has non-audio OCR sources
+  const hasOCRSources = useMemo(
+    () => entry?.mediaAttachments.some(
+      (a) => a.role === 'SOURCE' && !a.asset.mimeType?.startsWith('audio/')
+    ) ?? false,
+    [entry?.mediaAttachments]
+  )
+
+  // ---------------------------------------------------------------------------
+  // FETCH DATA
+  // ---------------------------------------------------------------------------
+
   const fetchEntry = useCallback(async () => {
     try {
       setIsLoading(true)
@@ -53,14 +69,6 @@ export default function JournalEntryPage() {
       }
       const data = await response.json()
       setEntry(data.entry)
-      setEditTitle(data.entry.title || '')
-      setEditContent(data.entry.content || '')
-
-      // Parse content to field values if template exists
-      if (data.entry.template?.fields) {
-        const parsed = parseContentToFields(data.entry.content, data.entry.template.fields as TemplateField[])
-        setFieldValues(extractFieldValues(parsed.fields))
-      }
     } catch (err) {
       console.error('Error fetching entry:', err)
       setError('Fehler beim Laden des Eintrags')
@@ -69,67 +77,96 @@ export default function JournalEntryPage() {
     }
   }, [entryId])
 
+  // Load entry + metadata on mount
   useEffect(() => {
     void fetchEntry()
+
+    // Load types and templates for edit form
+    async function loadMetadata() {
+      try {
+        const [typesRes, templatesRes] = await Promise.all([
+          fetch('/api/journal-entry-types'),
+          fetch('/api/templates'),
+        ])
+        if (typesRes.ok) {
+          const data = await typesRes.json()
+          setTypes(data.types || [])
+        }
+        if (templatesRes.ok) {
+          const data = await templatesRes.json()
+          setTemplates(data.templates || [])
+        }
+      } catch (err) {
+        console.error('Failed to load metadata:', err)
+      }
+    }
+    void loadMetadata()
   }, [fetchEntry])
 
-  // Handle field value changes
-  const handleFieldChange = (fieldId: string, value: string) => {
-    setFieldValues((prev) => ({ ...prev, [fieldId]: value }))
-  }
+  // ---------------------------------------------------------------------------
+  // HANDLERS
+  // ---------------------------------------------------------------------------
 
-  // Save changes
-  const handleSave = async () => {
-    if (!entry) return
-
+  /** Handle edit-submit from DynamicJournalForm */
+  const handleEditSubmit = useCallback(async (data: {
+    typeId: string
+    templateId: string | null
+    content: string
+    fieldValues: Record<string, string>
+    title?: string
+    isSensitive?: boolean
+    occurredAt?: string
+    capturedAt?: string | null
+  }) => {
     setIsSaving(true)
     try {
-      // Build content from fields if template exists
-      let content = editContent
-      const fields = entry.template?.fields as TemplateField[] | undefined
-      if (fields && fields.length > 0) {
-        content = buildContentFromFields(fields, fieldValues)
-      }
-
-      const response = await fetch(`/api/journal-entries/${entryId}`, {
+      const res = await fetch(`/api/journal-entries/${entryId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: editTitle || null,
-          content,
+          content: data.content,
+          title: data.title || null,
+          isSensitive: data.isSensitive,
+          occurredAt: data.occurredAt,
+          capturedAt: data.capturedAt,
         }),
       })
-
-      if (!response.ok) {
-        throw new Error('Fehler beim Speichern')
-      }
-
-      const data = await response.json()
-      setEntry(data.entry)
+      if (!res.ok) throw new Error('Update fehlgeschlagen')
+      const resData = await res.json()
+      setEntry(resData.entry)
       setIsEditing(false)
       push('Eintrag gespeichert', 'success')
     } catch (err) {
-      console.error('Error saving entry:', err)
+      console.error('Failed to update entry:', err)
       push('Fehler beim Speichern', 'error')
     } finally {
       setIsSaving(false)
     }
-  }
+  }, [entryId, push])
 
-  // Delete entry
-  const handleDelete = async () => {
+  /** W5: Save + AI pipeline on detail page */
+  const handleEditSubmitAndPipeline = useCallback(async (data: Parameters<typeof handleEditSubmit>[0]) => {
+    await handleEditSubmit(data)
+    try {
+      await fetch('/api/journal-ai/pipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ journalEntryId: entryId }),
+      })
+      push('KI-Pipeline abgeschlossen', 'success')
+      await fetchEntry()
+    } catch {
+      push('KI-Pipeline fehlgeschlagen', 'error')
+    }
+  }, [handleEditSubmit, entryId, push, fetchEntry])
+
+  /** Delete entry and navigate back */
+  const handleDelete = useCallback(async () => {
     if (!confirm('Eintrag wirklich löschen?')) return
-
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/journal-entries/${entryId}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        throw new Error('Fehler beim Löschen')
-      }
-
+      const response = await fetch(`/api/journal-entries/${entryId}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error('Fehler beim Löschen')
       push('Eintrag gelöscht', 'success')
       router.push('/journal')
     } catch (err) {
@@ -138,20 +175,11 @@ export default function JournalEntryPage() {
     } finally {
       setIsDeleting(false)
     }
-  }
+  }, [entryId, push, router])
 
-  // Cancel editing
-  const handleCancel = () => {
-    if (entry) {
-      setEditTitle(entry.title || '')
-      setEditContent(entry.content || '')
-      if (entry.template?.fields) {
-        const parsed = parseContentToFields(entry.content, entry.template.fields as TemplateField[])
-        setFieldValues(extractFieldValues(parsed.fields))
-      }
-    }
-    setIsEditing(false)
-  }
+  // ---------------------------------------------------------------------------
+  // RENDER
+  // ---------------------------------------------------------------------------
 
   if (isLoading) {
     return (
@@ -175,13 +203,10 @@ export default function JournalEntryPage() {
     )
   }
 
-  // Use occurredAt for date display (timeBox is not included in EntryWithRelations)
+  // Date display
   const formattedDate = entry.occurredAt
     ? format(new Date(entry.occurredAt), 'EEEE, d. MMMM yyyy', { locale: de })
     : format(new Date(entry.createdAt), 'EEEE, d. MMMM yyyy', { locale: de })
-
-  // Parse template fields from JSON
-  const templateFields = entry.template?.fields as TemplateField[] | undefined
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
@@ -194,28 +219,14 @@ export default function JournalEntryPage() {
           Zurück
         </Link>
         <div className="flex gap-2">
-          {isEditing ? (
-            <>
-              <button onClick={handleCancel} className="btn btn-ghost btn-sm" disabled={isSaving}>
-                Abbrechen
-              </button>
-              <button onClick={handleSave} className="btn btn-primary btn-sm gap-2" disabled={isSaving}>
-                {isSaving ? (
-                  <span className="loading loading-spinner loading-xs" />
-                ) : (
-                  <IconDeviceFloppy className="h-4 w-4" />
-                )}
-                Speichern
-              </button>
-            </>
-          ) : (
+          {!isEditing && (
             <>
               <button onClick={() => setIsEditing(true)} className="btn btn-ghost btn-sm gap-2">
                 <IconEdit className="h-4 w-4" />
                 Bearbeiten
               </button>
               <button
-                onClick={handleDelete}
+                onClick={() => void handleDelete()}
                 className="btn btn-ghost btn-sm text-error"
                 disabled={isDeleting}
               >
@@ -230,113 +241,94 @@ export default function JournalEntryPage() {
         </div>
       </div>
 
-      {/* Entry Card */}
-      <div className="card bg-base-100 shadow-sm">
-        <div className="card-body">
-          {/* Type & Date */}
-          <div className="flex items-center gap-3">
-            {entry.type && (
-              <div
-                className="flex items-center gap-2 rounded-full px-3 py-1 text-sm bg-base-200"
-              >
-                {entry.type.icon && <TablerIcon name={entry.type.icon} size={16} />}
-                <span>{entry.type.name}</span>
+      {/* Edit Mode: DynamicJournalForm + Panels */}
+      {isEditing && types.length > 0 ? (
+        <div className="rounded-lg border border-primary/30 bg-base-100 p-4 space-y-4">
+          <DynamicJournalForm
+            ref={formRef}
+            types={types}
+            templates={templates}
+            existingEntry={entry}
+            existingEntryId={entry.id}
+            initialTypeId={entry.type?.id}
+            initialTemplateId={entry.templateId || undefined}
+            initialContent={entry.content}
+            onSubmit={handleEditSubmit}
+            onSaveAndRunPipeline={handleEditSubmitAndPipeline}
+            onCancel={() => setIsEditing(false)}
+            isSubmitting={isSaving}
+            date={today}
+          />
+
+          {/* OCR Source Panel with restore button */}
+          {hasOCRSources && (
+            <OCRSourcePanel
+              noteId={entry.id}
+              initialTranscript={entry.content}
+              onRestoreToContent={(text) => formRef.current?.appendToContent(text)}
+            />
+          )}
+
+          {/* Tasks Panel */}
+          <JournalTasksPanel
+            journalEntryId={entry.id}
+            tasks={[]}
+            onTasksChange={() => {}}
+          />
+        </div>
+      ) : isEditing ? (
+        // Metadata still loading
+        <div className="flex justify-center py-8">
+          <span className="loading loading-spinner loading-md" />
+        </div>
+      ) : (
+        // View Mode
+        <div className="card bg-base-100 shadow-sm">
+          <div className="card-body">
+            {/* Type & Date */}
+            <div className="flex items-center gap-3">
+              {entry.type && (
+                <div className="flex items-center gap-2 rounded-full px-3 py-1 text-sm bg-base-200">
+                  {entry.type.icon && <TablerIcon name={entry.type.icon} size={16} />}
+                  <span>{entry.type.name}</span>
+                </div>
+              )}
+              <span className="text-sm text-base-content/60">{formattedDate}</span>
+            </div>
+
+            {/* Title */}
+            {entry.title && <h1 className="text-xl font-semibold">{entry.title}</h1>}
+
+            {/* Template Info */}
+            {entry.template && (
+              <div className="text-sm text-base-content/60">
+                Template: {entry.template.name}
               </div>
             )}
-            <span className="text-sm text-base-content/60">{formattedDate}</span>
-          </div>
 
-          {/* Title */}
-          {isEditing ? (
-            <input
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              placeholder="Titel (optional)"
-              className="input input-bordered w-full text-xl font-semibold"
-            />
-          ) : (
-            entry.title && <h1 className="text-xl font-semibold">{entry.title}</h1>
-          )}
-
-          {/* Template Info */}
-          {entry.template && (
-            <div className="text-sm text-base-content/60">
-              Template: {entry.template.name}
-            </div>
-          )}
-
-          {/* Content */}
-          {isEditing ? (
-            templateFields && templateFields.length > 0 ? (
-              // Template-based editing
-              <div className="space-y-4">
-                {[...templateFields]
-                  .sort((a, b) => a.order - b.order)
-                  .map((field) => (
-                    <div key={field.id} className="form-control">
-                      <label className="label">
-                        <span className="label-text font-medium">
-                          {field.icon && <span className="mr-2">{field.icon}</span>}
-                          {field.label || field.type}
-                          {field.required && <span className="text-error ml-1">*</span>}
-                        </span>
-                      </label>
-                      {field.instruction && (
-                        <p className="mb-2 text-sm text-base-content/60">{field.instruction}</p>
-                      )}
-                      {field.type === 'textarea' ? (
-                        <textarea
-                          value={fieldValues[field.id] || ''}
-                          onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                          className="textarea textarea-bordered min-h-32 w-full"
-                          placeholder={field.instruction || ''}
-                        />
-                      ) : (
-                        <input
-                          type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : field.type === 'time' ? 'time' : 'text'}
-                          value={fieldValues[field.id] || ''}
-                          onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                          className="input input-bordered w-full"
-                          placeholder={field.instruction || ''}
-                        />
-                      )}
-                    </div>
-                  ))}
-              </div>
-            ) : (
-              // Plain text editing
-              <textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="textarea textarea-bordered min-h-64 w-full"
-                placeholder="Inhalt..."
-              />
-            )
-          ) : (
-            // View mode - render markdown-like content
+            {/* Content */}
             <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
               {entry.content}
             </div>
-          )}
 
-          {/* Location */}
-          {entry.location && (
-            <div className="flex items-center gap-2 pt-4 text-sm text-base-content/60">
-              <TablerIcon name="map_pin" size={16} />
-              <span>{entry.location.name}</span>
-            </div>
-          )}
-
-          {/* Timestamps */}
-          <div className="border-t border-base-200 pt-4 text-xs text-base-content/50">
-            <div>Erstellt: {format(new Date(entry.createdAt), 'dd.MM.yyyy HH:mm', { locale: de })}</div>
-            {entry.updatedAt !== entry.createdAt && (
-              <div>Bearbeitet: {format(new Date(entry.updatedAt), 'dd.MM.yyyy HH:mm', { locale: de })}</div>
+            {/* Location */}
+            {entry.location && (
+              <div className="flex items-center gap-2 pt-4 text-sm text-base-content/60">
+                <TablerIcon name="map_pin" size={16} />
+                <span>{entry.location.name}</span>
+              </div>
             )}
+
+            {/* Timestamps */}
+            <div className="border-t border-base-200 pt-4 text-xs text-base-content/50">
+              <div>Erstellt: {format(new Date(entry.createdAt), 'dd.MM.yyyy HH:mm', { locale: de })}</div>
+              {entry.updatedAt !== entry.createdAt && (
+                <div>Bearbeitet: {format(new Date(entry.updatedAt), 'dd.MM.yyyy HH:mm', { locale: de })}</div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

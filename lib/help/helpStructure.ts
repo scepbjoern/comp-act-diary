@@ -66,9 +66,9 @@ export const helpCategories: HelpCategory[] = [
         id: 'journal-view',
         slug: 'journal-ansicht',
         title: 'Journal-Ansicht',
-        description: 'Einträge mit Aufgaben, OCR-Quellen, Sharing und Zeitstempeln',
+        description: 'Einträge erstellen, inline bearbeiten, Media-Uploads, Aufgaben und Sharing',
         icon: 'book',
-        keywords: ['journal', 'aufgabe', 'task', 'teilen', 'ocr', 'zeitstempel', 'panel', 'ai-einstellungen', 'template']
+        keywords: ['journal', 'aufgabe', 'task', 'teilen', 'ocr', 'zeitstempel', 'panel', 'ai-einstellungen', 'template', 'inline', 'bearbeiten', 'edit', 'media', 'upload']
       },
       {
         id: 'reflections',
@@ -82,17 +82,17 @@ export const helpCategories: HelpCategory[] = [
         id: 'media',
         slug: 'medien',
         title: 'Fotos & Medien',
-        description: 'Bilder hinzufügen, Kamera nutzen, Galerie',
+        description: 'Bilder hinzufügen, Kamera nutzen, Foto-Upload im Journal',
         icon: 'photo_camera',
-        keywords: ['foto', 'bild', 'kamera', 'galerie', 'upload']
+        keywords: ['foto', 'bild', 'kamera', 'galerie', 'upload', 'journal', 'media', 'camera']
       },
       {
         id: 'voice-input',
         slug: 'spracheingabe',
-        title: 'Spracheingabe',
-        description: 'Texte per Mikrofon diktieren',
+        title: 'Spracheingabe & Audio-Upload',
+        description: 'Texte per Mikrofon diktieren oder Audio-Dateien hochladen und transkribieren',
         icon: 'mic',
-        keywords: ['mikrofon', 'sprache', 'diktieren', 'audio', 'transkription']
+        keywords: ['mikrofon', 'sprache', 'diktieren', 'audio', 'transkription', 'upload', 'mp3', 'm4a', 'segmentierung']
       },
       {
         id: 'day-summary',
@@ -287,9 +287,9 @@ export const helpCategories: HelpCategory[] = [
         id: 'ocr',
         slug: 'texterkennung',
         title: 'Texterkennung (OCR)',
-        description: 'Text aus Bildern und PDFs extrahieren',
+        description: 'Text aus Bildern und PDFs extrahieren, OCR im Journal nutzen',
         icon: 'document_scanner',
-        keywords: ['ocr', 'text', 'erkennung', 'bild', 'pdf', 'scan']
+        keywords: ['ocr', 'text', 'erkennung', 'bild', 'pdf', 'scan', 'journal', 'restore', 'content']
       },
       {
         id: 'text-improvement',

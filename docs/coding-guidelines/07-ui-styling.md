@@ -14,6 +14,17 @@ Tailwind CSS mit daisyUI für konsistentes Design.
 
 ---
 
+## Icons: TablerIcon-Registrierung
+
+Beim Verwenden eines Icon-Namens via `<TablerIcon name="..." />` **immer prüfen**, ob der Name bereits in `components/ui/TablerIcon.tsx` → `iconMap` registriert ist. Falls nicht:
+
+1. Icon-Komponente importieren: `import { IconFooBar } from '@tabler/icons-react'`
+2. Mapping hinzufügen: `'foo-bar': IconFooBar,`
+
+Nicht registrierte Icons werden als roter `[name]`-Text gerendert und erzeugen eine `console.warn`.
+
+---
+
 ## daisyUI Komponenten
 
 ### Buttons
@@ -269,6 +280,28 @@ Die Benutzeroberfläche ist auf **Deutsch**:
 // ❌ Vermeiden
 <button>Save</button>
 <button>Cancel</button>
+```
+
+---
+
+## Checkboxes
+
+**Immer native HTML-Checkboxen verwenden**, niemals die DaisyUI `checkbox`-Klasse. DaisyUI-Checkboxen werden in manchen Themes/Kontexten nicht korrekt gerendert.
+
+```tsx
+{/* ✅ Korrekt: Native HTML Checkbox */}
+<label className="flex items-center gap-2 cursor-pointer">
+  <input
+    type="checkbox"
+    checked={value}
+    onChange={(e) => onChange(e.target.checked)}
+    className="h-4 w-4 rounded border-base-300"
+  />
+  <span className="label-text">Label</span>
+</label>
+
+{/* ❌ Vermeiden: DaisyUI Checkbox */}
+<input type="checkbox" className="checkbox checkbox-sm" />
 ```
 
 ---

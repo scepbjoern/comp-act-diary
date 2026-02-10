@@ -39,7 +39,7 @@ function makeEntry(overrides: Partial<EntryWithRelations> = {}): EntryWithRelati
     capturedAt: new Date('2026-02-05T10:00:00Z'),
     createdAt: new Date('2026-02-05T10:00:00Z'),
     updatedAt: new Date('2026-02-05T10:00:00Z'),
-    type: { id: 'type-1', code: 'daily_note', name: 'Tagesnotiz', icon: null },
+    type: { id: 'type-1', code: 'daily_note', name: 'Tagesnotiz', icon: null, bgColorClass: null },
     template: null,
     location: null,
     mediaAttachments: [],

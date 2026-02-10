@@ -16,6 +16,7 @@ const updateTypeSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   icon: z.string().max(50).optional().nullable(),
   bgColorClass: z.string().max(100).optional().nullable(),
+  defaultTemplateId: z.string().uuid().optional().nullable(),
 })
 
 type RouteContext = {
@@ -65,26 +66,29 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Typ nicht gefunden' }, { status: 404 })
     }
 
-    // System types (userId = null) cannot be edited
-    if (existing.userId === null) {
-      return NextResponse.json(
-        { error: 'System-Typen können nicht bearbeitet werden' },
-        { status: 403 }
-      )
-    }
+    // System types: only defaultTemplateId can be changed by users
+    const isSystemType = existing.userId === null
+    const { name, icon, bgColorClass, defaultTemplateId } = result.data
 
-    // Only owner can edit
-    if (existing.userId !== userId) {
+    if (isSystemType) {
+      // For system types, only allow setting defaultTemplateId
+      const hasNonTemplateChanges = name !== undefined || icon !== undefined || bgColorClass !== undefined
+      if (hasNonTemplateChanges) {
+        return NextResponse.json(
+          { error: 'System-Typen können nicht bearbeitet werden (nur Standard-Template änderbar)' },
+          { status: 403 }
+        )
+      }
+    } else if (existing.userId !== userId) {
       return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 })
     }
-
-    const { name, icon, bgColorClass } = result.data
 
     // Build update data
     const updateData: Record<string, unknown> = {}
     if (name !== undefined) updateData.name = name
     if (icon !== undefined) updateData.icon = icon
     if (bgColorClass !== undefined) updateData.bgColorClass = bgColorClass
+    if (defaultTemplateId !== undefined) updateData.defaultTemplateId = defaultTemplateId
 
     const type = await prisma.journalEntryType.update({
       where: { id },
@@ -95,8 +99,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         name: true,
         icon: true,
         bgColorClass: true,
+        defaultTemplateId: true,
         sortOrder: true,
         userId: true,
+        defaultTemplate: { select: { id: true, name: true } },
       },
     })
 

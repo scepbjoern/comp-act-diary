@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
+import { cookies } from 'next/headers'
+import { getPrisma } from '@/lib/core/prisma'
 
 export async function POST(req: NextRequest) {
   try {
@@ -53,8 +55,36 @@ export async function POST(req: NextRequest) {
 
     // Return the relative URL path
     const url = `/uploads/images/${decade}/${year}/${month}/${day}/${filename}`
-    
-    return NextResponse.json({ url, filename })
+
+    // Create a MediaAsset for journal integration (with demo user fallback)
+    let assetId: string | null = null
+    try {
+      const prisma = getPrisma()
+      const cookieStore = await cookies()
+      const cookieUserId = cookieStore.get('userId')?.value
+      let user = cookieUserId
+        ? await prisma.user.findUnique({ where: { id: cookieUserId } })
+        : null
+      if (!user) {
+        user = await prisma.user.findUnique({ where: { username: 'demo' } })
+      }
+      if (user) {
+        const asset = await prisma.mediaAsset.create({
+          data: {
+            userId: user.id,
+            filePath: url,
+            mimeType: file.type || 'image/jpeg',
+            capturedAt: targetDate,
+          },
+        })
+        assetId = asset.id
+      }
+    } catch (err) {
+      // Non-critical: image is saved, asset creation is best-effort
+      console.warn('Could not create MediaAsset for uploaded image:', err)
+    }
+
+    return NextResponse.json({ url, filename, assetId })
   } catch (error) {
     console.error('Image upload error:', error)
     return NextResponse.json(

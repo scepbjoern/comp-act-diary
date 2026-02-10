@@ -102,6 +102,7 @@ export interface EntryTypeInfo {
   code: string
   name: string
   icon: string | null
+  bgColorClass: string | null
 }
 
 export interface EntryTemplateInfo {
@@ -189,7 +190,7 @@ export interface UpdateMediaParams {
  * MediaAttachments are loaded separately via Entity relation.
  */
 export const entryIncludeLean = {
-  type: { select: { id: true, code: true, name: true, icon: true } },
+  type: { select: { id: true, code: true, name: true, icon: true, bgColorClass: true } },
   template: { select: { id: true, name: true, fields: true } },
   location: { select: { id: true, name: true } },
 } as const

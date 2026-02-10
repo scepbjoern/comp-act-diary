@@ -349,18 +349,30 @@ export function useJournalEntries(options: UseJournalEntriesOptions = {}): UseJo
 
   const runPipeline = useCallback(async (entryId: string): Promise<boolean> => {
     setError(null)
+    console.log('[runPipeline] Starting for entry:', entryId)
 
     try {
       const response = await fetch('/api/journal-ai/pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify({ entryId }),
+        body: JSON.stringify({ journalEntryId: entryId }),
       })
 
+      const data = await response.json()
+      console.log('[runPipeline] Response:', response.status, data)
+
       if (!response.ok) {
-        const data = await response.json()
         throw new Error(data.error || 'AI-Pipeline fehlgeschlagen')
+      }
+
+      // Log individual step results for debugging
+      if (data.steps) {
+        for (const step of data.steps) {
+          if (!step.success) {
+            console.warn(`[runPipeline] Step "${step.step}" failed:`, step.error)
+          }
+        }
       }
 
       // Refetch the entry to get updated data
@@ -369,13 +381,21 @@ export function useJournalEntries(options: UseJournalEntriesOptions = {}): UseJo
       })
 
       if (entryResponse.ok) {
-        const data = await entryResponse.json()
-        const updatedEntry = data.entry as EntryWithRelations
+        const entryData = await entryResponse.json()
+        const updatedEntry = entryData.entry as EntryWithRelations
         setEntries((prev) => prev.map((e) => (e.id === entryId ? updatedEntry : e)))
+      }
+
+      // Return false if all steps failed
+      const allFailed = data.steps?.every((s: { success: boolean }) => !s.success)
+      if (allFailed && data.steps?.length > 0) {
+        const errors = data.steps.map((s: { step: string; error?: string }) => `${s.step}: ${s.error}`).join('; ')
+        throw new Error(`Alle Pipeline-Schritte fehlgeschlagen: ${errors}`)
       }
 
       return true
     } catch (err) {
+      console.error('[runPipeline] Error:', err)
       setError(err instanceof Error ? err.message : 'Unbekannter Fehler')
       return false
     }

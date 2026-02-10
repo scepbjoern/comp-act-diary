@@ -405,10 +405,10 @@ async function seedSystemMetrics() {
 async function seedJournalEntryTypes() {
   console.log('Seeding JournalEntryTypes...')
   const types = [
-    { code: 'daily_note', name: 'Tagesnotiz', icon: '📝', bgColorClass: 'bg-blue-900/20' },
-    { code: 'reflection_week', name: 'Wochenreflexion', icon: '📅', bgColorClass: 'bg-purple-900/20' },
-    { code: 'reflection_month', name: 'Monatsreflexion', icon: '📆', bgColorClass: 'bg-indigo-900/20' },
-    { code: 'diary', name: 'Tagebuch', icon: '📔', bgColorClass: 'bg-emerald-900/20' },
+    { code: 'daily_note', name: 'Tagesnotiz', icon: '📝', bgColorClass: 'bg-blue-100 dark:bg-blue-900/30' },
+    { code: 'reflection_week', name: 'Wochenreflexion', icon: '📅', bgColorClass: 'bg-purple-100 dark:bg-purple-900/30' },
+    { code: 'reflection_month', name: 'Monatsreflexion', icon: '📆', bgColorClass: 'bg-purple-100 dark:bg-purple-900/30' },
+    { code: 'diary', name: 'Allgemein', icon: '📝', bgColorClass: 'bg-green-100 dark:bg-green-900/30' },
   ]
   const result: Record<string, string> = {}
   for (const t of types) {
@@ -418,12 +418,13 @@ async function seedJournalEntryTypes() {
         data: { code: t.code, name: t.name, icon: t.icon, bgColorClass: t.bgColorClass }
       })
       console.log(`  Created: ${t.code}`)
-    } else if (!type.bgColorClass) {
-      // Update existing types with bgColorClass
+    } else {
+      // Always sync name, icon, and bgColorClass for system types
       type = await prisma.journalEntryType.update({
         where: { id: type.id },
-        data: { bgColorClass: t.bgColorClass }
+        data: { name: t.name, icon: t.icon, bgColorClass: t.bgColorClass }
       })
+      console.log(`  Updated: ${t.code} → ${t.name}`)
     }
     result[t.code] = type.id
   }

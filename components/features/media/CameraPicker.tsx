@@ -5,10 +5,13 @@ export function CameraPicker({
   label = 'Kamera',
   buttonClassName = 'pill',
   onCapture,
+  icon,
 }: {
   label?: string
   buttonClassName?: string
   onCapture: (files: File[]) => void
+  /** Optional icon element to render instead of / alongside label */
+  icon?: React.ReactNode
 }) {
   const [supported, setSupported] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -114,7 +117,7 @@ export function CameraPicker({
 
   return (
     <>
-      <button className={buttonClassName} onClick={handleOpen}>{label}</button>
+      <button type="button" className={buttonClassName} onClick={handleOpen} title="Kamera">{icon}{label}</button>
       {open && (
         <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4">
           <div className="bg-surface border border-slate-700 rounded-xl w-full max-w-md p-3 flex flex-col gap-3">
@@ -122,8 +125,8 @@ export function CameraPicker({
               <video ref={videoRef} className="w-full h-full object-contain" autoPlay playsInline muted />
             </div>
             <div className="flex items-center justify-between">
-              <button className="pill" onClick={handleClose}>Schließen</button>
-              <button className="pill" onClick={handleCapture}>Foto aufnehmen</button>
+              <button type="button" className="pill" onClick={handleClose}>Schließen</button>
+              <button type="button" className="pill" onClick={handleCapture}>Foto aufnehmen</button>
             </div>
           </div>
         </div>

@@ -60,15 +60,35 @@ POST /api/day/[date]/habits    → Gewohnheiten speichern</code></pre>
       <h3>Journal-Ansicht</h3>
       <p>Die <strong>Journal-Ansicht</strong> (/journal) zeigt alle Einträge in einer kompakten Kartenansicht. Jede Karte kann aufgeklappt werden und bietet:</p>
       <ul>
+        <li><strong>Inline-Bearbeitung:</strong> Einträge direkt in der Liste bearbeiten (✏️-Button)</li>
+        <li><strong>Media-Uploads:</strong> Audio, Foto, Kamera und OCR direkt im Formular</li>
         <li><strong>Aufgaben-Panel:</strong> Aufgaben zum Eintrag verwalten und KI-Extraktion triggern</li>
-        <li><strong>OCR-Quellen:</strong> Originalbilder und PDFs, aus denen Text extrahiert wurde</li>
+        <li><strong>OCR-Quellen:</strong> Originalbilder/PDFs mit "In Content übernehmen"-Button</li>
         <li><strong>Teilen:</strong> Eintrag mit anderen Benutzern teilen</li>
         <li><strong>Zeitstempel:</strong> Bezugs- und Erfassungszeit bearbeiten</li>
-        <li><strong>AI-Einstellungen:</strong> Template-basierte KI-Konfiguration einsehen (Content, Analyse, Zusammenfassung, Titel, Audio-Segmentierung)</li>
+        <li><strong>AI-Einstellungen:</strong> Template-basierte KI-Konfiguration einsehen</li>
       </ul>
     `,
     instructions: `
       <h3>So nutzt du die Journal-Ansicht</h3>
+      <h4>Eintrag erstellen</h4>
+      <ol>
+        <li>Klicke <strong>"Neuer Eintrag"</strong> oben rechts</li>
+        <li>Wähle Typ und Template, gib einen optionalen Titel ein</li>
+        <li>Befülle die Felder (Text, Spracheingabe, Audio-Upload, OCR, Foto)</li>
+        <li>Optional: Markiere den Eintrag als <strong>sensibel</strong></li>
+        <li>Klicke <strong>"Eintrag erstellen"</strong></li>
+      </ol>
+      <h4>Eintrag inline bearbeiten</h4>
+      <ol>
+        <li>Klicke das ✏️-Symbol bei einem Eintrag</li>
+        <li>Die Karte wird durch ein Bearbeitungsformular ersetzt</li>
+        <li>Typ und Template sind gesperrt, alle anderen Felder bearbeitbar</li>
+        <li>Nutze Media-Buttons für Audio, Foto, Kamera oder OCR</li>
+        <li>Klicke <strong>"Speichern"</strong> oder <strong>"Abbrechen"</strong></li>
+      </ol>
+      <h4>Detail-Seite</h4>
+      <p>Klicke auf "Details anzeigen" in einer Karte, um die Einzelansicht zu öffnen. Auch dort kannst du über ✏️ den Eintrag mit dem gleichen Formular bearbeiten.</p>
       <h4>Aufgaben</h4>
       <ol>
         <li>Klappe einen Eintrag auf – das Aufgaben-Panel wird angezeigt</li>
@@ -76,36 +96,40 @@ POST /api/day/[date]/habits    → Gewohnheiten speichern</code></pre>
         <li>Klicke <strong>"Tasks erkennen"</strong> um KI-Vorschläge zu erhalten</li>
         <li>Hake erledigte Aufgaben mit der Checkbox ab</li>
       </ol>
-      <h4>OCR-Quellen</h4>
+      <h4>OCR-Quellen & Restore</h4>
       <ol>
         <li>Einträge mit OCR-Quellen zeigen ein Panel "OCR-Quellen"</li>
         <li>Klicke auf das Panel um die Original-Dateien zu sehen</li>
-        <li>Vorschau und Download sind möglich</li>
+        <li>Nutze <strong>"In Content übernehmen"</strong> um den OCR-Text in den Inhalt einzufügen</li>
       </ol>
       <h4>Teilen und Zeitstempel</h4>
       <ul>
         <li><strong>🔗 Teilen:</strong> Klicke das Share-Icon um den Eintrag freizugeben</li>
         <li><strong>🕐 Zeitstempel:</strong> Klicke das Uhr-Icon um Bezugs-/Erfassungszeit zu ändern</li>
-        <li><strong>⚙️ AI-Settings:</strong> Klicke das Zahnrad-Icon für die Template-KI-Konfiguration (Link zu /settings/templates)</li>
+        <li><strong>⚙️ AI-Settings:</strong> Klicke das Zahnrad-Icon für die Template-KI-Konfiguration</li>
       </ul>
     `,
     technical: `
       <h3>Technische Details</h3>
       <h4>Architektur</h4>
-      <p>Die Journal-Ansicht nutzt <code>JournalEntryCard</code> mit integrierten Panels und Modals:</p>
+      <p>Die Journal-Ansicht nutzt <code>JournalEntryCard</code> mit integrierten Panels und Modals. Im Edit-Mode wird die Karte durch <code>DynamicJournalForm</code> ersetzt:</p>
       <ul>
+        <li><code>DynamicJournalForm</code> – Einheitliches Formular für Create und Edit</li>
         <li><code>JournalTasksPanel</code> – Tasks pro Eintrag (lazy-loaded)</li>
-        <li><code>OCRSourcePanel</code> – OCR-Quellen (lazy-loaded bei Expand)</li>
+        <li><code>OCRSourcePanel</code> – OCR-Quellen mit "Restore to Content" (E5)</li>
         <li><code>ShareEntryModal</code> – Freigabeverwaltung</li>
         <li><code>TimestampModal</code> – Zeitstempel bearbeiten</li>
         <li><code>AISettingsPopup</code> – KI-Konfiguration anzeigen</li>
+        <li><code>audioUploadCore</code> – Gemeinsamer Audio-Upload-Core</li>
       </ul>
       <h4>API-Endpunkte</h4>
-      <pre><code>GET  /api/journal-entries/[id]/tasks    → Tasks laden
-POST /api/journal-ai/extract-tasks       → KI-Task-Extraktion
-GET  /api/notes/[id]/ocr-sources         → OCR-Quellen laden
-POST /api/journal-entries/[id]/access     → Freigabe erteilen
-PATCH /api/journal-entries/[id]           → Zeitstempel aktualisieren</code></pre>
+      <pre><code>POST  /api/journal-entries               → Eintrag erstellen
+PATCH /api/journal-entries/[id]           → Eintrag aktualisieren
+POST  /api/journal-entries/[id]/media     → Media-Attachment hinzufügen
+POST  /api/journal-entries/[id]/audio     → Audio hochladen + transkribieren
+GET   /api/journal-entries/[id]/tasks     → Tasks laden
+POST  /api/journal-ai/extract-tasks       → KI-Task-Extraktion
+GET   /api/notes/[id]/ocr-sources         → OCR-Quellen laden</code></pre>
     `,
   },
   'reflexionen': {
@@ -148,61 +172,81 @@ POST /api/reflections/[id]/photos</code></pre>
   'medien': {
     summary: `
       <h3>Fotos und Medien</h3>
-      <p>CompACT Diary unterstützt <strong>Fotos</strong> in verschiedenen Bereichen:</p>
+      <p>CompACT Diary unterstützt <strong>Fotos und Medien</strong> in verschiedenen Bereichen:</p>
       <ul>
+        <li><strong>Journal-Einträge:</strong> Fotos direkt beim Erstellen oder Bearbeiten hinzufügen</li>
         <li><strong>Tageseinträge:</strong> Fotos zu Ernährungsnotizen</li>
         <li><strong>Reflexionen:</strong> Fotos zu Reflexionen</li>
+        <li><strong>Kamera:</strong> Fotos direkt aufnehmen (Desktop-Stream oder Mobile-App)</li>
         <li><strong>KI-Bilder:</strong> Automatisch generierte Tagesbilder</li>
       </ul>
-      <p>Bilder werden automatisch komprimiert und optimiert.</p>
     `,
     instructions: `
       <h3>Fotos hinzufügen</h3>
-      <h4>Foto hochladen</h4>
+      <h4>Foto im Journal-Formular</h4>
+      <ol>
+        <li>Öffne das Journal-Formular (Neuer Eintrag oder ✏️ Bearbeiten)</li>
+        <li>Klicke auf <strong>"Foto"</strong> in der Media-Leiste</li>
+        <li>Wähle ein oder mehrere Bilder von deinem Gerät</li>
+        <li>Die Bilder werden hochgeladen und als MediaAttachment verknüpft</li>
+      </ol>
+      <h4>Kamera im Journal-Formular</h4>
+      <ol>
+        <li>Klicke auf <strong>"Kamera"</strong> in der Media-Leiste</li>
+        <li>Erlaube den Kamerazugriff (Desktop: Webcam-Stream, Mobile: native Kamera-App)</li>
+        <li>Nimm ein Foto auf</li>
+        <li>Das Foto wird automatisch hochgeladen</li>
+      </ol>
+      <h4>Foto hochladen (Tageseinträge)</h4>
       <ol>
         <li>Tippe auf <strong>"Foto hochladen"</strong></li>
         <li>Wähle ein Bild von deinem Gerät</li>
-        <li>Das Bild wird automatisch komprimiert</li>
       </ol>
-      <h4>Kamera nutzen</h4>
-      <ol>
-        <li>Tippe auf <strong>"Kamera"</strong></li>
-        <li>Erlaube den Kamerazugriff</li>
-        <li>Nimm ein Foto auf</li>
-      </ol>
-      <h4>Foto-Einstellungen</h4>
-      <p>In Einstellungen konfigurierbar: Format (WebP/JPEG/PNG), Qualität, Max. Grösse</p>
     `,
     technical: `
       <h3>Technische Details</h3>
-      <h4>Upload-Prozess</h4>
+      <h4>Upload-Prozess (Journal)</h4>
       <ol>
-        <li>Client: Bild mit Canvas API komprimiert</li>
-        <li>Server: Speicherung in <code>/uploads</code></li>
-        <li>Datenbank-Eintrag wird erstellt</li>
+        <li>Client: Bild über <code>/api/upload-image</code> hochladen</li>
+        <li>Bei bestehendem Eintrag: <code>POST /api/journal-entries/[id]/media</code> (GALLERY)</li>
+        <li>Bei neuem Eintrag: Asset-URLs werden gesammelt und nach dem Erstellen verknüpft</li>
       </ol>
+      <h4>Kamera-Capture</h4>
+      <p><code>CameraPicker</code> nutzt <code>getUserMedia</code> mit Canvas-Capture für Desktop. Auf Mobile wird die native Kamera-App über <code>input[capture]</code> genutzt.</p>
       <h4>API-Endpunkte</h4>
-      <pre><code>POST /api/upload-image
-GET/DELETE /api/photos/[id]</code></pre>
+      <pre><code>POST /api/upload-image                       → Bild hochladen
+POST /api/journal-entries/[id]/media         → Media-Attachment erstellen
+GET/DELETE /api/photos/[id]                  → Foto laden/löschen</code></pre>
     `,
   },
   'spracheingabe': {
     summary: `
-      <h3>Spracheingabe</h3>
-      <p>Mit der <strong>Spracheingabe</strong> kannst du Texte diktieren.</p>
+      <h3>Spracheingabe & Audio-Upload</h3>
+      <p>Mit der <strong>Spracheingabe</strong> kannst du Texte diktieren. Zusätzlich können <strong>Audio-Dateien</strong> (.mp3, .m4a) hochgeladen und transkribiert werden.</p>
       <ul>
-        <li><strong>Wo verfügbar:</strong> Bemerkungen, Ernährungsnotizen, Reflexionen</li>
+        <li><strong>Mikrofon:</strong> Direkt im Browser aufnehmen (pro Feld oder global)</li>
+        <li><strong>Audio-Upload:</strong> Bestehende Dateien hochladen und transkribieren</li>
+        <li><strong>Segmentierung:</strong> Bei Multi-Feld-Templates wird das Transkript KI-gestützt auf Felder verteilt</li>
         <li><strong>Modellauswahl:</strong> Whisper, Deepgram, GPT-4o</li>
       </ul>
     `,
     instructions: `
-      <h3>So nutzt du die Spracheingabe</h3>
+      <h3>Spracheingabe nutzen</h3>
+      <h4>Mikrofon (Live-Aufnahme)</h4>
       <ol>
-        <li>Tippe auf das <strong>🎤 Mikrofon-Symbol</strong></li>
+        <li>Tippe auf das <strong>🎤 Mikrofon-Symbol</strong> neben einem Textfeld</li>
         <li>Erlaube den Mikrofonzugriff</li>
         <li>Sprich deinen Text</li>
         <li>Tippe erneut zum Beenden</li>
-        <li>Der transkribierte Text erscheint im Feld</li>
+        <li>Der transkribierte Text erscheint im jeweiligen Feld</li>
+      </ol>
+      <h4>Audio-Datei hochladen</h4>
+      <ol>
+        <li>Klicke auf den <strong>Audio-Upload</strong>-Button in der Media-Leiste</li>
+        <li>Wähle eine .mp3 oder .m4a Datei (max. 50 MB)</li>
+        <li>Die Datei wird hochgeladen und transkribiert</li>
+        <li>Bei Templates mit mehreren Feldern wird das Transkript automatisch auf Felder verteilt</li>
+        <li>Optional: Gib ein Aufnahmedatum ein (capturedAt)</li>
       </ol>
       <h4>Modell auswählen</h4>
       <p>Tippe auf das ⚙️-Symbol für Modellauswahl:</p>
@@ -214,13 +258,22 @@ GET/DELETE /api/photos/[id]</code></pre>
     `,
     technical: `
       <h3>Technische Details</h3>
+      <h4>Audio-Core</h4>
+      <p>Die Upload-Logik ist in <code>lib/audio/audioUploadCore.ts</code> zentralisiert. Drei Funktionen:</p>
+      <ul>
+        <li><code>uploadAudioForEntry()</code> – Upload zu bestehendem Entry (MediaAsset + Attachment)</li>
+        <li><code>uploadAudioStandalone()</code> – Legacy-Endpoint für neue Einträge</li>
+        <li><code>transcribeOnly()</code> – Nur Transkription, ohne Audio-Persistenz</li>
+      </ul>
       <h4>Audio-Aufnahme</h4>
       <p>Web Audio API mit MediaRecorder (WebM/Opus oder MP4/AAC)</p>
-      <h4>API-Endpunkt</h4>
-      <pre><code>POST /api/transcribe
-Body: { audio: File, model?, language? }</code></pre>
-      <h4>Audio-Chunking</h4>
-      <p>Lange Aufnahmen werden mit FFmpeg aufgeteilt und separat transkribiert.</p>
+      <h4>API-Endpunkte</h4>
+      <pre><code>POST /api/transcribe                         → Nur transkribieren
+POST /api/diary/upload-audio                 → Standalone-Upload
+POST /api/journal-entries/[id]/audio         → Upload zu bestehendem Entry
+POST /api/journal-ai/segment-audio           → Transkript auf Felder verteilen</code></pre>
+      <h4>Validierung</h4>
+      <p>Akzeptierte Formate: .mp3, .m4a. Max. Dateigrösse: 50 MB (konfigurierbar via <code>NEXT_PUBLIC_MAX_AUDIO_FILE_SIZE_MB</code>).</p>
     `,
   },
   'tageszusammenfassung': {

@@ -48,6 +48,7 @@ import { AudioPlayerH5 } from '@/components/features/media/AudioPlayerH5'
 import { OCRSourcePanel } from '@/components/features/ocr/OCRSourcePanel'
 import JournalTasksPanel from '@/components/features/tasks/JournalTasksPanel'
 import { SharedBadge } from '@/components/features/diary/SharedBadge'
+import { JournalEntryImage } from '@/components/features/diary/JournalEntryImage'
 
 // =============================================================================
 // TYPES
@@ -63,6 +64,8 @@ export interface JournalEntryCardProps {
   onDelete?: (entryId: string) => void
   onShare?: (entryId: string) => void
   onRunPipeline?: (entryId: string) => void
+  /** Whether pipeline is currently running for this entry */
+  pipelineRunning?: boolean
   /** Callback when user clicks on a photo thumbnail (Phase 1: Lightbox) */
   onViewPhoto?: (attachmentId: string, imageUrl: string) => void
   className?: string
@@ -90,19 +93,23 @@ export interface JournalEntryCardProps {
   onOpenTimestampModal?: () => void
   /** Open AI settings popup */
   onOpenAISettings?: () => void
+
+  // Phase 5: Inline-Edit
+  /** Callback to restore OCR text into content (E5) */
+  onRestoreOcrToContent?: (text: string) => void
 }
 
 // =============================================================================
 // HELPER COMPONENTS
 // =============================================================================
 
-/** Displays the entry type icon and name */
+/** Displays the entry type icon (emoji) and name */
 function EntryTypeTag({ type }: { type: EntryWithRelations['type'] }) {
   if (!type) return null
 
   return (
     <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-      {type.icon && <TablerIcon name={type.icon} className="h-3.5 w-3.5" />}
+      {type.icon && <span>{type.icon}</span>}
       <span>{type.name}</span>
     </span>
   )
@@ -285,6 +292,7 @@ function JournalEntryCardComponent({
   onDelete,
   onShare: _onShare,
   onRunPipeline,
+  pipelineRunning,
   onViewPhoto,
   className,
   // Phase 2: Panels
@@ -299,6 +307,8 @@ function JournalEntryCardComponent({
   onOpenShareModal,
   onOpenTimestampModal,
   onOpenAISettings,
+  // Phase 5: Inline-Edit
+  onRestoreOcrToContent,
 }: JournalEntryCardProps) {
   const [isExpanded, setIsExpanded] = useState(mode === 'expanded' || mode === 'detail')
 
@@ -316,8 +326,10 @@ function JournalEntryCardComponent({
     (a) => a.asset.mimeType?.startsWith('image/')
   ) || []
 
-  // Determine if OCR sources should be shown (auto-detect SOURCE attachments)
-  const hasOCRSources = entry.mediaAttachments?.some((a) => a.role === 'SOURCE') || false
+  // Determine if OCR sources should be shown (exclude audio from SOURCE check)
+  const hasOCRSources = entry.mediaAttachments?.some(
+    (a) => a.role === 'SOURCE' && !a.asset.mimeType?.startsWith('audio/')
+  ) || false
   const shouldShowOCR = showOCRSources !== false && hasOCRSources
   
   // Determine if we should show full content (expanded/detail mode or manually expanded in compact)
@@ -331,7 +343,10 @@ function JournalEntryCardComponent({
   return (
     <article
       className={clsx(
-        'group rounded-lg border bg-card text-card-foreground transition-shadow',
+        'group rounded-lg text-card-foreground transition-shadow',
+        entry.type?.bgColorClass
+          ? entry.type.bgColorClass
+          : 'border bg-card',
         mode === 'compact' && 'hover:shadow-sm',
         mode === 'detail' && 'shadow-sm',
         isEditing && 'ring-2 ring-primary',
@@ -342,9 +357,9 @@ function JournalEntryCardComponent({
       <div
         className={clsx(
           'flex items-start justify-between gap-2 p-3',
-          mode === 'compact' && !isExpanded && 'cursor-pointer'
+          mode === 'compact' && 'cursor-pointer'
         )}
-        onClick={mode === 'compact' && !isExpanded ? handleToggleExpand : undefined}
+        onClick={mode === 'compact' ? handleToggleExpand : undefined}
       >
         <div className="flex-1 min-w-0">
           {/* Type badge and template */}
@@ -377,12 +392,7 @@ function JournalEntryCardComponent({
             )}
           </div>
 
-          {/* Content preview in compact mode (when not expanded) */}
-          {mode === 'compact' && !isExpanded && contentPreview && (
-            <p className="mt-2 text-sm text-base-content/70 line-clamp-1">
-              {contentPreview}
-            </p>
-          )}
+          {/* Content preview removed – collapsed cards show only header */}
         </div>
 
         {/* Actions - all buttons always visible (Entscheidung F3)
@@ -393,8 +403,13 @@ function JournalEntryCardComponent({
               onClick={(e) => { e.stopPropagation(); onRunPipeline(entry.id) }}
               className="p-1.5 rounded hover:bg-muted"
               title="KI-Pipeline ausführen"
+              disabled={pipelineRunning}
             >
-              <IconSparkles className="h-4 w-4" />
+              {pipelineRunning ? (
+                <span className="loading loading-spinner loading-xs text-violet-500" />
+              ) : (
+                <IconSparkles className="h-4 w-4 text-violet-500" />
+              )}
             </button>
           )}
           {onOpenAISettings && (
@@ -403,7 +418,7 @@ function JournalEntryCardComponent({
               className={clsx('p-1.5 rounded hover:bg-muted', !isExpanded && 'hidden sm:inline-flex')}
               title="AI-Einstellungen"
             >
-              <IconSettings className="h-4 w-4" />
+              <IconSettings className="h-4 w-4 text-base-content/60" />
             </button>
           )}
           {onOpenTimestampModal && (
@@ -412,7 +427,7 @@ function JournalEntryCardComponent({
               className={clsx('p-1.5 rounded hover:bg-muted', !isExpanded && 'hidden sm:inline-flex')}
               title="Zeitpunkte bearbeiten"
             >
-              <IconClock className="h-4 w-4" />
+              <IconClock className="h-4 w-4 text-sky-500" />
             </button>
           )}
           {onOpenShareModal && (
@@ -421,7 +436,7 @@ function JournalEntryCardComponent({
               className={clsx('p-1.5 rounded hover:bg-muted', !isExpanded && 'hidden sm:inline-flex')}
               title="Teilen"
             >
-              <IconShare className="h-4 w-4" />
+              <IconShare className="h-4 w-4 text-teal-500" />
             </button>
           )}
           {onEdit && (
@@ -430,7 +445,7 @@ function JournalEntryCardComponent({
               className="p-1.5 rounded hover:bg-muted"
               title="Bearbeiten"
             >
-              <IconEdit className="h-4 w-4" />
+              <IconEdit className="h-4 w-4 text-amber-500" />
             </button>
           )}
           {onDelete && (
@@ -461,6 +476,12 @@ function JournalEntryCardComponent({
       {/* Expanded Content Area */}
       {showFullContent && (
         <div className="px-3 pb-3 space-y-3">
+          {/* W6: Generated image (DALL-E) – prominently at the top */}
+          <JournalEntryImage
+            entryId={entry.id}
+            summaryText={entry.aiSummary || entry.content || ''}
+          />
+
           {/* AI Summary Section (blue background) */}
           {entry.aiSummary && (
             <div className="bg-sky-100 dark:bg-sky-900/20 rounded-lg">
@@ -468,20 +489,6 @@ function JournalEntryCardComponent({
                 title="Zusammenfassung"
                 icon={<IconClipboard size={16} className="text-sky-600 dark:text-sky-400" />}
                 content={entry.aiSummary}
-                defaultCollapsed={false}
-                canGenerate={false}
-                canDelete={false}
-              />
-            </div>
-          )}
-
-          {/* AI Analysis Section (yellow background) */}
-          {entry.analysis && (
-            <div className="bg-amber-100 dark:bg-amber-900/20 rounded-lg">
-              <JournalEntrySection
-                title="Analyse"
-                icon={<IconSearch size={16} className="text-amber-600 dark:text-amber-400" />}
-                content={entry.analysis}
                 defaultCollapsed={false}
                 canGenerate={false}
                 canDelete={false}
@@ -503,6 +510,20 @@ function JournalEntryCardComponent({
                 markdown={entry.content} 
               />
             </JournalEntrySection>
+          )}
+
+          {/* AI Analysis Section (yellow background) – below content */}
+          {entry.analysis && (
+            <div className="bg-amber-100 dark:bg-amber-900/20 rounded-lg">
+              <JournalEntrySection
+                title="Analyse"
+                icon={<IconSearch size={16} className="text-amber-600 dark:text-amber-400" />}
+                content={entry.analysis}
+                defaultCollapsed={false}
+                canGenerate={false}
+                canDelete={false}
+              />
+            </div>
           )}
 
           {/* Audio Section with players and transcripts - collapsible, default collapsed */}
@@ -529,6 +550,7 @@ function JournalEntryCardComponent({
             <OCRSourcePanel
               noteId={entry.id}
               initialTranscript={entry.content}
+              onRestoreToContent={onRestoreOcrToContent}
             />
           )}
 

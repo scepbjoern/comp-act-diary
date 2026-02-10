@@ -57,8 +57,10 @@ export async function GET(req: NextRequest) {
         name: true,
         icon: true,
         bgColorClass: true,
+        defaultTemplateId: true,
         sortOrder: true,
         userId: true,
+        defaultTemplate: { select: { id: true, name: true } },
         _count: {
           select: {
             journalEntries: true,

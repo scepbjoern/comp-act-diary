@@ -8,8 +8,7 @@
 
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   IconPlus,
   IconFilter,
@@ -20,6 +19,9 @@ import {
 } from '@tabler/icons-react'
 import { JournalEntryCard } from '@/components/features/journal'
 import { DynamicJournalForm } from '@/components/features/journal/DynamicJournalForm'
+import type { DynamicJournalFormHandle } from '@/components/features/journal/DynamicJournalForm'
+import { OCRSourcePanel } from '@/components/features/ocr/OCRSourcePanel'
+import JournalTasksPanel from '@/components/features/tasks/JournalTasksPanel'
 import { PhotoLightbox } from '@/components/features/journal/PhotoLightbox'
 import { ShareEntryModal } from '@/components/features/diary/ShareEntryModal'
 import { TimestampModal } from '@/components/features/day/TimestampModal'
@@ -52,6 +54,91 @@ interface JournalTemplate {
 }
 
 // =============================================================================
+// EDIT MODE WRAPPER (shows form + panels together)
+// =============================================================================
+
+interface EditModeWrapperProps {
+  entry: EntryWithRelations
+  types: JournalEntryType[]
+  templates: JournalTemplate[]
+  today: string
+  isSubmitting: boolean
+  tasks?: TaskCardData[]
+  onSubmit: (data: {
+    typeId: string
+    templateId: string | null
+    content: string
+    fieldValues: Record<string, string>
+    title?: string
+    isSensitive?: boolean
+    audioFileIds?: string[]
+    audioTranscripts?: Record<string, string>
+    ocrAssetIds?: string[]
+    photoAssetIds?: string[]
+  }) => void
+  onCancel: () => void
+  onSaveAndRunPipeline?: (data: EditModeWrapperProps['onSubmit'] extends (data: infer D) => void ? D : never) => void
+  onTasksChange: () => void
+}
+
+/**
+ * Wrapper that renders DynamicJournalForm with OCR/Tasks panels below.
+ * Solves MT-10: panels must remain visible during inline editing.
+ */
+function EditModeWrapper({ entry, types, templates, today, isSubmitting, tasks, onSubmit, onCancel, onSaveAndRunPipeline, onTasksChange }: EditModeWrapperProps) {
+  const formRef = useRef<DynamicJournalFormHandle>(null)
+
+  // Check if entry has non-audio OCR sources
+  const hasOCRSources = useMemo(
+    () => entry.mediaAttachments.some(
+      (a) => a.role === 'SOURCE' && !a.asset.mimeType?.startsWith('audio/')
+    ),
+    [entry.mediaAttachments]
+  )
+
+  // Handle OCR restore to content via form ref
+  const handleRestoreToContent = useCallback((text: string) => {
+    formRef.current?.appendToContent(text)
+  }, [])
+
+  return (
+    <div className="rounded-lg border border-primary/30 bg-base-100 p-4 space-y-4">
+      <DynamicJournalForm
+        ref={formRef}
+        types={types}
+        templates={templates}
+        existingEntry={entry}
+        existingEntryId={entry.id}
+        initialTypeId={entry.type?.id}
+        initialTemplateId={entry.templateId || undefined}
+        initialContent={entry.content}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+        onSaveAndRunPipeline={onSaveAndRunPipeline}
+        isSubmitting={isSubmitting}
+        date={today}
+      />
+
+      {/* OCR Source Panel – visible in edit mode with restore button */}
+      {hasOCRSources && (
+        <OCRSourcePanel
+          noteId={entry.id}
+          initialTranscript={entry.content}
+          onRestoreToContent={handleRestoreToContent}
+        />
+      )}
+
+      {/* Tasks Panel – read-only during edit */}
+      <JournalTasksPanel
+        journalEntryId={entry.id}
+        tasks={tasks || []}
+        onTasksChange={onTasksChange}
+      />
+    </div>
+  )
+}
+
+// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
@@ -59,7 +146,6 @@ interface JournalTemplate {
  * Journal overview page using the unified JournalService.
  */
 export default function JournalPage() {
-  const router = useRouter()
   const { toasts, push, dismiss } = useToasts()
 
   // Filter state
@@ -90,6 +176,9 @@ export default function JournalPage() {
   // New entry form state
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Phase 5: Inline-edit state
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null)
 
   // Photo lightbox state
   const [lightboxPhoto, setLightboxPhoto] = useState<{ url: string; alt?: string } | null>(null)
@@ -215,14 +304,19 @@ export default function JournalPage() {
   // HANDLERS
   // ---------------------------------------------------------------------------
 
-  /** Handle form submission from DynamicJournalForm */
+  /** Handle form submission from DynamicJournalForm (create mode) */
   const handleFormSubmit = useCallback(async (data: {
     typeId: string
     templateId: string | null
     content: string
     fieldValues: Record<string, string>
+    title?: string
+    isSensitive?: boolean
+    occurredAt?: string
     audioFileIds?: string[]
     audioTranscripts?: Record<string, string>
+    ocrAssetIds?: string[]
+    photoAssetIds?: string[]
   }) => {
     setIsSubmitting(true)
     try {
@@ -230,14 +324,16 @@ export default function JournalPage() {
         typeId: data.typeId,
         templateId: data.templateId || undefined,
         content: data.content,
-        // Audio files are attached separately after entry creation
+        title: data.title,
+        isSensitive: data.isSensitive,
+        occurredAt: data.occurredAt ? new Date(data.occurredAt) : undefined,
       })
 
       if (result) {
         setIsFormOpen(false)
         push('Eintrag erstellt', 'success')
         
-        // If audio files were recorded, attach them
+        // Attach audio files after entry creation
         if (data.audioFileIds && data.audioFileIds.length > 0) {
           for (const assetId of data.audioFileIds) {
             const transcript = data.audioTranscripts?.[assetId]
@@ -257,6 +353,45 @@ export default function JournalPage() {
           }
           await refetch()
         }
+
+        // Attach OCR assets after entry creation
+        if (data.ocrAssetIds && data.ocrAssetIds.length > 0) {
+          for (const assetId of data.ocrAssetIds) {
+            try {
+              await fetch(`/api/journal-entries/${result.id}/media`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assetId, role: 'SOURCE' }),
+              })
+            } catch (err) {
+              console.error('Failed to attach OCR asset:', err)
+            }
+          }
+        }
+
+        // Attach photo assets after entry creation
+        if (data.photoAssetIds && data.photoAssetIds.length > 0) {
+          for (const assetId of data.photoAssetIds) {
+            try {
+              await fetch(`/api/journal-entries/${result.id}/media`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assetId, role: 'GALLERY' }),
+              })
+            } catch (err) {
+              console.error('Failed to attach photo:', err)
+            }
+          }
+        }
+
+        // Refetch if any media was attached
+        if (
+          (data.audioFileIds && data.audioFileIds.length > 0) ||
+          (data.ocrAssetIds && data.ocrAssetIds.length > 0) ||
+          (data.photoAssetIds && data.photoAssetIds.length > 0)
+        ) {
+          await refetch()
+        }
       }
     } catch (err) {
       console.error('Failed to create entry:', err)
@@ -266,19 +401,100 @@ export default function JournalPage() {
     }
   }, [createEntry, push, refetch])
 
+  /** W3: Create entry and then run AI pipeline */
+  const handleFormSubmitAndPipeline = useCallback(async (data: Parameters<typeof handleFormSubmit>[0]) => {
+    setIsSubmitting(true)
+    try {
+      const result = await createEntry({
+        typeId: data.typeId,
+        templateId: data.templateId || undefined,
+        content: data.content,
+        title: data.title,
+        isSensitive: data.isSensitive,
+        occurredAt: data.occurredAt ? new Date(data.occurredAt) : undefined,
+      })
+      if (result) {
+        setIsFormOpen(false)
+        push('Eintrag erstellt – Pipeline läuft…', 'success')
+        await runPipeline(result.id)
+        push('KI-Pipeline abgeschlossen', 'success')
+      }
+    } catch (err) {
+      console.error('Create+Pipeline failed:', err)
+      push('Fehler', 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [createEntry, runPipeline, push])
+
+  /** Phase 5: Handle edit-submit from DynamicJournalForm (edit mode) */
+  const handleEditSubmit = useCallback(async (entryId: string, data: {
+    typeId: string
+    templateId: string | null
+    content: string
+    fieldValues: Record<string, string>
+    title?: string
+    isSensitive?: boolean
+    occurredAt?: string
+    capturedAt?: string | null
+  }) => {
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/api/journal-entries/${entryId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: data.content,
+          title: data.title || null,
+          isSensitive: data.isSensitive,
+          occurredAt: data.occurredAt,
+          capturedAt: data.capturedAt,
+        }),
+      })
+      if (!res.ok) throw new Error('Update fehlgeschlagen')
+      setEditingEntryId(null)
+      await refetch()
+      push('Eintrag aktualisiert', 'success')
+    } catch (err) {
+      console.error('Failed to update entry:', err)
+      push('Fehler beim Aktualisieren', 'error')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [refetch, push])
+
+  /** W5: Edit-submit + pipeline */
+  const handleEditSubmitAndPipeline = useCallback(async (entryId: string, data: Parameters<typeof handleEditSubmit>[1]) => {
+    await handleEditSubmit(entryId, data)
+    try {
+      await runPipeline(entryId)
+      push('KI-Pipeline abgeschlossen', 'success')
+    } catch {
+      push('KI-Pipeline fehlgeschlagen', 'error')
+    }
+  }, [handleEditSubmit, runPipeline, push])
+
   const handleDeleteEntry = useCallback(async (entryId: string) => {
     if (!confirm('Eintrag wirklich löschen?')) return
     await deleteEntry(entryId)
     push('Eintrag gelöscht', 'success')
   }, [deleteEntry, push])
 
+  const [pipelineRunningId, setPipelineRunningId] = useState<string | null>(null)
   const handleRunPipeline = useCallback(async (entryId: string) => {
+    setPipelineRunningId(entryId)
     try {
-      await runPipeline(entryId)
-      push('KI-Pipeline abgeschlossen', 'success')
+      const success = await runPipeline(entryId)
+      if (success) {
+        push('KI-Pipeline abgeschlossen', 'success')
+      } else {
+        push('KI-Pipeline: einige Schritte fehlgeschlagen – siehe Konsole', 'error')
+      }
     } catch (err) {
       console.error('Pipeline failed:', err)
-      push('KI-Pipeline fehlgeschlagen', 'error')
+      push(err instanceof Error ? err.message : 'KI-Pipeline fehlgeschlagen', 'error')
+    } finally {
+      setPipelineRunningId(null)
     }
   }, [runPipeline, push])
 
@@ -395,6 +611,7 @@ export default function JournalPage() {
             types={types}
             templates={templates}
             onSubmit={handleFormSubmit}
+            onSaveAndRunPipeline={handleFormSubmitAndPipeline}
             isSubmitting={isSubmitting}
             showMediaButtons={true}
             date={today}
@@ -456,26 +673,44 @@ export default function JournalPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {entries.map((entry) => (
-            <JournalEntryCard
-              key={entry.id}
-              entry={entry}
-              mode="compact"
-              onEdit={() => router.push(`/journal/${entry.id}`)}
-              onDelete={() => handleDeleteEntry(entry.id)}
-              onRunPipeline={() => handleRunPipeline(entry.id)}
-              onViewPhoto={handleViewPhoto}
-              // Phase 2: Tasks
-              tasks={tasksMap[entry.id]}
-              onTasksChange={() => refetchTasksForEntry(entry.id)}
-              // Phase 3: Modals
-              isShared={entry.accessCount > 0}
-              sharedWithCount={entry.accessCount}
-              onOpenShareModal={() => setShareModalEntryId(entry.id)}
-              onOpenTimestampModal={() => setTimestampModalEntry(entry)}
-              onOpenAISettings={() => setAiSettingsEntry(entry)}
-            />
-          ))}
+          {entries.map((entry) =>
+            editingEntryId === entry.id ? (
+              // Phase 5: Inline-Edit – render DynamicJournalForm + panels
+              <EditModeWrapper
+                key={entry.id}
+                entry={entry}
+                types={types}
+                templates={templates}
+                today={today}
+                isSubmitting={isSubmitting}
+                tasks={tasksMap[entry.id]}
+                onSubmit={(data) => handleEditSubmit(entry.id, data)}
+                onSaveAndRunPipeline={(data) => handleEditSubmitAndPipeline(entry.id, data)}
+                onCancel={() => setEditingEntryId(null)}
+                onTasksChange={() => refetchTasksForEntry(entry.id)}
+              />
+            ) : (
+              <JournalEntryCard
+                key={entry.id}
+                entry={entry}
+                mode="compact"
+                onEdit={() => setEditingEntryId(entry.id)}
+                onDelete={() => handleDeleteEntry(entry.id)}
+                onRunPipeline={() => handleRunPipeline(entry.id)}
+                pipelineRunning={pipelineRunningId === entry.id}
+                onViewPhoto={handleViewPhoto}
+                // Phase 2: Tasks
+                tasks={tasksMap[entry.id]}
+                onTasksChange={() => refetchTasksForEntry(entry.id)}
+                // Phase 3: Modals
+                isShared={entry.accessCount > 0}
+                sharedWithCount={entry.accessCount}
+                onOpenShareModal={() => setShareModalEntryId(entry.id)}
+                onOpenTimestampModal={() => setTimestampModalEntry(entry)}
+                onOpenAISettings={() => setAiSettingsEntry(entry)}
+              />
+            )
+          )}
 
           {/* Load more trigger */}
           <div ref={loadMoreRef} className="h-10">

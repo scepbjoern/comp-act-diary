@@ -8,6 +8,7 @@
 
 import { useId, useCallback } from 'react'
 import { IconMicrophone, IconSparkles } from '@tabler/icons-react'
+import { RichTextEditor } from '@/components/features/editor/RichTextEditor'
 import { TemplateField } from '@/types/journal'
 
 interface FieldRendererProps {
@@ -66,14 +67,11 @@ export function FieldRenderer({
     switch (field.type) {
       case 'textarea':
         return (
-          <textarea
-            id={inputId}
-            value={value}
-            onChange={handleChange}
-            disabled={disabled}
-            className={baseTextareaClass}
+          <RichTextEditor
+            markdown={value}
+            onChange={onChange}
             placeholder={field.label ? undefined : 'Schreibe hier...'}
-            aria-describedby={field.instruction ? `${inputId}-instruction` : undefined}
+            readOnly={disabled}
           />
         )
 
@@ -131,13 +129,10 @@ export function FieldRenderer({
 
       default:
         return (
-          <textarea
-            id={inputId}
-            value={value}
-            onChange={handleChange}
-            disabled={disabled}
-            className={baseTextareaClass}
-            aria-describedby={field.instruction ? `${inputId}-instruction` : undefined}
+          <RichTextEditor
+            markdown={value}
+            onChange={onChange}
+            readOnly={disabled}
           />
         )
     }

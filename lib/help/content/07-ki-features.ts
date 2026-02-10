@@ -103,11 +103,27 @@ Body: { audio, model?, language? }</code></pre>
         <li><strong>Bilder:</strong> Fotos von Dokumenten, Screenshots</li>
         <li><strong>PDFs:</strong> Gescannte Dokumente</li>
         <li><strong>Handschrift:</strong> Auch handgeschriebener Text</li>
+        <li><strong>Journal-Integration:</strong> OCR direkt im Journal-Formular nutzen</li>
+        <li><strong>Restore to Content:</strong> OCR-Text nachträglich in den Inhalt übernehmen</li>
       </ul>
     `,
     instructions: `
       <h3>OCR nutzen</h3>
-      <h4>Text aus Bild extrahieren</h4>
+      <h4>OCR im Journal-Formular</h4>
+      <ol>
+        <li>Öffne das Journal-Formular (Neuer Eintrag oder ✏️ Bearbeiten)</li>
+        <li>Klicke auf <strong>"OCR"</strong> in der Media-Leiste</li>
+        <li>Wähle ein Bild oder PDF</li>
+        <li>Der erkannte Text wird automatisch in das Content-Feld eingefügt</li>
+        <li>Die Quelldatei wird als MediaAttachment gespeichert</li>
+      </ol>
+      <h4>OCR-Text in Content übernehmen (Edit-Mode)</h4>
+      <ol>
+        <li>Öffne das OCR-Quellen-Panel bei einem bestehenden Eintrag</li>
+        <li>Klicke auf <strong>"In Content übernehmen"</strong></li>
+        <li>Der OCR-Text wird in das Inhaltsfeld eingefügt</li>
+      </ol>
+      <h4>Text aus Bild extrahieren (allgemein)</h4>
       <ol>
         <li>Lade ein Bild hoch</li>
         <li>Klicke auf <strong>"Text erkennen"</strong></li>
@@ -125,10 +141,13 @@ Body: { audio, model?, language? }</code></pre>
       <h3>Technische Details</h3>
       <h4>Technologie</h4>
       <p>Vision-Modelle (GPT-4V oder ähnlich) für OCR-Aufgaben.</p>
+      <h4>Journal-Integration</h4>
+      <p><code>OCRUploadButton</code> öffnet ein Modal für den Upload. Das Ergebnis (Text + mediaAssetIds) wird an <code>DynamicJournalForm</code> zurückgegeben und dort in den Content eingefügt.</p>
+      <p><code>OCRSourcePanel</code> zeigt gespeicherte OCR-Quellen an und bietet den "In Content übernehmen"-Button (E5).</p>
       <h4>API-Endpunkte</h4>
-      <pre><code>POST /api/ocr
-Body: { image: base64 | url }
-Response: { text: string }</code></pre>
+      <pre><code>POST /api/ocr                               → Text aus Bild extrahieren
+GET  /api/notes/[id]/ocr-sources            → OCR-Quelldateien laden
+POST /api/journal-entries/[id]/media        → OCR-Asset als SOURCE verknüpfen</code></pre>
       <h4>Unterstützte Formate</h4>
       <ul>
         <li>Bilder: JPEG, PNG, WebP, GIF</li>

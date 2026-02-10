@@ -5,8 +5,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
-import Together from 'together-ai'
 import { z } from 'zod'
 import { getPrisma } from '@/lib/core/prisma'
 import {
@@ -15,7 +13,8 @@ import {
   formatDateForPrompt,
   type JournalAISettings,
 } from '@/lib/config/defaultPrompts'
-import { FALLBACK_MODEL_ID, inferProvider, getApiKeyForProvider, type LLMProvider } from '@/lib/config/llmModels'
+import { FALLBACK_MODEL_ID, inferProvider, type LLMProvider } from '@/lib/config/llmModels'
+import { makeAIRequest } from '@/lib/core/ai'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -112,36 +111,29 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    const apiKey = getApiKeyForProvider(provider)
-    if (!apiKey) {
-      throw new Error(`Missing API key for provider: ${provider}`)
-    }
-    
-    let title: string
     const messages: Array<{ role: 'system' | 'user'; content: string }> = [
       { role: 'system', content: interpolatedPrompt },
       { role: 'user', content: text.substring(0, 1000) },
     ]
 
-    if (provider === 'openai') {
-      const openai = new OpenAI({ apiKey })
-      const completion = await openai.chat.completions.create({
-        model: titleSettings.modelId,
-        messages,
-        temperature: 0.7,
-        max_tokens: 50,
-      })
-      title = completion.choices[0]?.message?.content?.trim() || 'Tagebucheintrag'
-    } else {
-      const together = new Together({ apiKey })
-      const response = await together.chat.completions.create({
-        model: titleSettings.modelId,
-        messages,
-        max_tokens: 50,
-        temperature: 0.7,
-      })
-      title = response.choices?.[0]?.message?.content?.trim() || 'Tagebucheintrag'
-    }
+    // Use central makeAIRequest helper (same as all other AI features)
+    // Reasoning models (gpt-oss-*) need high max_tokens for internal reasoning budget
+    const response = await makeAIRequest({
+      model: titleSettings.modelId,
+      messages,
+      maxTokens: 2048,
+      temperature: 0.7,
+      provider,
+    })
+
+    let title = response.choices?.[0]?.message?.content?.trim() || ''
+    console.log('[generate-title] Model:', titleSettings.modelId, 'Provider:', provider, 'Raw:', JSON.stringify(title))
+
+    // Final fallback
+    if (!title) title = 'Tagebucheintrag'
+
+    // Strip surrounding quotes if LLM wraps the title
+    title = title.replace(/^["'„"»«]+|["'"»«"]+$/g, '')
 
     return NextResponse.json({ title, modelUsed: titleSettings.modelId })
   } catch (error) {

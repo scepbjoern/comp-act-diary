@@ -5,6 +5,12 @@ import { TablerIcon } from '@/components/ui/TablerIcon'
 import { IconX } from '@tabler/icons-react'
 import fixWebmDuration from 'fix-webm-duration'
 import { usePasscodeLock } from '@/hooks/usePasscodeLock'
+import {
+  uploadAudioForEntry,
+  uploadAudioStandalone,
+  transcribeOnly,
+  generateAudioFilename,
+} from '@/lib/audio/audioUploadCore'
 
 type RecordingState = 'idle' | 'recording' | 'paused' | 'uploading'
 
@@ -303,88 +309,57 @@ export function MicrophoneButton(props: {
     setStatusMessage('Datei wird hochgeladen...')
     setError(null)
     try {
-      const fd = new FormData()
-      const ext = blob.type.includes('ogg') ? 'ogg' : blob.type.includes('mp4') ? 'mp4' : blob.type.includes('mpeg') ? 'mp3' : 'webm'
-      
       const startTime = recordingStartTimeRef.current || new Date()
-      const year = startTime.getFullYear()
-      const month = String(startTime.getMonth() + 1).padStart(2, '0')
-      const day = String(startTime.getDate()).padStart(2, '0')
-      const hours = String(startTime.getHours()).padStart(2, '0')
-      const minutes = String(startTime.getMinutes()).padStart(2, '0')
-      const guid = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substr(2, 9)
-      
-      const filename = `${year}-${month}-${day}_${hours}-${minutes}_${guid}.${ext}`
-      fd.append('file', new File([blob], filename, { type: blob.type || 'audio/webm' }))
-      fd.append('model', selectedModel)
+      const filename = generateAudioFilename(startTime, blob.type || 'audio/webm')
+      const file = new File([blob], filename, { type: blob.type || 'audio/webm' })
 
-      // Use existing entry endpoint if existingEntryId is provided
+      const onStage = (_s: string, msg: string) => setStatusMessage(msg)
+
+      let text: string
+      let audioFileId: string | null = null
+      let audioFilePath: string | null = null
+
       if (existingEntryId) {
-        // Don't append text to DB - we update the editor locally instead
-        fd.append('appendText', 'false')
-        
-        setStatusMessage('Wird transkribiert...')
-        const res = await fetch(`/api/journal-entries/${existingEntryId}/audio`, { method: 'POST', body: fd, credentials: 'same-origin' })
-        if (!res.ok) {
-          const errorData = await res.json()
-          console.error('Server error response:', errorData)
-          const errorMessage = errorData.error || 'Upload fehlgeschlagen'
-          const details = errorData.details ? ` (${errorData.details})` : ''
-          throw new Error(errorMessage + details)
-        }
-        const data = await res.json()
-        if (onAudioData) {
-          onAudioData({ 
-            text: data.transcript, 
-            audioFileId: data.assetId,
-            audioFilePath: data.filePath,
-            capturedAt: startTime.toISOString(),
-            model: data.model || selectedModel,
-          })
-        } else if (onText) {
-          onText(data.transcript)
-        }
+        // Upload to existing entry (unified API)
+        const result = await uploadAudioForEntry(file, {
+          entryId: existingEntryId,
+          model: selectedModel,
+          appendText: false,
+        }, onStage)
+        text = result.text
+        audioFileId = result.audioFileId ?? null
+        audioFilePath = result.audioFilePath ?? null
       } else if (keepAudio && date) {
-        fd.append('date', date)
-        fd.append('time', time || '')
-        fd.append('keepAudio', String(keepAudio))
-        // Send recording start time as capturedAt
-        fd.append('capturedAt', startTime.toISOString())
-        
-        setStatusMessage('Wird transkribiert...')
-        const res = await fetch('/api/diary/upload-audio', { method: 'POST', body: fd, credentials: 'same-origin' })
-        if (!res.ok) {
-          const errorData = await res.json()
-          console.error('Server error response:', errorData)
-          const errorMessage = errorData.error || 'Upload fehlgeschlagen'
-          const details = errorData.details ? ` (${errorData.details})` : ''
-          throw new Error(errorMessage + details)
-        }
-        const data = await res.json()
-        if (onAudioData) {
-          onAudioData({ 
-            text: data.text, 
-            audioFileId: data.audioFileId,
-            audioFilePath: data.audioFilePath,
-            capturedAt: startTime.toISOString(),
-            model: data.model || selectedModel,
-          })
-        } else if (onText) {
-          onText(data.text)
-        }
+        // Upload standalone (legacy diary endpoint)
+        const result = await uploadAudioStandalone(file, {
+          date,
+          time: time || '',
+          model: selectedModel,
+          keepAudio,
+          capturedAt: startTime.toISOString(),
+        }, onStage)
+        text = result.text
+        audioFileId = result.audioFileId ?? null
+        audioFilePath = result.audioFilePath ?? null
       } else {
-        setStatusMessage('Wird transkribiert...')
-        const res = await fetch('/api/transcribe', { method: 'POST', body: fd, credentials: 'same-origin' })
-        if (!res.ok) {
-          const text = await res.text()
-          throw new Error(text || 'Transkription fehlgeschlagen')
-        }
-        const data = await res.json()
-        if (onAudioData) {
-          onAudioData({ text: data.text, audioFileId: null, audioFilePath: null, capturedAt: startTime.toISOString(), model: selectedModel })
-        } else if (onText) {
-          onText(data.text)
-        }
+        // Transcribe only (no persistence)
+        const result = await transcribeOnly(file, {
+          model: selectedModel,
+        }, onStage)
+        text = result.text
+      }
+
+      // Notify consumer
+      if (onAudioData) {
+        onAudioData({
+          text,
+          audioFileId,
+          audioFilePath,
+          capturedAt: startTime.toISOString(),
+          model: selectedModel,
+        })
+      } else if (onText) {
+        onText(text)
       }
     } finally {
       setState('idle')

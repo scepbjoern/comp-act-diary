@@ -1,34 +1,52 @@
 'use client'
 
+/**
+ * components/features/media/AudioUploadButton.tsx
+ * Button for uploading audio files (.mp3, .m4a) with transcription.
+ * Supports both legacy diary endpoint and unified journal-entries endpoint.
+ * Uses audioUploadCore for shared upload logic.
+ */
+
 import { useRef, useState, useEffect } from 'react'
 import { TablerIcon } from '@/components/ui/TablerIcon'
+import {
+  validateAudioFile,
+  formatElapsedTime,
+  estimateStage,
+  resolveTranscriptionModel,
+  uploadAudioForEntry,
+  uploadAudioStandalone,
+  STAGE_MESSAGES,
+  type UploadStage,
+  type AudioUploadResult,
+} from '@/lib/audio/audioUploadCore'
 
 interface AudioUploadButtonProps {
-  onAudioUploaded: (result: { text: string; audioFileId: string; audioFilePath: string; keepAudio: boolean; capturedAt?: string; model?: string }) => void
+  /** Legacy callback – kept for backward compatibility (DiarySection) */
+  onAudioUploaded?: (result: { text: string; audioFileId: string; audioFilePath: string; keepAudio: boolean; capturedAt?: string; model?: string }) => void
+  /** Unified callback – preferred for new code */
+  onResult?: (result: AudioUploadResult) => void
   date: string // ISO date string YYYY-MM-DD
   time: string // HH:MM time string
   keepAudio?: boolean
+  /** If set, uploads via /api/journal-entries/[id]/audio instead of legacy endpoint */
+  existingEntryId?: string
+  /** Show date/time input for capturedAt override */
+  showCapturedAtInput?: boolean
   className?: string
   compact?: boolean
   disabled?: boolean
   model?: string
 }
 
-type UploadStage = 'idle' | 'uploading' | 'analyzing' | 'transcribing' | 'complete'
-
-const stageMessages: Record<UploadStage, string> = {
-  idle: '',
-  uploading: 'Datei wird hochgeladen...',
-  analyzing: 'Audio wird analysiert...',
-  transcribing: 'Wird transkribiert...',
-  complete: 'Fertig!',
-}
-
 export default function AudioUploadButton({
   onAudioUploaded,
+  onResult,
   date,
   time,
   keepAudio = true,
+  existingEntryId,
+  showCapturedAtInput = false,
   className = '',
   compact = false,
   disabled = false,
@@ -41,6 +59,10 @@ export default function AudioUploadButton({
   const [elapsedTime, setElapsedTime] = useState(0)
   const elapsedTimeRef = useRef(0)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // State for optional capturedAt override
+  const [capturedAtDate, setCapturedAtDate] = useState('')
+  const [capturedAtTime, setCapturedAtTime] = useState('')
 
   // Timer for elapsed time display
   useEffect(() => {
@@ -64,50 +86,14 @@ export default function AudioUploadButton({
     }
   }, [uploading])
 
-  const formatElapsedTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    if (mins === 0) return `${secs}s`
-    return `${mins}m ${secs}s`
-  }
-
-  // Estimate progress stage based on elapsed time and file size
-  const updateStageByTime = (fileSizeMB: number) => {
-    // Rough estimates: 
-    // - Upload: ~2 seconds per MB (min 3s)
-    // - Analysis: ~5 seconds
-    // - Transcription: rest of the time
-    const uploadTime = Math.max(3, fileSizeMB * 2)
-    const analysisTime = 5
-    
-    return () => {
-      const elapsed = elapsedTimeRef.current
-      if (elapsed < uploadTime) {
-        setStage('uploading')
-      } else if (elapsed < uploadTime + analysisTime) {
-        setStage('analyzing')
-      } else {
-        setStage('transcribing')
-      }
-    }
-  }
-
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate file type
-    const validTypes = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/mp3']
-    if (!validTypes.includes(file.type) && !file.name.match(/\.(mp3|m4a)$/i)) {
-      setError('Bitte nur .mp3 oder .m4a Dateien hochladen')
-      return
-    }
-
-    // Check file size (max from env or 50MB)
-    const maxSizeMB = parseInt(process.env.NEXT_PUBLIC_MAX_AUDIO_FILE_SIZE_MB || '50', 10)
-    const maxSizeBytes = maxSizeMB * 1024 * 1024
-    if (file.size > maxSizeBytes) {
-      setError(`Datei zu groß. Maximum ${maxSizeMB}MB`)
+    // Validate using audioUploadCore
+    const validationError = validateAudioFile(file)
+    if (validationError) {
+      setError(validationError)
       return
     }
 
@@ -115,72 +101,68 @@ export default function AudioUploadButton({
     setError(null)
     setStage('uploading')
     
-    // Calculate file size in MB for stage estimation
+    // Stage estimation based on file size
     const fileSizeMB = file.size / (1024 * 1024)
-    const stageUpdater = updateStageByTime(fileSizeMB)
-    
-    // Start stage estimation interval
     const stageInterval = setInterval(() => {
-      stageUpdater()
+      setStage(estimateStage(elapsedTimeRef.current, fileSizeMB))
     }, 1000)
 
     try {
-      // Resolve transcription model (prop -> DB settings -> fallback)
-      let selectedModel = model
-      if (!selectedModel) {
-        try {
-          const settingsRes = await fetch('/api/user/settings', { credentials: 'same-origin' })
-          if (settingsRes.ok) {
-            const settingsData = await settingsRes.json()
-            selectedModel = settingsData.settings?.transcriptionModel
-          }
-        } catch {/* ignore settings fetch errors */}
-      }
-      if (!selectedModel) {
-        selectedModel = 'gpt-4o-transcribe'
+      const selectedModel = await resolveTranscriptionModel(model)
+
+      // Determine capturedAt: user override → file.lastModified → undefined
+      let capturedAt: string | undefined
+      if (capturedAtDate) {
+        const dateStr = capturedAtDate + (capturedAtTime ? `T${capturedAtTime}:00` : 'T00:00:00')
+        capturedAt = new Date(dateStr).toISOString()
+      } else if (file.lastModified) {
+        capturedAt = new Date(file.lastModified).toISOString()
       }
 
-      const formData = new FormData()
-      const capturedAt = file.lastModified ? new Date(file.lastModified).toISOString() : undefined
-      formData.append('file', file)
-      formData.append('date', date)
-      formData.append('time', time)
-      formData.append('model', selectedModel)
-      formData.append('keepAudio', String(keepAudio))
-      // Send file.lastModified as capturedAt (default for uploaded files)
-      if (capturedAt) {
-        formData.append('capturedAt', capturedAt)
-      }
+      let result: AudioUploadResult
 
-      setStage('uploading')
-      const response = await fetch('/api/diary/upload-audio', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        console.error('Server error response:', errorData)
-        const errorMessage = errorData.error || 'Upload fehlgeschlagen'
-        const details = errorData.details ? ` (${errorData.details})` : ''
-        throw new Error(errorMessage + details)
+      if (existingEntryId) {
+        // Upload to existing entry via unified API
+        result = await uploadAudioForEntry(file, {
+          entryId: existingEntryId,
+          model: selectedModel,
+        }, (s, msg) => { setStage(s); void msg })
+      } else {
+        // Upload via legacy standalone endpoint
+        result = await uploadAudioStandalone(file, {
+          date,
+          time,
+          model: selectedModel,
+          keepAudio,
+          capturedAt,
+        }, (s, msg) => { setStage(s); void msg })
       }
 
       setStage('complete')
-      const result = await response.json()
-      onAudioUploaded({
-        text: result.text,
-        audioFileId: result.audioFileId,
-        audioFilePath: result.audioFilePath,
-        keepAudio: result.keepAudio,
-        capturedAt,
-        model: result.model || selectedModel,
-      })
 
-      // Reset file input
+      // Call unified callback if provided
+      if (onResult) {
+        onResult(result)
+      }
+
+      // Call legacy callback for backward compatibility
+      if (onAudioUploaded) {
+        onAudioUploaded({
+          text: result.text,
+          audioFileId: result.audioFileId || '',
+          audioFilePath: result.audioFilePath || '',
+          keepAudio: result.keepAudio ?? keepAudio,
+          capturedAt: result.capturedAt,
+          model: result.model,
+        })
+      }
+
+      // Reset file input and capturedAt fields
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
+      setCapturedAtDate('')
+      setCapturedAtTime('')
     } catch (err) {
       console.error('Audio upload error:', err)
       setError(err instanceof Error ? err.message : 'Upload fehlgeschlagen')
@@ -194,7 +176,7 @@ export default function AudioUploadButton({
   // Get current status message
   const getStatusMessage = () => {
     if (!uploading) return ''
-    const baseMessage = stageMessages[stage]
+    const baseMessage = STAGE_MESSAGES[stage]
     const timeInfo = elapsedTime > 0 ? ` (${formatElapsedTime(elapsedTime)})` : ''
     return baseMessage + timeInfo
   }
@@ -202,18 +184,47 @@ export default function AudioUploadButton({
   // Icon size consistent at 20px
   const ICON_SIZE = 20
 
+  // Shared file input element
+  const fileInput = (
+    <input
+      ref={fileInputRef}
+      type="file"
+      accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/x-m4a"
+      onChange={handleFileSelect}
+      className="hidden"
+      disabled={disabled || uploading}
+    />
+  )
+
+  // Optional capturedAt input row
+  const capturedAtInputs = showCapturedAtInput && !compact && (
+    <div className="flex items-center gap-2 mt-2 text-sm">
+      <label className="text-base-content/70">Aufgenommen am:</label>
+      <input
+        type="date"
+        value={capturedAtDate}
+        onChange={(e) => setCapturedAtDate(e.target.value)}
+        className="input input-bordered input-xs"
+        disabled={uploading}
+      />
+      <span className="text-base-content/70">um</span>
+      <input
+        type="time"
+        value={capturedAtTime}
+        onChange={(e) => setCapturedAtTime(e.target.value)}
+        className="input input-bordered input-xs"
+        disabled={uploading}
+      />
+      <span className="text-base-content/50 text-xs">(optional)</span>
+    </div>
+  )
+
   if (compact) {
     return (
       <div className={`inline-flex items-center ${className}`}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/x-m4a"
-          onChange={handleFileSelect}
-          className="hidden"
-          disabled={disabled || uploading}
-        />
+        {fileInput}
         <button
+          type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || uploading}
           className="text-green-500 hover:text-green-400 disabled:opacity-50"
@@ -237,15 +248,9 @@ export default function AudioUploadButton({
 
   return (
     <div className={className}>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/x-m4a"
-        onChange={handleFileSelect}
-        className="hidden"
-        disabled={disabled || uploading}
-      />
+      {fileInput}
       <button
+        type="button"
         onClick={() => fileInputRef.current?.click()}
         disabled={disabled || uploading}
         className="pill flex items-center gap-2"
@@ -262,6 +267,7 @@ export default function AudioUploadButton({
           </>
         )}
       </button>
+      {capturedAtInputs}
       {uploading && (
         <div className="text-sm text-base-content/70 mt-1">
           Lange Audios werden automatisch in Teile aufgeteilt.

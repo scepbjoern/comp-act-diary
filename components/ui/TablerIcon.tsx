@@ -104,6 +104,7 @@ import {
   IconCircleX,
   IconTemplate,
   IconLayoutGrid,
+  IconClipboardText,
 } from '@tabler/icons-react'
 
 // Mapping from old Material Icon names to Tabler Icons
@@ -278,6 +279,21 @@ const iconMap: Record<string, typeof IconSettings> = {
   // Template icons
   template: IconTemplate,
   'layout-grid': IconLayoutGrid,
+
+  // Clipboard
+  'clipboard-text': IconClipboardText,
+
+  // Emoji fallbacks (used as JournalEntryType icons in DB)
+  '📝': IconNotebook,
+  '🍽️': IconLeaf,
+  '💊': IconStethoscope,
+  '🏋️': IconStairs,
+  '📅': IconCalendar,
+  '💡': IconBolt,
+  '🎯': IconTarget,
+  '❤️': IconHeart,
+  '📖': IconBook,
+  '🧠': IconBrain,
 }
 
 interface TablerIconProps {

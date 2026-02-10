@@ -68,6 +68,14 @@ else
   log "SETUP_FTS=false → Kein Volltextsuche-Setup."
 fi
 
+# =============================================================================
+# SYSTEM TYPES SYNC (idempotent, runs on every start)
+# =============================================================================
+log "Synchronisiere System-Typen..."
+psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f scripts/sync-system-types.sql -q 2>/dev/null || \
+  log "Warnung: System-Typen-Sync fehlgeschlagen (nicht kritisch)."
+log "System-Typen synchronisiert."
+
 log "DB-Schema sichergestellt. Starte App..."
 if [ "$#" -gt 0 ]; then
   log "Starte Kommando: $*"

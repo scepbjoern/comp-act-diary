@@ -298,7 +298,8 @@ export class JournalService {
       updateData.content = content
       updateData.contentUpdatedAt = new Date()
     }
-    if (fieldValues !== undefined) updateData.fieldValues = JSON.stringify(fieldValues)
+    // Note: fieldValues are already merged into content by the frontend form.
+    // JournalEntry has no fieldValues column – do not persist them separately.
     if (occurredAt !== undefined) updateData.occurredAt = occurredAt
     if (capturedAt !== undefined) updateData.capturedAt = capturedAt
     if (isSensitive !== undefined) updateData.isSensitive = isSensitive

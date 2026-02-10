@@ -15,8 +15,8 @@ import {
   IconCheck,
   IconX,
 } from '@tabler/icons-react'
-import { TablerIcon } from '@/components/ui/TablerIcon'
 import { Toasts, useToasts } from '@/components/ui/Toast'
+import { EmojiPickerButton } from '@/components/features/journal/EmojiPickerButton'
 
 interface JournalEntryType {
   id: string
@@ -24,12 +24,20 @@ interface JournalEntryType {
   name: string
   icon: string | null
   bgColorClass: string | null
+  defaultTemplateId: string | null
+  defaultTemplate: { id: string; name: string } | null
   sortOrder: number
   userId: string | null
   _count: {
     journalEntries: number
     templates: number
   }
+}
+
+interface Template {
+  id: string
+  name: string
+  typeId: string | null
 }
 
 // Available background color classes
@@ -59,17 +67,26 @@ export default function TypesPage() {
     name: '',
     icon: '',
     bgColorClass: 'bg-base-200',
+    defaultTemplateId: '' as string | null,
   })
   const [isSaving, setIsSaving] = useState(false)
+  const [templates, setTemplates] = useState<Template[]>([])
 
-  // Fetch types
+  // Fetch types and templates
   const fetchTypes = useCallback(async () => {
     try {
       setIsLoading(true)
-      const response = await fetch('/api/journal-entry-types')
-      if (!response.ok) throw new Error('Fehler beim Laden')
-      const data = await response.json()
-      setTypes(data.types || [])
+      const [typesRes, templatesRes] = await Promise.all([
+        fetch('/api/journal-entry-types'),
+        fetch('/api/templates'),
+      ])
+      if (!typesRes.ok) throw new Error('Fehler beim Laden')
+      const typesData = await typesRes.json()
+      setTypes(typesData.types || [])
+      if (templatesRes.ok) {
+        const templatesData = await templatesRes.json()
+        setTemplates(templatesData.templates || [])
+      }
     } catch (err) {
       console.error('Error fetching types:', err)
       setError('Fehler beim Laden der Typen')
@@ -84,7 +101,7 @@ export default function TypesPage() {
 
   // Start creating
   const handleStartCreate = () => {
-    setFormData({ code: '', name: '', icon: '', bgColorClass: 'bg-base-200' })
+    setFormData({ code: '', name: '', icon: '', bgColorClass: 'bg-base-200', defaultTemplateId: null })
     setIsCreating(true)
     setEditingId(null)
   }
@@ -96,6 +113,7 @@ export default function TypesPage() {
       name: type.name,
       icon: type.icon || '',
       bgColorClass: type.bgColorClass || 'bg-base-200',
+      defaultTemplateId: type.defaultTemplateId || null,
     })
     setEditingId(type.id)
     setIsCreating(false)
@@ -105,8 +123,31 @@ export default function TypesPage() {
   const handleCancel = () => {
     setIsCreating(false)
     setEditingId(null)
-    setFormData({ code: '', name: '', icon: '', bgColorClass: 'bg-base-200' })
+    setFormData({ code: '', name: '', icon: '', bgColorClass: 'bg-base-200', defaultTemplateId: null })
   }
+
+  // Save default template for a type (including system types)
+  const handleSetDefaultTemplate = async (typeId: string, templateId: string | null) => {
+    try {
+      const response = await fetch(`/api/journal-entry-types/${typeId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ defaultTemplateId: templateId || null }),
+      })
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Fehler beim Speichern')
+      }
+      push('Standard-Template gespeichert', 'success')
+      void fetchTypes()
+    } catch (err) {
+      push(err instanceof Error ? err.message : 'Fehler', 'error')
+    }
+  }
+
+  // Get templates for a specific type
+  const getTemplatesForType = (typeId: string) =>
+    templates.filter((t) => t.typeId === typeId || t.typeId === null)
 
   // Save (create or update)
   const handleSave = async () => {
@@ -261,14 +302,12 @@ export default function TypesPage() {
             </div>
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Icon (Tabler Icon Name)</span>
+                <span className="label-text">Icon</span>
               </label>
-              <input
-                type="text"
-                value={formData.icon}
-                onChange={(e) => setFormData((prev) => ({ ...prev, icon: e.target.value }))}
-                className="input input-bordered"
-                placeholder="z.B. sun, moon, heart"
+              <EmojiPickerButton
+                value={formData.icon || undefined}
+                onChange={(emoji) => setFormData((prev) => ({ ...prev, icon: emoji }))}
+                placeholder="Icon wählen"
               />
             </div>
             <div className="form-control">
@@ -316,18 +355,16 @@ export default function TypesPage() {
               >
                 {editingId === type.id ? (
                   // Edit mode
-                  <div className="flex flex-1 items-center gap-2">
+                  <div className="flex flex-1 flex-wrap items-center gap-2">
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                      className="input input-bordered input-sm flex-1"
+                      className="input input-bordered input-sm flex-1 min-w-[120px]"
                     />
-                    <input
-                      type="text"
-                      value={formData.icon}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, icon: e.target.value }))}
-                      className="input input-bordered input-sm w-24"
+                    <EmojiPickerButton
+                      value={formData.icon || undefined}
+                      onChange={(emoji) => setFormData((prev) => ({ ...prev, icon: emoji }))}
                       placeholder="Icon"
                     />
                     <select
@@ -351,12 +388,26 @@ export default function TypesPage() {
                 ) : (
                   // View mode
                   <>
-                    <div className="flex items-center gap-3">
-                      {type.icon && <TablerIcon name={type.icon} size={20} />}
-                      <div>
+                    <div className="flex flex-1 items-center gap-3">
+                      {type.icon && <span className="text-xl">{type.icon}</span>}
+                      <div className="flex-1">
                         <div className="font-medium">{type.name}</div>
                         <div className="text-xs text-base-content/60">
                           {type._count.journalEntries} Einträge · {type._count.templates} Templates
+                        </div>
+                        {/* Default template selector */}
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className="text-xs text-base-content/50">Standard-Template:</span>
+                          <select
+                            value={type.defaultTemplateId || ''}
+                            onChange={(e) => handleSetDefaultTemplate(type.id, e.target.value || null)}
+                            className="select select-bordered select-xs"
+                          >
+                            <option value="">– keins –</option>
+                            {getTemplatesForType(type.id).map((t) => (
+                              <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
                     </div>
@@ -389,7 +440,7 @@ export default function TypesPage() {
       <div>
         <h2 className="mb-3 font-medium">System-Typen</h2>
         <p className="mb-3 text-sm text-base-content/60">
-          Diese Typen sind vordefiniert und können nicht bearbeitet werden.
+          Vordefinierte Typen – du kannst das Standard-Template pro Typ festlegen.
         </p>
         <div className="space-y-2">
           {systemTypes.map((type) => (
@@ -397,12 +448,26 @@ export default function TypesPage() {
               key={type.id}
               className={`flex items-center justify-between rounded-lg p-3 ${type.bgColorClass || 'bg-base-200'}`}
             >
-              <div className="flex items-center gap-3">
-                {type.icon && <TablerIcon name={type.icon} size={20} />}
-                <div>
+              <div className="flex flex-1 items-center gap-3">
+                {type.icon && <span className="text-xl">{type.icon}</span>}
+                <div className="flex-1">
                   <div className="font-medium">{type.name}</div>
                   <div className="text-xs text-base-content/60">
                     {type._count.journalEntries} Einträge · {type._count.templates} Templates
+                  </div>
+                  {/* Default template selector */}
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="text-xs text-base-content/50">Standard-Template:</span>
+                    <select
+                      value={type.defaultTemplateId || ''}
+                      onChange={(e) => handleSetDefaultTemplate(type.id, e.target.value || null)}
+                      className="select select-bordered select-xs"
+                    >
+                      <option value="">– keins –</option>
+                      {getTemplatesForType(type.id).map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -415,7 +480,7 @@ export default function TypesPage() {
       {/* Link to Templates */}
       <div className="border-t border-base-300 pt-4">
         <Link href="/settings/templates" className="btn btn-ghost btn-sm gap-2">
-          <TablerIcon name="template" size={16} />
+          📋
           Templates verwalten
         </Link>
       </div>

@@ -30,6 +30,7 @@ interface OCRSourcePanelProps {
 export function OCRSourcePanel({
   noteId,
   initialTranscript,
+  onRestoreToContent,
 }: OCRSourcePanelProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -217,6 +218,26 @@ export function OCRSourcePanel({
                   Keine OCR-Quelldateien verknüpft
                 </p>
               )}
+
+              {/* Restore to Content button (E5) */}
+              {onRestoreToContent && (() => {
+                const ocrText = sources
+                  .map((s) => s.ocrText)
+                  .filter(Boolean)
+                  .join('\n\n')
+                const text = ocrText || initialTranscript || ''
+                if (!text) return null
+                return (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline gap-1"
+                    onClick={() => onRestoreToContent(text)}
+                  >
+                    <TablerIcon name="clipboard-text" className="w-4 h-4" />
+                    In Content übernehmen
+                  </button>
+                )
+              })()}
             </>
           )}
         </div>

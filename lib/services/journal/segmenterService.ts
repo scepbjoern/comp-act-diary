@@ -101,8 +101,9 @@ function segmentByExplicitMarkers(
 
   if (parts.length > 1) {
     // Successfully split by "nächstes feld"
+    // Strip leading/trailing punctuation left over from marker boundaries (e.g. ". ")
     for (let i = 0; i < Math.min(parts.length, sortedFields.length); i++) {
-      segments[sortedFields[i].id] = parts[i].trim()
+      segments[sortedFields[i].id] = parts[i].trim().replace(/^[.,;:!?\s]+/, '')
     }
 
     // If more parts than fields, append remainder to last field
