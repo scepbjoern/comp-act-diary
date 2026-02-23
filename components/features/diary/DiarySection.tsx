@@ -15,9 +15,8 @@ import type { DayNote } from '@/types/day'
 import DiaryInteractionPanel from './DiaryInteractionPanel'
 import { useReadMode } from '@/hooks/useReadMode'
 
-const DiaryEntriesAccordion = dynamic(() => import('@/components/features/diary/DiaryEntriesAccordion').then(mod => ({ default: mod.DiaryEntriesAccordion })), {
-  loading: () => <div className="text-sm text-gray-400">Lädt...</div>
-})
+import { DynamicJournalForm } from '@/components/features/journal/DynamicJournalForm'
+import { JournalEntryCard } from '@/components/features/journal/JournalEntryCard'
 
 interface DiarySectionProps {
   date: string
@@ -209,285 +208,74 @@ export function DiarySection({
 
       {/* New diary entry form - hidden in read mode */}
       {!readMode && (
-      <div className="space-y-2 md:p-3 md:rounded md:border md:border-slate-700 md:bg-slate-800/30">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs text-gray-400">Titel</span>
-          <input 
-            type="text" 
-            value={newDiaryTitle}
-            onChange={e => onNewDiaryTitleChange(e.target.value)}
-            placeholder="Optional: Titel für Eintrag"
-            className="flex-1 bg-background border border-slate-700 rounded px-2 py-1 text-sm"
-          />
-          <button
-            className="btn btn-ghost btn-xs text-gray-300 hover:text-gray-100"
-            onClick={onGenerateTitle}
-            title="Titel mit KI generieren"
-          >
-            <span className="md:inline hidden">Generieren</span>
-            ✨
-          </button>
-        </div>
-        
-        <div className="flex items-center gap-2 mb-2 flex-wrap">
-          <span className="text-xs text-gray-400">Bezugzeit</span>
-          <input 
-            type="time" 
-            value={newDiaryTime}
-            onChange={e => onNewDiaryTimeChange(e.target.value)}
-            className="bg-background border border-slate-700 rounded px-2 py-1 text-sm"
-          />
-          <span className="text-xs text-gray-400">Erfasst am</span>
-          <input
-            type="datetime-local"
-            value={resolveCapturedDateTime(newDiaryCapturedDate, newDiaryCapturedTime)}
-            onChange={e => handleCapturedDateTimeChange(e.target.value)}
-            className="bg-background border border-slate-700 rounded px-2 py-1 text-sm"
-          />
-        </div>
-        
-        <RichTextEditor
-          key={editorKey}
-          markdown={newDiaryText}
-          onChange={onNewDiaryTextChange}
-          placeholder="Neuer Tagebucheintrag..."
-          time={newDiaryTime}
-        />
-
-        {/* Original transcript section - shown when text was improved */}
-        {originalDiaryText && (
-          <OriginalTranscriptSection
-            originalText={originalDiaryText}
-            onRestore={(t: string) => {
-              onNewDiaryTextChange(t)
-              setTimeout(() => onEditorKeyIncrement(), 0)
-            }}
-          />
-        )}
-        
-        {/* Direct re-transcribe button for newly uploaded audio */}
-        {newDiaryAudioFileIds.length > 0 && (
-          <div className="flex items-center gap-2 p-2 bg-slate-700/30 rounded">
-            <span className="text-xs text-gray-400">
-              Audio bereit {isRetranscribing && '(transkribiere...)'}
-            </span>
-            <button
-              className="btn btn-ghost btn-xs text-gray-300 hover:text-gray-100"
-              onClick={onShowRetranscribeOptionsToggle}
-              disabled={isRetranscribing}
-              title="Audio mit anderem Modell erneut transkribieren"
-            >
-              {isRetranscribing ? '⏳' : '🔄'} Neu transkribieren
-            </button>
+        <DynamicJournalForm
+          types={[
+            { id: 'diary', code: 'diary', name: 'Tagebuch', icon: '📝' }
+          ]}
+          templates={[]}
+          initialTypeId="diary"
+          date={date}
+          onSubmit={async (entryData) => {
+            // Mapping von DynamicJournalForm-Data auf die bisherige saveDiaryEntry-Logik
+            // Da DynamicJournalForm die Felder schon aufbereitet, müssen wir sie nur in den State schieben und speichern
+            onNewDiaryTitleChange(entryData.title || '')
+            onNewDiaryTextChange(entryData.content || '')
             
-            {showRetranscribeOptions && createPortal(
-              <div className="modal modal-open">
-                <div className="modal-box max-w-xs">
-                  <button
-                    className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-                    onClick={onShowRetranscribeOptionsToggle}
-                  >
-                    <IconX size={20} />
-                  </button>
-                  
-                  <h3 className="font-bold text-lg mb-4">Modell auswählen</h3>
-                  
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-xs text-base-content/60 font-medium mb-1">Whisper:</div>
-                      <button
-                        className="btn btn-ghost btn-sm w-full justify-start text-left"
-                        onClick={() => onRetranscribeAudio('openai/whisper-large-v3')}
-                      >
-                        openai/whisper-large-v3
-                      </button>
-                    </div>
-                    
-                    <div>
-                      <div className="text-xs text-base-content/60 font-medium mb-1">Deepgram:</div>
-                      <button
-                        className="btn btn-ghost btn-sm w-full justify-start text-left"
-                        onClick={() => onRetranscribeAudio('deepgram/nova-3')}
-                      >
-                        deepgram/nova-3
-                      </button>
-                    </div>
-                    
-                    <div>
-                      <div className="text-xs text-base-content/60 font-medium mb-1">GPT:</div>
-                      <button
-                        className="btn btn-ghost btn-sm w-full justify-start text-left"
-                        onClick={() => onRetranscribeAudio('gpt-4o-mini-transcribe')}
-                      >
-                        gpt-4o-mini-transcribe
-                      </button>
-                      <button
-                        className="btn btn-ghost btn-sm w-full justify-start text-left"
-                        onClick={() => onRetranscribeAudio('gpt-4o-transcribe')}
-                      >
-                        gpt-4o-transcribe
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div className="modal-backdrop" onClick={onShowRetranscribeOptionsToggle} />
-              </div>,
-              document.body
-            )}
-          </div>
-        )}
-        
-        <div className="flex items-center gap-2 flex-wrap">
-          <MicrophoneButton
-            date={date}
-            time={newDiaryTime}
-            keepAudio={keepAudio}
-            onAudioData={({ text, audioFileId, capturedAt, model }: { text: string; audioFileId?: string | null; capturedAt?: string; model?: string }) => {
-              onNewDiaryTextChange(newDiaryText ? (newDiaryText + '\n\n' + text) : text)
-              if (audioFileId) {
-                onAddNewDiaryAudioFileId(audioFileId)
-                onAddNewDiaryAudioTranscript(audioFileId, text, model || null)
-              }
-              if (capturedAt) {
-                const d = new Date(capturedAt)
-                const y = d.getFullYear()
-                const m = String(d.getMonth() + 1).padStart(2, '0')
-                const day = String(d.getDate()).padStart(2, '0')
-                const hh = String(d.getHours()).padStart(2, '0')
-                const mm = String(d.getMinutes()).padStart(2, '0')
-                onNewDiaryCapturedDateChange(`${y}-${m}-${day}`)
-                onNewDiaryCapturedTimeChange(`${hh}:${mm}`)
-              }
-              onEditorKeyIncrement()
-            }}
-            className="text-gray-300 hover:text-gray-100"
-            compact
-          />
-          
-          <AudioUploadButton
-            date={date}
-            time={newDiaryTime}
-            keepAudio={keepAudio}
-            onAudioUploaded={({ text, audioFileId, capturedAt, model }: { text: string; audioFileId?: string | null; capturedAt?: string; model?: string }) => {
-              onNewDiaryTextChange(newDiaryText ? (newDiaryText + '\n\n' + text) : text)
-              if (audioFileId) {
-                onAddNewDiaryAudioFileId(audioFileId)
-                onAddNewDiaryAudioTranscript(audioFileId, text, model || null)
-              }
-              if (capturedAt) {
-                const d = new Date(capturedAt)
-                const y = d.getFullYear()
-                const m = String(d.getMonth() + 1).padStart(2, '0')
-                const day = String(d.getDate()).padStart(2, '0')
-                const hh = String(d.getHours()).padStart(2, '0')
-                const mm = String(d.getMinutes()).padStart(2, '0')
-                onNewDiaryCapturedDateChange(`${y}-${m}-${day}`)
-                onNewDiaryCapturedTimeChange(`${hh}:${mm}`)
-              }
-              onEditorKeyIncrement()
-            }}
-            compact
-          />
+            // Extrahieren der Zeit aus occurredAt
+            if (entryData.occurredAt) {
+              const d = new Date(entryData.occurredAt)
+              const hh = String(d.getHours()).padStart(2, '0')
+              const mm = String(d.getMinutes()).padStart(2, '0')
+              onNewDiaryTimeChange(`${hh}:${mm}`)
+            }
+            
+            // Extrahieren der Zeit aus capturedAt
+            if (entryData.capturedAt) {
+              const d = new Date(entryData.capturedAt)
+              const y = d.getFullYear()
+              const m = String(d.getMonth() + 1).padStart(2, '0')
+              const day = String(d.getDate()).padStart(2, '0')
+              const hh = String(d.getHours()).padStart(2, '0')
+              const mm = String(d.getMinutes()).padStart(2, '0')
+              onNewDiaryCapturedDateChange(`${y}-${m}-${day}`)
+              onNewDiaryCapturedTimeChange(`${hh}:${mm}`)
+            }
 
-          <OCRUploadButton
-            date={date}
-            time={newDiaryTime}
-            onOcrComplete={({ text, mediaAssetIds, capturedAt }: { text: string; mediaAssetIds: string[]; capturedAt?: string }) => {
-              onNewDiaryTextChange(newDiaryText ? (newDiaryText + '\n\n' + text) : text)
-              if (capturedAt) {
-                const d = new Date(capturedAt)
-                const y = d.getFullYear()
-                const m = String(d.getMonth() + 1).padStart(2, '0')
-                const day = String(d.getDate()).padStart(2, '0')
-                const hh = String(d.getHours()).padStart(2, '0')
-                const mm = String(d.getMinutes()).padStart(2, '0')
-                onNewDiaryCapturedDateChange(`${y}-${m}-${day}`)
-                onNewDiaryCapturedTimeChange(`${hh}:${mm}`)
+            // Optional: Wenn audioFileIds in DynamicJournalForm zurückgegeben werden würden,
+            // müssten wir sie hier setzen. Aktuell macht DynamicJournalForm das intern via API,
+            // aber wir triggern einfach saveDiaryEntry, was den State leert und die Liste neu lädt.
+            
+            // Wir nutzen die neue API-Route direkt, da saveDiaryEntry auf den alten State zugreift
+            // und React-State-Updates asynchron sind.
+            try {
+              const res = await fetch(`/api/day/${notes[0]?.dayId || timeBoxId}/notes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: 'DIARY',
+                  title: entryData.title || null,
+                  text: entryData.content || '',
+                  // audioFileIds etc. sind in DynamicJournalForm bereits verarbeitet falls implementiert
+                  occurredAt: entryData.occurredAt,
+                  capturedAt: entryData.capturedAt,
+                  tzOffsetMinutes: new Date().getTimezoneOffset(),
+                }),
+                credentials: 'same-origin',
+              })
+              
+              if (res.ok) {
+                // Bei Erfolg form leeren
+                onClearDiaryForm()
+                // Refresh notes
+                await onRefreshNotes?.()
+              } else {
+                console.error('Failed to save entry via form')
               }
-              // Store OCR asset IDs for linking when saving
-              if (mediaAssetIds.length > 0) {
-                onNewDiaryOcrAssetIdsChange?.(mediaAssetIds)
-              }
-              onEditorKeyIncrement()
-            }}
-            compact
-          />
-
-          {/* Audio storage toggle - database icons */}
-          <button
-            type="button"
-            onClick={() => onKeepAudioChange(!keepAudio)}
-            title={keepAudio ? 'Audio wird gespeichert' : 'Audio wird nicht gespeichert'}
-            className="text-gray-500 hover:text-gray-400"
-          >
-            <TablerIcon name={keepAudio ? 'database' : 'database-off'} size={20} />
-          </button>
-          
-          {/* Vertical divider */}
-          <div className="w-px h-5 bg-slate-600" />
-          
-          <button
-            type="button"
-            onClick={handleImproveText}
-            disabled={isImproving || (!newDiaryText.trim() && !originalDiaryText?.trim())}
-            title="Text mit KI verbessern"
-            className="text-primary hover:text-primary/80 disabled:opacity-50"
-          >
-            {isImproving ? (
-              <span className="loading loading-spinner loading-xs" />
-            ) : (
-              <IconSparkles size={20} />
-            )}
-          </button>
-          
-          {/* Vertical divider */}
-          <div className="w-px h-5 bg-slate-600" />
-          
-          {/* Save button - icon only, hidden when nothing to save */}
-          {newDiaryText.trim() && (
-            <button 
-              type="button"
-              onClick={onSaveDiaryEntry}
-              title="Speichern"
-              className="text-green-500 hover:text-green-400"
-            >
-              <TablerIcon name="device-floppy" size={20} />
-            </button>
-          )}
-          
-          {/* Save + AI Pipeline button */}
-          {newDiaryText.trim() && onSaveAndRunPipeline && (
-            <button 
-              type="button"
-              onClick={handleSaveAndRunPipeline}
-              disabled={isSavingWithPipeline}
-              title="Speichern + AI-Pipeline ausführen"
-              className="text-primary hover:text-primary/80 disabled:opacity-50 flex items-center gap-1"
-            >
-              {isSavingWithPipeline ? (
-                <span className="loading loading-spinner loading-xs" />
-              ) : (
-                <>
-                  <TablerIcon name="device-floppy" size={16} />
-                  <IconSparkles size={16} />
-                </>
-              )}
-            </button>
-          )}
-          
-          {/* Cancel button - icon only, hidden when nothing to cancel */}
-          {(newDiaryText.trim() || newDiaryAudioFileIds.length > 0 || newDiaryTime) && (
-            <button 
-              type="button"
-              onClick={onClearDiaryForm}
-              title="Abbrechen"
-              className="text-red-500 hover:text-red-400"
-            >
-              <TablerIcon name="cancel" size={20} />
-            </button>
-          )}
-        </div>
-      </div>
+            } catch (err) {
+              console.error('Error saving entry via form:', err)
+            }
+          }}
+        />
       )}
 
       {/* Interaction panel for linking contacts - hidden in read mode */}
@@ -500,32 +288,112 @@ export function DiarySection({
       )}
 
       {/* Existing diary entries */}
-      <DiaryEntriesAccordion
-        notes={notes}
-        currentDate={date}
-        editingNoteId={editingNoteId}
-        editingText={editingText}
-        editingTime={editingTime}
-        editingCapturedDate={editingCapturedDate}
-        editingCapturedTime={editingCapturedTime}
-        editingTitle={editingTitle}
-        onEdit={onStartEditNote}
-        onSave={onSaveEditNote}
-        onCancel={onCancelEditNote}
-        onDelete={onDeleteNote}
-        onTextChange={onEditingTextChange}
-        onTimeChange={onEditingTimeChange}
-        onCapturedDateChange={onEditingCapturedDateChange}
-        onCapturedTimeChange={onEditingCapturedTimeChange}
-        onTitleChange={onEditingTitleChange}
-        onUploadPhotos={onUploadPhotos}
-        onDeletePhoto={onDeletePhoto}
-        onViewPhoto={onViewPhoto}
-        onDeleteAudio={onDeleteAudio}
-        onRetranscribe={onHandleRetranscribe}
-        onUpdateContent={onUpdateNoteContent}
-        onRefreshNotes={onRefreshNotes}
-      />
+      <div className="space-y-4 mt-6">
+        {notes.filter(n => n.type === 'DIARY').map(note => {
+          // Wir transformieren DayNote zu EntryWithRelations, da die Card das Format verlangt
+          // Die genaue Typisierung erfolgt hier auf "as any", da es sich um eine Migration handelt 
+          // und page.tsx das echte EntryWithRelations bald liefert.
+          const entryWithRelations = {
+            id: note.id,
+            userId: note.ownerUserId || '',
+            typeId: note.type, // 'DIARY'
+            timeBoxId: timeBoxId || '',
+            title: note.title || '',
+            content: note.text || '',
+            aiSummary: note.aiSummary || null,
+            analysis: note.analysis || null,
+            occurredAt: note.occurredAtIso ? new Date(note.occurredAtIso) : new Date(),
+            capturedAt: note.capturedAtIso ? new Date(note.capturedAtIso) : new Date(),
+            createdAt: note.createdAtIso ? new Date(note.createdAtIso) : new Date(),
+            updatedAt: note.contentUpdatedAt ? new Date(note.contentUpdatedAt) : new Date(),
+            isSensitive: false,
+            deletedAt: null,
+            locationId: null,
+            templateId: null,
+            contentUpdatedAt: note.contentUpdatedAt ? new Date(note.contentUpdatedAt) : null,
+            type: {
+              id: note.type,
+              code: 'diary',
+              name: 'Tagebuch',
+              icon: '📝',
+              sortOrder: 0,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              userId: null,
+              description: null,
+              defaultTemplateId: null,
+              bgColorClass: null
+            },
+            mediaAttachments: note.audioAttachments?.map(a => ({
+              id: a.id,
+              assetId: a.assetId,
+              entityId: note.id,
+              userId: note.ownerUserId || '',
+              role: 'ATTACHMENT',
+              displayOrder: 0,
+              timeBoxId: timeBoxId || null,
+              transcript: a.transcript || null,
+              transcriptModel: a.transcriptModel || null,
+              fieldId: null,
+              createdAt: a.createdAt ? new Date(a.createdAt) : new Date(),
+              asset: {
+                id: a.assetId,
+                userId: note.ownerUserId || '',
+                mimeType: 'audio/webm', // Fallback, da in AudioAttachmentInfo nicht enthalten
+                filePath: a.filePath,
+                duration: a.duration,
+                capturedAt: a.capturedAt ? new Date(a.capturedAt) : null,
+                createdAt: a.createdAt ? new Date(a.createdAt) : new Date(),
+                updatedAt: new Date(),
+                thumbnailData: null,
+                width: null,
+                height: null,
+                externalProvider: null,
+                externalId: null,
+                externalUrl: null,
+                thumbnailUrl: null,
+                ocrText: null,
+                ocrMetadata: null,
+                ocrStatus: null,
+                ocrProcessedAt: null,
+              }
+            })) || [],
+            accessCount: note.sharedWithCount || 0
+          } as any
+
+          return (
+            <JournalEntryCard
+              key={note.id}
+              entry={entryWithRelations}
+              mode="compact"
+              isEditing={editingNoteId === note.id}
+              onEdit={() => onStartEditNote(note)}
+              onDelete={onDeleteNote}
+              onRunPipeline={async () => {
+                // Führt die alte RunPipeline-Logik in page.tsx nicht direkt aus,
+                // wir machen hier einen simplen Fetch wie in DiaryEntriesAccordion
+                try {
+                  await fetch('/api/journal-ai/pipeline', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ journalEntryId: note.id }),
+                  })
+                  onRefreshNotes?.()
+                } catch (e) {
+                  console.error('Pipeline failed', e)
+                }
+              }}
+              onViewPhoto={(attachmentId, url) => onViewPhoto(note.id, 0, url)}
+              onUploadPhotos={(id, files) => onUploadPhotos(id, files)}
+              onDeletePhoto={onDeletePhoto}
+              onRestoreOcrToContent={(text) => {
+                // Placeholder für OCR Restore in Phase 6 Startseite
+                console.log('Restore OCR:', text)
+              }}
+            />
+          )
+        })}
+      </div>
       
       <SaveIndicator saving={saving} savedAt={savedAt} />
     </div>

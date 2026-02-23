@@ -17,7 +17,7 @@
  * - Edit/Delete/Share/Pipeline buttons
  */
 
-import { useState, memo, useCallback } from 'react'
+import { useState, useEffect, memo, useCallback } from 'react'
 import Link from 'next/link'
 import { format, formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
@@ -37,16 +37,18 @@ import {
   IconFileText,
   IconClock,
   IconSettings,
+  IconX,
 } from '@tabler/icons-react'
 import type { EntryWithRelations, EntryMediaAttachment } from '@/lib/services/journal/types'
 import type { TaskCardData } from '@/components/features/tasks/TaskCard'
 import clsx from 'clsx'
-import { JournalEntrySection } from '@/components/features/diary/JournalEntrySection'
-import { DiaryContentWithMentions } from '@/components/features/diary/DiaryContentWithMentions'
+import { JournalEntrySection } from './JournalEntrySection'
+import { ContentWithMentions } from '@/components/shared/ContentWithMentions'
 import { AudioPlayerH5 } from '@/components/features/media/AudioPlayerH5'
+import { CameraPicker } from '@/components/features/media/CameraPicker'
 import { OCRSourcePanel } from '@/components/features/ocr/OCRSourcePanel'
 import JournalTasksPanel from '@/components/features/tasks/JournalTasksPanel'
-import { SharedBadge } from '@/components/features/diary/SharedBadge'
+import { SharedBadge } from '@/components/shared/SharedBadge'
 import { JournalEntryImage } from '@/components/features/diary/JournalEntryImage'
 
 // =============================================================================
@@ -97,6 +99,11 @@ export interface JournalEntryCardProps {
   /** Callback to restore OCR text into content (E5) */
   onRestoreOcrToContent?: (text: string) => void
 
+  // Phase 6: Photo Upload
+  /** Callback to upload photos for this entry */
+  onUploadPhotos?: (entryId: string, files: FileList | File[]) => void
+  /** Callback to delete a photo */
+  onDeletePhoto?: (attachmentId: string) => void
 }
 
 // =============================================================================
@@ -235,9 +242,11 @@ function AudioSection({ attachments }: { attachments: EntryMediaAttachment[] }) 
 interface PhotoGalleryProps {
   attachments: EntryMediaAttachment[]
   onViewPhoto?: (attachmentId: string, imageUrl: string) => void
+  onDeletePhoto?: (attachmentId: string) => void
+  isEditing?: boolean
 }
 
-function PhotoGallery({ attachments, onViewPhoto }: PhotoGalleryProps) {
+function PhotoGallery({ attachments, onViewPhoto, onDeletePhoto, isEditing }: PhotoGalleryProps) {
   const images = attachments.filter((a) => a.asset.mimeType?.startsWith('image/'))
   if (images.length === 0) return null
 
@@ -251,20 +260,39 @@ function PhotoGallery({ attachments, onViewPhoto }: PhotoGalleryProps) {
   return (
     <div className="flex flex-wrap gap-2">
       {images.map((img) => (
-        <button
-          key={img.id}
-          type="button"
-          onClick={(e) => handlePhotoClick(img, e)}
-          className="block w-20 h-20 rounded-lg overflow-hidden bg-base-200 hover:ring-2 hover:ring-primary transition-all cursor-pointer"
-          title="Foto ansehen"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={img.asset.filePath.startsWith('/') ? img.asset.filePath : `/${img.asset.filePath}`}
-            alt="Foto"
-            className="w-full h-full object-cover"
-          />
-        </button>
+        <div key={img.id} className="relative group">
+          <button
+            type="button"
+            onClick={(e) => handlePhotoClick(img, e)}
+            className="block w-20 h-20 rounded-lg overflow-hidden bg-base-200 hover:ring-2 hover:ring-primary transition-all cursor-pointer"
+            title="Foto ansehen"
+          >
+            {img.asset.id && (
+              <img
+                src={`/api/media/${img.asset.id}`}
+                alt="Eintrag Foto"
+                className="object-cover w-full h-full"
+                loading="lazy"
+              />
+            )}
+          </button>
+          
+          {isEditing && onDeletePhoto && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (window.confirm('Möchtest du dieses Foto wirklich löschen?')) {
+                  onDeletePhoto(img.id)
+                }
+              }}
+              className="absolute -top-2 -right-2 bg-error text-error-content rounded-full p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-600"
+              title="Foto löschen"
+            >
+              <IconX size={14} />
+            </button>
+          )}
+        </div>
       ))}
     </div>
   )
@@ -309,14 +337,61 @@ function JournalEntryCardComponent({
   onOpenAISettings,
   // Phase 5: Inline-Edit
   onRestoreOcrToContent,
+  onUploadPhotos,
+  onDeletePhoto,
 }: JournalEntryCardProps) {
   const [isExpanded, setIsExpanded] = useState(mode === 'expanded' || mode === 'detail')
-
-  const handleToggleExpand = useCallback(() => {
-    if (mode === 'compact') {
-      setIsExpanded((prev) => !prev)
+  
+  // URL Highlighting (Phase 6)
+  const [isHighlighted, setIsHighlighted] = useState(false)
+  
+  // Only auto-expand if mode is not compact
+  useEffect(() => {
+    if (mode === 'expanded' || mode === 'detail') {
+      setIsExpanded(true)
     }
   }, [mode])
+
+  // Phase 6: URL Highlighting logic
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    
+    // Function to check if this entry should be highlighted based on URL
+    const checkHighlight = () => {
+      const urlParams = new URLSearchParams(window.location.search)
+      const entryParam = urlParams.get('entry')
+      const hashParam = window.location.hash.replace('#entry-', '')
+      
+      const shouldHighlight = entryParam === entry.id || hashParam === entry.id
+      
+      if (shouldHighlight) {
+        setIsHighlighted(true)
+        setIsExpanded(true) // Auto-expand highlighted entries
+        
+        // Scroll into view with a slight delay to ensure rendering is complete
+        setTimeout(() => {
+          const el = document.getElementById(`entry-${entry.id}`)
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }, 100)
+        
+        // Remove highlight after animation (3 seconds)
+        const timer = setTimeout(() => {
+          setIsHighlighted(false)
+        }, 3000)
+        
+        return () => clearTimeout(timer)
+      }
+    }
+
+    // Check on mount
+    checkHighlight()
+    
+    // Listen for hash changes
+    window.addEventListener('hashchange', checkHighlight)
+    return () => window.removeEventListener('hashchange', checkHighlight)
+  }, [entry.id])
 
   // Filter media attachments by type
   const audioAttachments = entry.mediaAttachments?.filter(
@@ -336,15 +411,12 @@ function JournalEntryCardComponent({
   const showFullContent = isExpanded || mode === 'expanded' || mode === 'detail'
   
   return (
-    <article
+    <article 
+      id={`entry-${entry.id}`}
       className={clsx(
-        'group rounded-lg text-card-foreground transition-shadow',
-        entry.type?.bgColorClass
-          ? entry.type.bgColorClass
-          : 'border bg-card',
-        mode === 'compact' && 'hover:shadow-sm',
-        mode === 'detail' && 'shadow-sm',
-        isEditing && 'ring-2 ring-primary',
+        "bg-base-100 rounded-xl border transition-all duration-300",
+        isEditing ? "border-primary shadow-md ring-1 ring-primary/20" : "border-base-300 hover:border-base-content/20 shadow-sm",
+        isHighlighted && "ring-2 ring-primary ring-offset-2 ring-offset-base-100 shadow-lg scale-[1.01] bg-primary/5",
         className
       )}
     >
@@ -354,7 +426,7 @@ function JournalEntryCardComponent({
           'flex items-start justify-between gap-2 p-3',
           mode === 'compact' && 'cursor-pointer'
         )}
-        onClick={mode === 'compact' ? handleToggleExpand : undefined}
+        onClick={mode === 'compact' ? () => setIsExpanded(!isExpanded) : undefined}
       >
         <div className="flex-1 min-w-0">
           {/* Type badge and template */}
@@ -454,7 +526,7 @@ function JournalEntryCardComponent({
           )}
           {mode === 'compact' && (
             <button
-              onClick={(e) => { e.stopPropagation(); handleToggleExpand() }}
+              onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded) }}
               className="p-1.5 rounded hover:bg-muted"
               title={isExpanded ? 'Einklappen' : 'Aufklappen'}
             >
@@ -500,7 +572,7 @@ function JournalEntryCardComponent({
               canGenerate={false}
               canDelete={false}
             >
-              <DiaryContentWithMentions 
+              <ContentWithMentions 
                 noteId={entry.id} 
                 markdown={entry.content} 
               />
@@ -527,16 +599,41 @@ function JournalEntryCardComponent({
           )}
 
           {/* Photo Gallery */}
-          {imageAttachments.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium flex items-center gap-2">
-                <IconPhoto size={16} />
-                Fotos ({imageAttachments.length})
-              </h4>
+          {(entry.mediaAttachments && entry.mediaAttachments.some(a => a.asset.mimeType?.startsWith('image/')) || (isEditing && onUploadPhotos)) && (
+            <div className="mt-4">
               <PhotoGallery 
-                attachments={entry.mediaAttachments} 
-                onViewPhoto={onViewPhoto} 
+                attachments={entry.mediaAttachments || []} 
+                onViewPhoto={onViewPhoto}
+                onDeletePhoto={onDeletePhoto}
+                isEditing={isEditing}
               />
+              
+              {/* Photo Upload Buttons (only in edit mode) */}
+              {isEditing && onUploadPhotos && (
+                <div className="mt-2 flex gap-2">
+                  <CameraPicker 
+                    onCapture={(files) => onUploadPhotos(entry.id, files)}
+                  />
+                  <div className="relative">
+                    <input
+                      type="file"
+                      id={`photo-upload-${entry.id}`}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      accept="image/*"
+                      multiple
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          onUploadPhotos(entry.id, e.target.files)
+                        }
+                      }}
+                    />
+                    <button type="button" className="btn btn-outline btn-sm">
+                      <IconPhoto size={16} />
+                      Foto hochladen
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

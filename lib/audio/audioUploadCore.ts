@@ -199,63 +199,19 @@ export async function uploadAudioForEntry(
     attachmentId: data.attachmentId ?? null,
     capturedAt: new Date().toISOString(),
     model: data.model || model,
+    keepAudio: data.keepAudio,
   }
 }
 
 /**
- * Uploads audio via the legacy `/api/diary/upload-audio` endpoint.
- * Used when creating new entries (no entryId yet) but audio should be persisted.
+ * Options for standalone audio upload (legacy diary endpoint)
  */
 export async function uploadAudioStandalone(
-  fileOrBlob: File | Blob,
-  options: UploadStandaloneOptions,
-  onStageChange?: OnStageChange,
+  _file: File,
+  _options: UploadStandaloneOptions,
+  _onStageChange?: OnStageChange
 ): Promise<AudioUploadResult> {
-  const { date, time, model, keepAudio, capturedAt } = options
-
-  const fd = new FormData()
-
-  if (fileOrBlob instanceof File) {
-    fd.append('file', fileOrBlob)
-  } else {
-    const filename = generateAudioFilename(new Date(), fileOrBlob.type || 'audio/webm')
-    fd.append('file', new File([fileOrBlob], filename, { type: fileOrBlob.type || 'audio/webm' }))
-  }
-
-  fd.append('date', date)
-  fd.append('time', time || '')
-  fd.append('model', model)
-  fd.append('keepAudio', String(keepAudio))
-  if (capturedAt) {
-    fd.append('capturedAt', capturedAt)
-  }
-
-  onStageChange?.('uploading', STAGE_MESSAGES.uploading)
-
-  const res = await fetch('/api/diary/upload-audio', {
-    method: 'POST',
-    body: fd,
-    credentials: 'same-origin',
-  })
-
-  if (!res.ok) {
-    throw new Error(await parseServerError(res))
-  }
-
-  onStageChange?.('transcribing', STAGE_MESSAGES.transcribing)
-
-  const data = await res.json()
-
-  onStageChange?.('complete', STAGE_MESSAGES.complete)
-
-  return {
-    text: data.text,
-    audioFileId: data.audioFileId,
-    audioFilePath: data.audioFilePath,
-    capturedAt: capturedAt || new Date().toISOString(),
-    model: data.model || model,
-    keepAudio: data.keepAudio,
-  }
+  throw new Error("Standalone audio upload is no longer supported. Please save the entry first and upload audio to the entry.")
 }
 
 /**

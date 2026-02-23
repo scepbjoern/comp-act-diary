@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { SharedBadge } from '@/components/features/diary/SharedBadge'
+import { SharedBadge } from '@/components/shared/SharedBadge'
 
 describe('SharedBadge', () => {
   it('should render nothing when not shared (no status)', () => {

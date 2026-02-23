@@ -10,13 +10,13 @@ interface MentionContact {
   namesToDetectAsMention?: string[]
 }
 
-interface DiaryContentWithMentionsProps {
+interface ContentWithMentionsProps {
   noteId: string
   markdown: string
   className?: string
 }
 
-export function DiaryContentWithMentions({ noteId, markdown, className }: DiaryContentWithMentionsProps) {
+export function ContentWithMentions({ noteId, markdown, className }: ContentWithMentionsProps) {
   const [mentionedContacts, setMentionedContacts] = useState<MentionContact[]>([])
   const [loading, setLoading] = useState(true)
 

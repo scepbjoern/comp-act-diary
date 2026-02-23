@@ -537,27 +537,9 @@ export default function HeutePage() {
     doneSaving()
   }
 
-  // Callbacks for DiarySection
+  // Placeholder für onGenerateTitle Callbacks from DarmkurSection
   const handleGenerateTitle = async () => {
-    if (!newDiaryText.trim()) {
-      push('Bitte erst Text eingeben', 'error')
-      return
-    }
-    try {
-      const res = await fetch('/api/generate-title', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: newDiaryText, model: 'gpt-4o-mini' })
-      })
-      const data = await res.json()
-      if (data.title) {
-        setNewDiaryTitle(data.title)
-        push('Titel generiert', 'success')
-      }
-    } catch (e) {
-      console.error('Title generation failed', e)
-      push('Titel-Generierung fehlgeschlagen', 'error')
-    }
+    return Promise.resolve()
   }
 
   // Callback for ResetDaySection
@@ -723,7 +705,11 @@ export default function HeutePage() {
             onViewPhoto={(noteId, index, url) => setViewer({ noteId, index, url })}
             onDeleteAudio={deleteAudio}
             onHandleRetranscribe={handleRetranscribe}
-            onGenerateTitle={handleGenerateTitle}
+            onGenerateTitle={() => {
+              // Placeholder für alte generateTitle logic in page.tsx. Wird eigentlich nicht mehr aus page aufgerufen,
+              // da DiarySection eigene KI-Titel generiert, aber die Prop ist noch definiert
+              return Promise.resolve()
+            }}
             onUpdateNoteContent={updateNoteContent}
             onRefreshNotes={async () => {
               try {

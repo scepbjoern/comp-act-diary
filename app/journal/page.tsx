@@ -23,7 +23,7 @@ import type { DynamicJournalFormHandle } from '@/components/features/journal/Dyn
 import { OCRSourcePanel } from '@/components/features/ocr/OCRSourcePanel'
 import JournalTasksPanel from '@/components/features/tasks/JournalTasksPanel'
 import { PhotoLightbox } from '@/components/features/journal/PhotoLightbox'
-import { ShareEntryModal } from '@/components/features/diary/ShareEntryModal'
+import { ShareEntryModal } from '@/components/shared/ShareEntryModal'
 import { TimestampModal } from '@/components/features/day/TimestampModal'
 import { AISettingsPopup } from '@/components/features/ai/AISettingsPopup'
 import { PipelineStepModal } from '@/components/features/journal/PipelineStepModal'
