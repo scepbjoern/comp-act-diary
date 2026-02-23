@@ -17,8 +17,9 @@
  * - Edit/Delete/Share/Pipeline buttons
  */
 
-import { useState, useEffect, memo, useCallback } from 'react'
+import { useState, useEffect, memo } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { format, formatDistanceToNow } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { 
@@ -268,11 +269,14 @@ function PhotoGallery({ attachments, onViewPhoto, onDeletePhoto, isEditing }: Ph
             title="Foto ansehen"
           >
             {img.asset.id && (
-              <img
+              <Image
                 src={`/api/media/${img.asset.id}`}
                 alt="Eintrag Foto"
                 className="object-cover w-full h-full"
                 loading="lazy"
+                width={80}
+                height={80}
+                unoptimized
               />
             )}
           </button>
@@ -397,10 +401,6 @@ function JournalEntryCardComponent({
   const audioAttachments = entry.mediaAttachments?.filter(
     (a) => a.asset.mimeType?.startsWith('audio/')
   ) || []
-  const imageAttachments = entry.mediaAttachments?.filter(
-    (a) => a.asset.mimeType?.startsWith('image/')
-  ) || []
-
   // Determine if OCR sources should be shown (exclude audio from SOURCE check)
   const hasOCRSources = entry.mediaAttachments?.some(
     (a) => a.role === 'SOURCE' && !a.asset.mimeType?.startsWith('audio/')

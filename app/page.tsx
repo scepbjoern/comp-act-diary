@@ -118,55 +118,24 @@ export default function HeutePage() {
   })
   
   // Diary Management Hook
+  // Note: Many vars from this hook are no longer needed on the home page after Phase 6
+  // migration (DiarySection now uses DynamicJournalForm internally). They remain
+  // destructured with _ prefix because the hook is still used by DarmkurSection.
   const {
     notes,
     setNotes,
     editingNoteId,
     editingTime,
-    editingCapturedDate,
-    editingCapturedTime,
     editingText,
-    editingTitle,
     setEditingTime,
-    setEditingCapturedDate,
-    setEditingCapturedTime,
     setEditingText,
-    setEditingTitle,
-    newDiaryText,
-    newDiaryTitle,
-    newDiaryAudioFileIds,
-    newDiaryAudioTranscripts,
-    newDiaryTime,
-    editorKey,
-    keepAudio,
-    showRetranscribeOptions,
-    isRetranscribing,
-    setNewDiaryText,
-    setNewDiaryTitle,
-    setNewDiaryAudioFileIds,
-    setNewDiaryAudioTranscripts,
-    setNewDiaryOcrAssetIds,
-    setNewDiaryTime,
-    newDiaryCapturedDate,
-    newDiaryCapturedTime,
-    setNewDiaryCapturedDate,
-    setNewDiaryCapturedTime,
-    setEditorKey,
-    setKeepAudio,
-    setShowRetranscribeOptions,
     startEditNote,
     cancelEditNote,
     saveEditNote,
-    updateNoteContent,
     deleteNote,
-    deleteAudio,
     uploadPhotos,
     deletePhoto,
-    retranscribeAudio,
-    handleRetranscribe,
-    addNewDiaryAudioTranscript,
     clearDiaryForm,
-    saveDiaryEntry
   } = useDiaryManagement(day?.id || null, date, (saving) => {
     if (saving) startSaving()
     else doneSaving()
@@ -224,24 +193,9 @@ export default function HeutePage() {
       const hh = String(now.getHours()).padStart(2, '0')
       const mm = String(now.getMinutes()).padStart(2, '0')
       setMealTime(`${hh}:${mm}`)
-      setNewDiaryTime(`${hh}:${mm}`)
-      // Set default title based on date and time
-      setNewDiaryTitle(`${date} ${hh}:${mm}`)
-      const y = now.getFullYear()
-      const m = String(now.getMonth() + 1).padStart(2, '0')
-      const d = String(now.getDate()).padStart(2, '0')
-      setNewDiaryCapturedDate(`${y}-${m}-${d}`)
-      setNewDiaryCapturedTime(`${hh}:${mm}`)
     }
     void load()
-  }, [date, setHabits, setNewDiaryCapturedDate, setNewDiaryCapturedTime, setNewDiaryTime, setNewDiaryTitle, setNotes, setSymptomIcons])
-
-  // Update diary title when time changes
-  useEffect(() => {
-    if (newDiaryTime && date) {
-      setNewDiaryTitle(`${date} ${newDiaryTime}`)
-    }
-  }, [newDiaryTime, date, setNewDiaryTitle])
+  }, [date, setHabits, setNotes, setSymptomIcons])
 
   // Load inline analytics with small debounce and abort on date change
   useEffect(() => {
@@ -412,105 +366,6 @@ export default function HeutePage() {
     if (updatedDay) setDay(updatedDay)
   }
 
-  // saveDiaryEntry and shiftDate are now handled by useDiaryManagement and lib/date-utils
-
-  // Save diary entry and run AI pipeline (keeps form open during processing)
-  async function saveDiaryEntryAndRunPipeline(): Promise<void> {
-    if (!day || !newDiaryText.trim()) return
-    
-    // Build occurredAt from date + time
-    const timeToUse = newDiaryTime || new Date().toISOString().slice(11, 16)
-    const timeParts = timeToUse.split(':').map(Number)
-    const hours = timeParts[0] ?? 0
-    const minutes = timeParts[1] ?? 0
-    const occurredAtDate = new Date(date)
-    occurredAtDate.setHours(hours, minutes, 0, 0)
-    const capturedAt = newDiaryCapturedDate && newDiaryCapturedTime
-      ? new Date(`${newDiaryCapturedDate}T${newDiaryCapturedTime}:00`).toISOString()
-      : new Date().toISOString()
-    
-    // Step 1: Save entry WITHOUT closing form (don't use saveDiaryEntry which resets form)
-    const saveRes = await fetch(`/api/day/${day.id}/notes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'DIARY',
-        title: newDiaryTitle.trim() || null,
-        text: newDiaryText.trim(),
-        audioFileIds: newDiaryAudioFileIds,
-        audioTranscripts: newDiaryAudioTranscripts,
-        keepAudio,
-        occurredAt: occurredAtDate.toISOString(),
-        capturedAt,
-        tzOffsetMinutes: new Date().getTimezoneOffset(),
-      }),
-      credentials: 'same-origin',
-    })
-    
-    const saveData = await saveRes.json()
-    if (!saveRes.ok || !saveData?.notes) {
-      push('Speichern fehlgeschlagen', 'error')
-      return
-    }
-    
-    // Find the newly created entry
-    const diaryNotes = saveData.notes.filter((n: { type: string }) => n.type === 'DIARY')
-    const latestNote = diaryNotes.sort((a: { createdAtIso: string }, b: { createdAtIso: string }) => 
-      (b.createdAtIso || '').localeCompare(a.createdAtIso || '')
-    )[0]
-    
-    if (!latestNote) {
-      push('Eintrag nicht gefunden', 'error')
-      return
-    }
-    
-    // Step 2: Run pipeline
-    try {
-      await fetch('/api/journal-ai/pipeline', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ journalEntryId: latestNote.id }),
-      })
-      
-      // Step 3: Generate title
-      if (latestNote.text?.trim()) {
-        const titleRes = await fetch('/api/generate-title', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: latestNote.text, model: 'gpt-4o-mini' })
-        })
-        const titleData = await titleRes.json()
-        if (titleData.title) {
-          await fetch(`/api/notes/${latestNote.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: titleData.title })
-          })
-        }
-      }
-      
-      // Step 4: Refresh notes and THEN close form
-      const refreshRes = await fetch(`/api/day?date=${date}`, { credentials: 'same-origin' })
-      const refreshData = await refreshRes.json()
-      if (refreshData?.notes) setNotes(refreshData.notes)
-      
-      // Now reset the form (close edit mode)
-      setNewDiaryText('')
-      setNewDiaryAudioFileIds([])
-      setNewDiaryAudioTranscripts([])
-      const now = new Date()
-      const hh = String(now.getHours()).padStart(2, '0')
-      const mm = String(now.getMinutes()).padStart(2, '0')
-      setNewDiaryTime(`${hh}:${mm}`)
-      setNewDiaryTitle(`${date} ${hh}:${mm}`)
-      setEditorKey(prev => prev + 1)
-      
-      push('AI-Pipeline abgeschlossen', 'success')
-    } catch (e) {
-      console.error('Pipeline failed', e)
-      push('AI-Pipeline fehlgeschlagen', 'error')
-    }
-  }
 
   async function addMealNote() {
     if (!day || !mealText.trim()) return
@@ -535,11 +390,6 @@ export default function HeutePage() {
     const mm = String(now.getMinutes()).padStart(2, '0')
     setMealTime(`${hh}:${mm}`)
     doneSaving()
-  }
-
-  // Placeholder für onGenerateTitle Callbacks from DarmkurSection
-  const handleGenerateTitle = async () => {
-    return Promise.resolve()
   }
 
   // Callback for ResetDaySection
@@ -659,58 +509,12 @@ export default function HeutePage() {
             date={date}
             timeBoxId={day.timeBoxId}
             notes={notes}
-            newDiaryTitle={newDiaryTitle}
-            newDiaryText={newDiaryText}
-            newDiaryTime={newDiaryTime}
-            newDiaryCapturedDate={newDiaryCapturedDate}
-            newDiaryCapturedTime={newDiaryCapturedTime}
-            newDiaryAudioFileIds={newDiaryAudioFileIds}
-            editorKey={editorKey}
-            keepAudio={keepAudio}
-            showRetranscribeOptions={showRetranscribeOptions}
-            isRetranscribing={isRetranscribing}
-            editingNoteId={editingNoteId}
-            editingText={editingText}
-            editingTime={editingTime}
-            editingCapturedDate={editingCapturedDate}
-            editingCapturedTime={editingCapturedTime}
-            editingTitle={editingTitle}
-            saving={saving}
-            savedAt={savedAt}
-            onNewDiaryTitleChange={setNewDiaryTitle}
-            onNewDiaryTextChange={setNewDiaryText}
-            onNewDiaryTimeChange={setNewDiaryTime}
-            onNewDiaryCapturedDateChange={setNewDiaryCapturedDate}
-            onNewDiaryCapturedTimeChange={setNewDiaryCapturedTime}
-            onAddNewDiaryAudioFileId={(id) => setNewDiaryAudioFileIds(prev => [...prev, id])}
-            onAddNewDiaryAudioTranscript={addNewDiaryAudioTranscript}
-            onNewDiaryOcrAssetIdsChange={setNewDiaryOcrAssetIds}
-            onEditorKeyIncrement={() => setEditorKey(prev => prev + 1)}
-            onKeepAudioChange={setKeepAudio}
-            onShowRetranscribeOptionsToggle={() => setShowRetranscribeOptions(!showRetranscribeOptions)}
-            onSaveDiaryEntry={saveDiaryEntry}
             onClearDiaryForm={clearDiaryForm}
-            onRetranscribeAudio={async (model: string) => { await retranscribeAudio(model) }}
             onStartEditNote={startEditNote}
-            onSaveEditNote={saveEditNote}
-            onCancelEditNote={cancelEditNote}
             onDeleteNote={deleteNote}
-            onEditingTextChange={setEditingText}
-            onEditingTimeChange={setEditingTime}
-            onEditingCapturedDateChange={setEditingCapturedDate}
-            onEditingCapturedTimeChange={setEditingCapturedTime}
-            onEditingTitleChange={setEditingTitle}
             onUploadPhotos={uploadPhotos}
             onDeletePhoto={deletePhoto}
             onViewPhoto={(noteId, index, url) => setViewer({ noteId, index, url })}
-            onDeleteAudio={deleteAudio}
-            onHandleRetranscribe={handleRetranscribe}
-            onGenerateTitle={() => {
-              // Placeholder für alte generateTitle logic in page.tsx. Wird eigentlich nicht mehr aus page aufgerufen,
-              // da DiarySection eigene KI-Titel generiert, aber die Prop ist noch definiert
-              return Promise.resolve()
-            }}
-            onUpdateNoteContent={updateNoteContent}
             onRefreshNotes={async () => {
               try {
                 const res = await fetch(`/api/day?date=${date}`, { credentials: 'same-origin' })
@@ -720,7 +524,6 @@ export default function HeutePage() {
                 console.error('Refresh notes failed', e)
               }
             }}
-            onSaveAndRunPipeline={saveDiaryEntryAndRunPipeline}
           />
 
           <DarmkurSection
