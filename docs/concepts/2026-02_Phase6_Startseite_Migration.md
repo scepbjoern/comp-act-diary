@@ -399,9 +399,9 @@ Nur ein Screen betroffen: **Startseite (`/`)**
 
 **Aktionen**:
 1. Backup der Datenbank erstellen
-2. Skript im Dry-Run ausführen: `npx ts-node scripts/migrate-audio-attachments.ts`
+2. Skript im Dry-Run ausführen: `docker compose exec app node scripts/migrate-audio-attachments.bundled.cjs`
 3. Ergebnisse prüfen
-4. Echter Lauf: `npx ts-node scripts/migrate-audio-attachments.ts --execute`
+4. Echter Lauf: `docker compose exec app node scripts/migrate-audio-attachments.bundled.cjs --execute`
 
 ---
 
