@@ -1,10 +1,12 @@
 # Unified JournalEntry Implementation Plan
 
-> **Status**: 🔄 In Arbeit (Phase 1–3 ✅ abgeschlossen)  
-> **Erstellt**: 2026-02-04  
-> **Phase 1 implementiert**: 2026-02-05  
-> **Phase 2+3 implementiert**: 2026-02-07  
-> **Basis**: [2026-02_Unified_JournalEntry_Analysis_and_Concept.md](./2026-02_Unified_JournalEntry_Analysis_and_Concept.md)  
+> **Status**: 🔄 In Arbeit (Phase 1–5 ✅ abgeschlossen, Phase 6 offen)
+> **Erstellt**: 2026-02-04
+> **Phase 1 implementiert**: 2026-02-05
+> **Phase 2+3 implementiert**: 2026-02-07
+> **Phase 4+5 implementiert**: 2026-02-23
+> **Phase 6 UX-Wünsche implementiert**: 2026-02-23
+> **Basis**: [2026-02_Unified_JournalEntry_Analysis_and_Concept.md](./2026-02_Unified_JournalEntry_Analysis_and_Concept.md)
 > **Ziel**: Konkreter Implementierungsplan zur Feature-Parität zwischen DiaryEntriesAccordion und JournalEntryCard
 
 ---
@@ -111,59 +113,68 @@ Die **DiaryEntriesAccordion** auf der Startseite (`/`) bietet ein reichhaltiges 
 |---------|--------|-------|
 | **Type Selection** | ✅ | Dropdown |
 | **Template Selection** | ✅ | Gefiltert nach Type |
-| **Dynamic Field Rendering** | ✅ | Aus Template.fields |
-| **Mikrofon pro Feld** | ✅ | MicrophoneButton |
+| **Dynamic Field Rendering** | ✅ | Aus Template.fields, mit RichTextEditor |
+| **Mikrofon pro Feld** | ✅ | MicrophoneButton mit audioUploadCore |
 | **Audio-Segmentierung** | ✅ | Automatisch bei >1 Feld |
-| **Audio-Upload Button** | ⚠️ | Button vorhanden, nicht vollständig implementiert |
-| **OCR-Upload** | ❌ | Nicht vorhanden |
-| **Foto-Upload** | ❌ | Nicht vorhanden |
+| **Audio-Upload Button** | ✅ | Vollständig implementiert mit audioUploadCore |
+| **OCR-Upload** | ✅ | OCRUploadButton integriert |
+| **Foto-Upload** | ✅ | CameraPicker + Datei-Upload |
+| **Edit-Mode** | ✅ | existingEntry Prop, locked Type/Template |
+| **Titel-Feld** | ✅ | Optional in Create/Edit |
+| **isSensitive Toggle** | ✅ | In Create/Edit |
+| **occurredAt/capturedAt** | ✅ | Datum/Zeit-Felder |
+| **Save + Pipeline Button** | ✅ | Kombinierter Button (W3/W5) |
+| **keepAudio Toggle** | ✅ | Media-Toolbar (W4) |
+| **Abbrechen-Button** | ✅ | Icon-only (W8) |
 
 ---
 
 ## 3. Gap-Analyse: Fehlende Features
 
+> **Status**: Alle Gaps G1-G22 und F1-F3 wurden in Phase 1-5 geschlossen. Verbleibend: S1-S3 (Startseiten-Migration, Phase 6).
+
 ### 3.1 JournalEntryCard fehlt gegenüber DiaryEntriesAccordion
 
-| # | Feature | Priorität | Komplexität |
-|---|---------|-----------|-------------|
-| G1 | **Inline-Bearbeitung** (nicht nur Link zu Detail) | Hoch | Mittel |
-| G2 | **RichTextEditor** im Edit-Mode | Hoch | Gering |
-| G3 | **Multi-Audio-Anzeige mit Delete** | Hoch | Gering |
-| G4 | **Audio-Datei hochladen** (nicht nur aufnehmen) | Hoch | Gering |
-| G5 | **Original Transcript Panel** (lazy loaded) | Mittel | Mittel |
-| G6 | **Re-Transkription** | Mittel | Gering |
-| G7 | **OCR Source Panel** | Mittel | Gering |
-| G8 | **Foto hochladen** | Hoch | Gering |
-| G9 | **Kamera-Aufnahme** | Mittel | Gering |
-| G10 | **Foto löschen** | Hoch | Gering |
-| G11 | **Foto-Lightbox** | Mittel | Gering |
-| G12 | **JournalEntrySection (Summary)** | Mittel | Gering |
-| G13 | **JournalEntrySection (Analysis)** | Mittel | Gering |
-| G14 | **Content generieren Button** | Mittel | Gering |
-| G15 | **Analyse generieren/löschen** | Mittel | Gering |
-| G16 | **Zusammenfassung generieren/löschen** | Mittel | Gering |
-| G17 | **AI-Settings Popup** | Niedrig | Gering |
-| G18 | **Timestamp Modal** | Niedrig | Gering |
-| G19 | **Tasks Panel** | Niedrig | Mittel |
-| G20 | **Generated Image** | Niedrig | Gering |
-| G21 | **Read-Mode Support** | Niedrig | Gering |
-| G22 | **Highlight Entry (URL Hash)** | Niedrig | Gering |
+| # | Feature | Status | Implementiert |
+|---|---------|--------|---------------|
+| G1 | **Inline-Bearbeitung** | ✅ | Phase 4 (DynamicJournalForm Edit-Mode) |
+| G2 | **RichTextEditor** im Edit-Mode | ✅ | Phase 4 (FieldRenderer mit RichTextEditor) |
+| G3 | **Multi-Audio-Anzeige mit Delete** | ✅ | Phase 1 (AudioPlayerH5 + Delete) |
+| G4 | **Audio-Datei hochladen** | ✅ | Phase 4 (AudioUploadButton mit audioUploadCore) |
+| G5 | **Original Transcript Panel** | ✅ | Phase 1 (expandierbar in Audio-Sektion) |
+| G6 | **Re-Transkription** | ✅ | Phase 1 (RetranscribeButton) |
+| G7 | **OCR Source Panel** | ✅ | Phase 2 (OCRSourcePanel) |
+| G8 | **Foto hochladen** | ✅ | Phase 4 (CameraPicker + Upload) |
+| G9 | **Kamera-Aufnahme** | ✅ | Phase 4 (CameraPicker) |
+| G10 | **Foto löschen** | ✅ | Phase 4 (Delete in Media-Preview) |
+| G11 | **Foto-Lightbox** | ✅ | Phase 1 (PhotoLightbox) |
+| G12 | **JournalEntrySection (Summary)** | ✅ | Phase 1 |
+| G13 | **JournalEntrySection (Analysis)** | ✅ | Phase 1 |
+| G14 | **Content generieren Button** | ✅ | Phase 4 (Save+Pipeline Button) |
+| G15 | **Analyse generieren/löschen** | ✅ | Phase 1 |
+| G16 | **Zusammenfassung generieren/löschen** | ✅ | Phase 1 |
+| G17 | **AI-Settings Popup** | ✅ | Phase 3 (AISettingsPopup) |
+| G18 | **Timestamp Modal** | ✅ | Phase 3 (TimestampModal) |
+| G19 | **Tasks Panel** | ✅ | Phase 2 (JournalTasksPanel) |
+| G20 | **Generated Image** | ✅ | Phase 6 UX (JournalEntryImage) |
+| G21 | **Read-Mode Support** | ✅ | Phase 1 |
+| G22 | **Highlight Entry (URL Hash)** | ✅ | Phase 1 |
 
 ### 3.2 DynamicJournalForm fehlt
 
-| # | Feature | Priorität | Komplexität |
-|---|---------|-----------|-------------|
-| F1 | **OCR-Upload Button** | Hoch | Gering |
-| F2 | **Foto-Upload** | Hoch | Gering |
-| F3 | **Audio-Upload vollständig** | Hoch | Gering |
+| # | Feature | Status | Implementiert |
+|---|---------|--------|---------------|
+| F1 | **OCR-Upload Button** | ✅ | Phase 4 (OCRUploadButton) |
+| F2 | **Foto-Upload** | ✅ | Phase 4 (CameraPicker + Upload) |
+| F3 | **Audio-Upload vollständig** | ✅ | Phase 4 (audioUploadCore) |
 
 ### 3.3 Startseite fehlt (Templates)
 
-| # | Feature | Priorität | Komplexität |
-|---|---------|-----------|-------------|
-| S1 | **Template-Auswahl** | Mittel | Mittel |
-| S2 | **Dynamische Feld-Darstellung** | Mittel | Mittel |
-| S3 | **Audio-Segmentierung** | Niedrig | Mittel |
+| # | Feature | Status | Phase |
+|---|---------|--------|-------|
+| S1 | **Template-Auswahl** | ❌ Offen | Phase 6 |
+| S2 | **Dynamische Feld-Darstellung** | ❌ Offen | Phase 6 |
+| S3 | **Audio-Segmentierung** | ❌ Offen | Phase 6 |
 
 ---
 
@@ -544,11 +555,12 @@ export type { UnifiedEntryFormProps, FormData as EntryFormData } from './Unified
 - Testdaten erweitert (Sharing, OCR, Tasks)
 - Unit Tests: SharedBadge (9 Tests), JournalEntryCard (18 Tests)
 
-### Phase 4: DynamicJournalForm erweitern + Inline-Edit (1.5-2 Tage)
+### Phase 4: DynamicJournalForm erweitern + Inline-Edit (1.5-2 Tage) ✅
 
+> **Implementiert**: 2026-02-23
 > Audio-Details: Siehe [Anhang C](#anhang-c-audio-konsolidierung)
 
-**Schritt 4.0**: Inline-Edit Konzept implementieren
+**Schritt 4.0**: Inline-Edit Konzept implementieren ✅
 - `JournalEntryCard` hat bereits `onEdit` Callback (Phase 2+3), navigiert aktuell zur Detail-Seite
 - Umstellen: Klick auf Edit-Button → Parent-Komponente ersetzt Card durch `DynamicJournalForm`
 - `DynamicJournalForm` mit `existingEntry` Prop für Edit-Mode
@@ -556,51 +568,53 @@ export type { UnifiedEntryFormProps, FormData as EntryFormData } from './Unified
 - `onSubmit` → Update, dann zurück zu `JournalEntryCard`
 - Keine separate Page-Navigation nötig
 
-**Schritt 4.1**: OCR-Upload + Restore-Funktion
+**Schritt 4.1**: OCR-Upload + Restore-Funktion ✅
 - OCRUploadButton importieren
 - onOcrComplete Callback
-- **OCR "Restore to Content"** (Phase 2 Read-Mode → jetzt mit Edit-Mode verfügbar)
+- **OCR "Restore to content"** (Phase 2 Read-Mode → jetzt mit Edit-Mode verfügbar)
 
-**Schritt 4.2**: Foto-Upload
+**Schritt 4.2**: Foto-Upload ✅
 - Foto-Upload Button
 - CameraPicker
 
-**Schritt 4.3**: UnifiedEntryForm konsolidieren
-- Relevante Logik aus UnifiedEntryForm in DynamicJournalForm übernehmen
-- UnifiedEntryForm-Verwendungen ersetzen
-- UnifiedEntryForm.tsx entfernen
-- index.ts anpassen
+**Schritt 4.3**: UnifiedEntryForm konsolidieren ✅
+- Relevante Logik aus UnifiedEntryForm in DynamicJournalForm übernommen
+- UnifiedEntryForm.tsx **entfernt**
+- index.ts angepasst
 
-**Schritt 4.4**: Audio-Core erstellen
-- `lib/audio/audioUploadCore.ts` mit shared utilities erstellen
-- Types, Validation, Stage-Messages, formatElapsedTime extrahieren
+**Schritt 4.4**: Audio-Core erstellen ✅
+- `lib/audio/audioUploadCore.ts` mit shared utilities erstellt
+- Types, Validation, Stage-Messages, formatElapsedTime extrahiert
 - Upload-Funktionen: `uploadAudioForEntry`, `uploadAudioStandalone`, `transcribeOnly`
 
-**Schritt 4.5**: MicrophoneButton refactoren
+**Schritt 4.5**: MicrophoneButton refactoren ✅
 - Import audioUploadCore für Upload-Logik
 - Neuer einheitlicher Callback: `onResult: (result: AudioUploadResult) => void`
 - Legacy-Props `onAudioData`, `onText` als deprecated beibehalten (Backward-Compatibility)
 
-**Schritt 4.6**: AudioUploadButton refactoren
+**Schritt 4.6**: AudioUploadButton refactoren ✅
 - Import audioUploadCore für Upload-Logik
 - Neuer Prop: `existingEntryId?: string` (nutzt dann `/api/journal-entries/[id]/audio`)
 - Neuer Prop: `showCapturedAtInput?: boolean` (für manuelle capturedAt-Eingabe)
 - Neuer einheitlicher Callback: `onResult: (result: AudioUploadResult) => void`
 - Legacy-Prop `onAudioUploaded` als deprecated beibehalten
 
-**Schritt 4.7**: DynamicJournalForm Audio-Integration
-- AudioUploadButton mit Segmentierung integrieren (Multi-Feld-Templates)
-- Unified Callbacks nutzen
-- Für neue Einträge: Audio-IDs sammeln, nach Speichern MediaAttachments erstellen
+**Schritt 4.7**: DynamicJournalForm Audio-Integration ✅
+- AudioUploadButton mit Segmentierung integriert (Multi-Feld-Templates)
+- Unified Callbacks genutzt
+- Für neue Einträge: Audio-IDs sammeln, nach Speichern MediaAttachments erstellt
 
-### Phase 5: Journal-Seite Integration & Test (0.5 Tag)
+### Phase 5: Journal-Seite Integration & Test (0.5 Tag) ✅
 
-**Schritt 5.1**: Journal-Seite vollständig integrieren
+> **Implementiert**: 2026-02-23
+
+**Schritt 5.1**: Journal-Seite vollständig integrieren ✅
 - JournalEntryCard mit allen Props (siehe [Anhang B](#anhang-b-props-design-für-journalentrycard))
-- Alle Callbacks verbinden
-- DynamicJournalForm für Erstellung nutzen
+- Alle Callbacks verbunden
+- DynamicJournalForm für Erstellung genutzt
+- EditModeWrapper für Inline-Edit implementiert
 
-**Schritt 5.2**: End-to-End Tests
+**Schritt 5.2**: End-to-End Tests ✅
 - Eintrag erstellen mit Audio, Foto, OCR
 - Eintrag bearbeiten inline
 - AI-Pipeline triggern
@@ -609,7 +623,8 @@ export type { UnifiedEntryFormProps, FormData as EntryFormData } from './Unified
 
 ### Phase 6: Startseiten-Migration (1-2 Tage)
 
-> **Voraussetzung**: Journal-Seite funktioniert vollständig (Phase 1-5 abgeschlossen)
+> **Voraussetzung**: Journal-Seite funktioniert vollständig (Phase 1-5 abgeschlossen) ✅
+> **UX-Wünsche W1-W8**: Siehe [Phase 6 UX-Wünsche](2026-02_Phase6_Journal_UX_Wuensche.md) - ✅ alle implementiert
 
 **Schritt 6.1**: DiarySection refactoren
 - DiarySection.tsx so anpassen, dass es DynamicJournalForm nutzt

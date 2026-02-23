@@ -1,9 +1,9 @@
 # Phase 4 & 5: Inline-Edit, Media-Uploads & Audio-Konsolidierung
 
-> **Status**: 📋 Konzept  
-> **Erstellt**: 2026-02-07  
-> **Bezug**: [Unified JournalEntry Implementation Plan](2026-02_Unified_JournalEntry_Implementation_Plan.md)  
-> **Vorgänger**: [Phase 2-3: Panels und Modals](2026-02_Phase2-3_Panels_und_Modals.md) ✅  
+> **Status**: ✅ Implementiert (2026-02-23)
+> **Erstellt**: 2026-02-07
+> **Bezug**: [Unified JournalEntry Implementation Plan](2026-02_Unified_JournalEntry_Implementation_Plan.md)
+> **Vorgänger**: [Phase 2-3: Panels und Modals](2026-02_Phase2-3_Panels_und_Modals.md) ✅
 > **Ziel**: Inline-Editing via DynamicJournalForm, vollständige Media-Uploads (Audio, Foto, OCR), Audio-Konsolidierung und Journal-Seite finalisieren
 
 ---
