@@ -135,7 +135,6 @@ export default function HeutePage() {
     deleteNote,
     uploadPhotos,
     deletePhoto,
-    clearDiaryForm,
   } = useDiaryManagement(day?.id || null, date, (saving) => {
     if (saving) startSaving()
     else doneSaving()
@@ -508,22 +507,7 @@ export default function HeutePage() {
           <DiarySection
             date={date}
             timeBoxId={day.timeBoxId}
-            notes={notes}
-            onClearDiaryForm={clearDiaryForm}
-            onStartEditNote={startEditNote}
-            onDeleteNote={deleteNote}
-            onUploadPhotos={uploadPhotos}
-            onDeletePhoto={deletePhoto}
-            onViewPhoto={(noteId, index, url) => setViewer({ noteId, index, url })}
-            onRefreshNotes={async () => {
-              try {
-                const res = await fetch(`/api/day?date=${date}`, { credentials: 'same-origin' })
-                const data = await res.json()
-                if (data?.notes) setNotes(data.notes)
-              } catch (e) {
-                console.error('Refresh notes failed', e)
-              }
-            }}
+            onToast={push}
           />
 
           <DarmkurSection

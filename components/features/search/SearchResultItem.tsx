@@ -1,10 +1,12 @@
 /**
  * Single search result item component.
  * Displays title, snippet with highlighting, and navigation link.
+ * Journal entries show two navigation options: home page (with highlight) and detail page.
  */
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { IconExternalLink } from '@tabler/icons-react';
 import { TablerIcon } from '@/components/ui/TablerIcon';
 import type { SearchResultItem as SearchResultItemType } from '@/types/search';
 import { entityTypeIcons } from '@/lib/validators/search';
@@ -18,11 +20,18 @@ export function SearchResultItem({ item, onClick }: SearchResultItemProps) {
   const router = useRouter();
   const iconName = entityTypeIcons[item.type] || 'file';
 
+  // Primary click: navigate to the default URL (home page with highlight for journal entries)
   const handleClick = () => {
-    // Close overlay first
     onClick?.();
-    // Navigate and refresh to ensure page updates with new query params
     router.push(item.url);
+    router.refresh();
+  };
+
+  // Secondary click: navigate to journal detail page
+  const handleDetailClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onClick?.();
+    router.push(`/journal/${item.id}`);
     router.refresh();
   };
 
@@ -56,6 +65,18 @@ export function SearchResultItem({ item, onClick }: SearchResultItemProps) {
             className="text-sm text-base-content/70 mt-1 line-clamp-2"
             dangerouslySetInnerHTML={{ __html: sanitizeSnippet(item.snippet) }}
           />
+        )}
+
+        {/* Secondary navigation for journal entries: link to detail page */}
+        {item.type === 'journal_entry' && (
+          <button
+            type="button"
+            onClick={handleDetailClick}
+            className="inline-flex items-center gap-1 mt-1 text-xs text-primary hover:text-primary-focus hover:underline"
+          >
+            <IconExternalLink size={12} />
+            Detail-Ansicht
+          </button>
         )}
       </div>
     </div>
