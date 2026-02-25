@@ -1,5 +1,39 @@
 # Changelog
 
+## [1.2.0](https://github.com/scepbjoern/comp-act-diary/compare/v1.1.0...v1.2.0) (2026-02-25)
+
+
+### Features
+
+* add audio attachment support to journal entries with transcript persistence ([298d9c7](https://github.com/scepbjoern/comp-act-diary/commit/298d9c70736b90ca4fdbed58fef5d14982792e84))
+* add bundled migration script for orphaned audio attachments ([af69fad](https://github.com/scepbjoern/comp-act-diary/commit/af69fad5bca9ac0f6963c1179fb1ab98c739e218))
+* add JournalEntryType CRUD API and UI management with template system integration ([152ceb4](https://github.com/scepbjoern/comp-act-diary/commit/152ceb42b3ac075bf77db614ec4aba781ae958ed))
+* add multi-audio support to journal entries with per-attachment transcripts ([04e5dbf](https://github.com/scepbjoern/comp-act-diary/commit/04e5dbfbb8ccae4c1aebe6e28f8a5b9e570cd7ba))
+* add photo lightbox and improve journal entry card display ([f31ab97](https://github.com/scepbjoern/comp-act-diary/commit/f31ab976037bfadc60886c787aa96fdd40872e54))
+* add pipeline step selection modal and image generation to AI pipeline ([faddbe1](https://github.com/scepbjoern/comp-act-diary/commit/faddbe1ede084aa847fdd2ed87cd2dfdefc0b4d3))
+* add system template sync to entrypoint and expand sync-system-types.sql ([bee542f](https://github.com/scepbjoern/comp-act-diary/commit/bee542f8cd3c59ac7d51afa4ad2844a3c8562670))
+* implement automatic script bundling for all scripts ([4279d05](https://github.com/scepbjoern/comp-act-diary/commit/4279d05ec8577f887ab4f8317783a56e9071f134))
+* implement unified journal entry system (Phases 1-2) ([de9346d](https://github.com/scepbjoern/comp-act-diary/commit/de9346de2e2638110b50ec207a77075e39f07650))
+* integrate Phase 2+3 features into journal page - tasks, modals, and template-based AI config ([e0b810c](https://github.com/scepbjoern/comp-act-diary/commit/e0b810c45a172dd2337ef89acc4a63a89b97190f))
+* **journal:** Dynamic Templates Feature Complete ([628e0a0](https://github.com/scepbjoern/comp-act-diary/commit/628e0a00534de68ebeabdcf0a5e244f2839dd13a))
+* **journal:** Phase 4-5 Audio-Konsolidierung & Phase 6 UX-Verbesserungen ([530f50d](https://github.com/scepbjoern/comp-act-diary/commit/530f50dae21ac556ab127fbb56e0596afbff4663))
+* migrate home page to unified journal entries (Phase 6) ([c5b6300](https://github.com/scepbjoern/comp-act-diary/commit/c5b63007fe9e9976fd1fa12cd88c24495e8c3cad))
+* migrate journal pages to unified JournalService API ([bfcdd68](https://github.com/scepbjoern/comp-act-diary/commit/bfcdd68c1743d5f64b89824730d4bf863b4a78e6))
+* rebuild DiarySection as self-contained component with full Journal parity ([fc9cae3](https://github.com/scepbjoern/comp-act-diary/commit/fc9cae3c9996e6a9a2e31a869dd99e97fb94cff4))
+
+
+### Bug Fixes
+
+* add .js extension to journalEntryAccessService import in migration script ([be267b6](https://github.com/scepbjoern/comp-act-diary/commit/be267b6b11a4717049d2957c80bfacd86f5fc1e8))
+* add lib directory to Docker image for migration script dependencies ([9c7a2ca](https://github.com/scepbjoern/comp-act-diary/commit/9c7a2ca664bb2b643171ec09a664f3c6d0c805af))
+* four homepage bugs after Phase 6 migration ([5379720](https://github.com/scepbjoern/comp-act-diary/commit/537972098b4a0c2ef347a4709ba40a127e031a28))
+* P2 collapse/expand and P3 OCR image path ([d20cc29](https://github.com/scepbjoern/comp-act-diary/commit/d20cc294a8f66bfcce76ddadcb151b05066facb9))
+* photo thumbnails, collapse toggle, referenceDate TimeBox resolution ([df4b1c4](https://github.com/scepbjoern/comp-act-diary/commit/df4b1c41cae1b2071a87145a816e2118ce7b314e))
+* remove .js extensions from relative imports in journalEntryAccessService ([8562966](https://github.com/scepbjoern/comp-act-diary/commit/856296623245abae191a3ab300892fe7b3c57153))
+* resolve merge conflicts and implement audio transcription with drag-and-drop field ordering ([08f3a05](https://github.com/scepbjoern/comp-act-diary/commit/08f3a0570ad5588448f4ac3694c298a543426378))
+* switch script bundler from ESM to CommonJS format ([01874eb](https://github.com/scepbjoern/comp-act-diary/commit/01874eb15f4d6b6c781bcf200004270db61a20ad))
+* update bundled script file extension from .js to .cjs in documentation and build script ([e93c1f3](https://github.com/scepbjoern/comp-act-diary/commit/e93c1f3dc7a9d3155baf0b558c314d7acb626fdc))
+
 ## [1.1.0](https://github.com/scepbjoern/comp-act-diary/compare/v1.0.0...v1.1.0) (2026-01-28)
 
 
