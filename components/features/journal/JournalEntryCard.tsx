@@ -406,8 +406,10 @@ function JournalEntryCardComponent({
   ) || false
   const shouldShowOCR = showOCRSources !== false && hasOCRSources
   
-  // Determine if we should show full content (expanded/detail mode or manually expanded in compact)
-  const showFullContent = isExpanded || mode === 'expanded' || mode === 'detail'
+  // Determine if we should show full content
+  // Only depends on isExpanded state - user can toggle freely
+  // mode='expanded' only sets initial state, doesn't force it
+  const showFullContent = isExpanded
   
   return (
     <article 

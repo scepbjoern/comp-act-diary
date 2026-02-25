@@ -71,8 +71,8 @@ function getOcrFolder(date: Date): { folderPath: string; relativePath: string } 
   const decade = `${Math.floor(year / 10) * 10}s`
 
   const uploadsDir = getUploadsDir()
-  const relativePath = path.join('ocr', decade, String(year), month, day)
-  const folderPath = path.join(uploadsDir, relativePath)
+  const relativePath = path.join('uploads', 'ocr', decade, String(year), month, day)
+  const folderPath = path.join(uploadsDir, 'ocr', decade, String(year), month, day)
 
   return { folderPath, relativePath }
 }
