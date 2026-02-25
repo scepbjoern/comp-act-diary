@@ -270,7 +270,7 @@ function PhotoGallery({ attachments, onViewPhoto, onDeletePhoto, isEditing }: Ph
           >
             {img.asset.filePath && (
               <Image
-                src={`/${img.asset.filePath}`}
+                src={`/${img.asset.filePath.replace(/^\//, '')}`}
                 alt="Eintrag Foto"
                 className="object-cover w-full h-full"
                 loading="lazy"
@@ -349,12 +349,11 @@ function JournalEntryCardComponent({
   // URL Highlighting (Phase 6)
   const [isHighlighted, setIsHighlighted] = useState(false)
   
-  // Only auto-expand if mode is not compact
+  // Initial expand state based on mode - only runs once on mount
+  // User can toggle afterwards, this won't override their choice
   useEffect(() => {
-    if (mode === 'expanded' || mode === 'detail') {
-      setIsExpanded(true)
-    }
-  }, [mode])
+    setIsExpanded(mode === 'expanded' || mode === 'detail')
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Phase 6: URL Highlighting logic
   useEffect(() => {

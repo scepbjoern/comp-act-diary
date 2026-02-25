@@ -139,14 +139,26 @@ export async function POST(req: NextRequest) {
     // Store OCR text as transcript in first attachment for consistency with audio workflow
     for (let i = 0; i < mediaAssetIds.length; i++) {
       const assetId = mediaAssetIds[i]
+      // SOURCE attachment for OCR source panel
       await prisma.mediaAttachment.create({
         data: {
           assetId,
           entityId: entity.id,
           userId: user.id,
           role: 'SOURCE',
+          timeBoxId: timeBox.id,
           transcript: i === 0 ? text : null,
           transcriptModel: i === 0 ? 'mistral-ocr-latest' : null,
+        },
+      })
+      // GALLERY attachment so OCR images appear in photo gallery
+      await prisma.mediaAttachment.create({
+        data: {
+          assetId,
+          entityId: entity.id,
+          userId: user.id,
+          role: 'GALLERY',
+          timeBoxId: timeBox.id,
         },
       })
     }
