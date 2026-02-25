@@ -1,7 +1,7 @@
 # Phase 6: Startseite-Migration zum Unified JournalEntry-System
 
 **Erstellt:** Februar 2026  
-**Status:** Planung  
+**Status:** ✅ Implementiert (2026-02-25)  
 **Basiert auf:** `2026-02_Unified_JournalEntry_Implementation_Plan.md`
 
 ---
@@ -86,15 +86,15 @@ Die folgende Matrix zeigt, welche Features von `DiaryEntriesAccordion` bereits i
 | Audio löschen | ✅ | ✅ | OK |
 | Neu transkribieren | ✅ | ✅ | OK |
 | Fotos anzeigen | ✅ | ✅ | OK |
-| Foto-Upload (best. Einträge) | ✅ | ❌ | Nicht in Card, nur via DynamicJournalForm |
-| Foto-Upload (Bearbeiten) | ✅ | ❌ | Im Edit-Formular nicht sichtbar |
-| Foto löschen | ✅ | ❌ | Nicht in Card |
+| Foto-Upload (best. Einträge) | ✅ | ✅ | CameraPicker + Upload in Edit-Mode |
+| Foto-Upload (Bearbeiten) | ✅ | ✅ | Im Edit-Formular sichtbar |
+| Foto löschen | ✅ | ✅ | Delete-Button pro Foto im Edit-Mode |
 | OCR-Quellen anzeigen | ✅ | ✅ | OK |
 | Tasks-Panel | ✅ | ✅ | OK |
 | Sharing Badge + Modal | ✅ | ✅ | OK |
 | Bearbeiten-Modus | ✅ | ✅ | via onEdit-Callback (öffnet Modal/Form) |
 | Eintrag löschen | ✅ | ✅ | OK |
-| URL-Highlighting (#entry-id) | ✅ | ❌ | Muss ergänzt werden |
+| URL-Highlighting (#entry-id) | ✅ | ✅ | ?entry={id} und #entry-{id} mit Scroll + Highlight |
 
 ### 2.3 Nicht-funktionale Anforderungen
 

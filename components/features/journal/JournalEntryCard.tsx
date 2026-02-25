@@ -268,9 +268,9 @@ function PhotoGallery({ attachments, onViewPhoto, onDeletePhoto, isEditing }: Ph
             className="block w-20 h-20 rounded-lg overflow-hidden bg-base-200 hover:ring-2 hover:ring-primary transition-all cursor-pointer"
             title="Foto ansehen"
           >
-            {img.asset.id && (
+            {img.asset.filePath && (
               <Image
-                src={`/api/media/${img.asset.id}`}
+                src={`/${img.asset.filePath}`}
                 alt="Eintrag Foto"
                 className="object-cover w-full h-full"
                 loading="lazy"
@@ -424,9 +424,9 @@ function JournalEntryCardComponent({
       <div
         className={clsx(
           'flex items-start justify-between gap-2 p-3',
-          mode === 'compact' && 'cursor-pointer'
+          mode !== 'detail' && 'cursor-pointer'
         )}
-        onClick={mode === 'compact' ? () => setIsExpanded(!isExpanded) : undefined}
+        onClick={mode !== 'detail' ? () => setIsExpanded(!isExpanded) : undefined}
       >
         <div className="flex-1 min-w-0">
           {/* Type badge and template */}
@@ -524,7 +524,7 @@ function JournalEntryCardComponent({
               <IconTrash className="h-4 w-4" />
             </button>
           )}
-          {mode === 'compact' && (
+          {mode !== 'detail' && (
             <button
               onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded) }}
               className="p-1.5 rounded hover:bg-muted"

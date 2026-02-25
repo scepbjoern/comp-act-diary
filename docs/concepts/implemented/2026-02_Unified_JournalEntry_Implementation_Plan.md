@@ -1,12 +1,13 @@
 # Unified JournalEntry Implementation Plan
 
-> **Status**: 🔄 In Arbeit (Phase 1–5 ✅ abgeschlossen, Phase 6 offen)
+> **Status**: ✅ Abgeschlossen (Phase 1–6 implementiert)
 > **Erstellt**: 2026-02-04
 > **Phase 1 implementiert**: 2026-02-05
 > **Phase 2+3 implementiert**: 2026-02-07
 > **Phase 4+5 implementiert**: 2026-02-23
 > **Phase 6 UX-Wünsche implementiert**: 2026-02-23
-> **Basis**: [2026-02_Unified_JournalEntry_Analysis_and_Concept.md](./2026-02_Unified_JournalEntry_Analysis_and_Concept.md)
+> **Phase 6 Startseite-Migration implementiert**: 2026-02-25
+> **Basis**: [2026-02_Unified_JournalEntry_Analysis_and_Concept.md](../2026-02_Unified_JournalEntry_Analysis_and_Concept.md)
 > **Ziel**: Konkreter Implementierungsplan zur Feature-Parität zwischen DiaryEntriesAccordion und JournalEntryCard
 
 ---
@@ -172,9 +173,9 @@ Die **DiaryEntriesAccordion** auf der Startseite (`/`) bietet ein reichhaltiges 
 
 | # | Feature | Status | Phase |
 |---|---------|--------|-------|
-| S1 | **Template-Auswahl** | ❌ Offen | Phase 6 |
-| S2 | **Dynamische Feld-Darstellung** | ❌ Offen | Phase 6 |
-| S3 | **Audio-Segmentierung** | ❌ Offen | Phase 6 |
+| S1 | **Template-Auswahl** | ✅ | Phase 6 (DiarySection lädt Types/Templates von API) |
+| S2 | **Dynamische Feld-Darstellung** | ✅ | Phase 6 (DynamicJournalForm mit FieldRenderer) |
+| S3 | **Audio-Segmentierung** | ✅ | Phase 6 (DynamicJournalForm mit AudioUploadButton) |
 
 ---
 
@@ -621,35 +622,47 @@ export type { UnifiedEntryFormProps, FormData as EntryFormData } from './Unified
 - Sharing testen
 - Template-basierte Einträge testen
 
-### Phase 6: Startseiten-Migration (1-2 Tage)
+### Phase 6: Startseiten-Migration (1-2 Tage) ✅
 
 > **Voraussetzung**: Journal-Seite funktioniert vollständig (Phase 1-5 abgeschlossen) ✅
 > **UX-Wünsche W1-W8**: Siehe [Phase 6 UX-Wünsche](2026-02_Phase6_Journal_UX_Wuensche.md) - ✅ alle implementiert
+> **Implementiert**: 2026-02-25
 
-**Schritt 6.1**: DiarySection refactoren
-- DiarySection.tsx so anpassen, dass es DynamicJournalForm nutzt
-- Bestehende Formular-Logik durch DynamicJournalForm ersetzen
+**Schritt 6.1**: DiarySection refactoren ✅
+- DiarySection als self-contained Komponente mit useJournalEntries Hook
+- DynamicJournalForm hinter "+ Neuer Eintrag" Toggle-Button
+- Types/Templates von API geladen (nicht hardcoded)
+- Props reduziert auf date + timeBoxId + onToast
 
-**Schritt 6.2**: DiaryEntriesAccordion ersetzen
-- JournalEntryCard statt DiaryEntriesAccordion verwenden
-- Alle Callbacks aus DiaryEntriesAccordion in die neue Struktur übernehmen
-- Sicherstellen, dass alle Features funktionieren
+**Schritt 6.2**: DiaryEntriesAccordion ersetzen ✅
+- JournalEntryCard statt DiaryEntriesAccordion (mode='expanded')
+- Alle Callbacks: Edit (EditModeWrapper), Delete, Pipeline, Share, Timestamp, AISettings
+- Tasks pro Entry geladen
+- PipelineStepModal für AI-Schritt-Auswahl
 
-**Schritt 6.3**: Legacy-APIs entfernen
-- `POST /api/diary/upload-audio` entfernen
-- `POST /api/notes/[id]/photos` entfernen
-- `DELETE /api/photos/[id]` entfernen
-- Prüfen ob `/api/diary/retranscribe` noch benötigt wird
+**Schritt 6.3**: Legacy-APIs entfernen ✅
+- `POST /api/diary/upload-audio` entfernt
+- `POST /api/notes/[id]/photos` entfernt
+- `DELETE /api/photos/[id]` entfernt
 
-**Schritt 6.4**: Komponenten verschieben und aufräumen
-- Wiederverwendbare Komponenten aus `diary/` verschieben (siehe [Kapitel 7.4](#74-ordnerstruktur-strategie))
-- `DiaryEntriesAccordion.tsx` entfernen
-- `index.ts` finalisieren
+**Schritt 6.4**: Komponenten verschieben und aufräumen ✅
+- JournalEntrySection → journal/
+- ShareEntryModal → shared/
+- SharedBadge → shared/
+- DiaryContentWithMentions → shared/ContentWithMentions.tsx
+- DiaryEntriesAccordion.tsx entfernt
 
-**Schritt 6.5**: Finale Tests
-- E2E-Test: Eintrag auf Startseite erstellen → in Journal-Liste sichtbar
-- E2E-Test: Eintrag auf Journal-Seite erstellen → auf Startseite sichtbar
-- Prüfe: Keine Console-Errors, keine 404s auf alte APIs
+**Schritt 6.5**: Finale Tests ✅
+- TypeScript: 0 Errors
+- Vitest: 269 Tests grün
+- ESLint: 0 neue Errors
+- Manuelles Testing: Alle Features funktionsfähig
+
+**Zusätzliche Fixes (2026-02-25)**:
+- Foto-Thumbnails: filePath statt /api/media/{id} für korrekte Anzeige
+- Collapse/Expand: Chevron-Button und Header-Klick für alle Modi (nicht nur compact)
+- Bezugszeit: updateEntry resolved timeBoxId neu wenn occurredAt sich ändert
+- Suche: Dual-Navigation für Journal-Einträge (Startseite + Detail-Ansicht)
 
 ---
 

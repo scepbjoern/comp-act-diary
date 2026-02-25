@@ -305,6 +305,32 @@ export class JournalService {
     if (isSensitive !== undefined) updateData.isSensitive = isSensitive
     if (locationId !== undefined) updateData.locationId = locationId
 
+    // If occurredAt changed, re-resolve timeBoxId (entry moves to the day of the reference time)
+    if (occurredAt !== undefined) {
+      const existingEntry = await this.prisma.journalEntry.findUnique({
+        where: { id },
+        select: { timeBoxId: true, userId: true },
+      })
+      if (existingEntry) {
+        const newTimeBoxId = await this.resolveTimeBox(existingEntry.userId, new Date(occurredAt))
+        if (newTimeBoxId !== existingEntry.timeBoxId) {
+          updateData.timeBoxId = newTimeBoxId
+
+          // Move related MediaAttachments to the new TimeBox
+          await this.prisma.mediaAttachment.updateMany({
+            where: { entityId: id },
+            data: { timeBoxId: newTimeBoxId },
+          })
+
+          // Move related Interactions to the new TimeBox
+          await this.prisma.interaction.updateMany({
+            where: { journalEntryId: id },
+            data: { occurredAt: new Date(occurredAt), timeBoxId: newTimeBoxId },
+          })
+        }
+      }
+    }
+
     await this.prisma.journalEntry.update({
       where: { id },
       data: updateData,
