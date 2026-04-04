@@ -56,6 +56,20 @@ interface DiarySectionProps {
   onToast?: (message: string, type: 'success' | 'error') => void
 }
 
+function mapAudioTranscriptsForCreate(
+  audioTranscripts?: Record<string, { transcript: string; model: string }>
+): Array<{ assetId: string; transcript: string; transcriptModel?: string | null }> | undefined {
+  if (!audioTranscripts || Object.keys(audioTranscripts).length === 0) {
+    return undefined
+  }
+
+  return Object.entries(audioTranscripts).map(([assetId, transcriptData]) => ({
+    assetId,
+    transcript: transcriptData.transcript,
+    transcriptModel: transcriptData.model || null,
+  }))
+}
+
 // ─── Edit Mode Wrapper (same pattern as Journal page) ────────────────────────
 
 interface EditModeWrapperProps {
@@ -256,6 +270,7 @@ export function DiarySection({ date, timeBoxId, onToast }: DiarySectionProps) {
     title?: string
     isSensitive?: boolean
     occurredAt?: string
+    capturedAt?: string | null
     audioFileIds?: string[]
     audioTranscripts?: Record<string, { transcript: string; model: string }>
     ocrAssetIds?: string[]
@@ -267,70 +282,20 @@ export function DiarySection({ date, timeBoxId, onToast }: DiarySectionProps) {
         typeId: data.typeId,
         templateId: data.templateId || undefined,
         content: data.content,
+        fieldValues: data.fieldValues,
         title: data.title,
         isSensitive: data.isSensitive,
         timeBoxId,
         occurredAt: data.occurredAt ? new Date(data.occurredAt) : undefined,
+        capturedAt: data.capturedAt ? new Date(data.capturedAt) : undefined,
+        audioFileIds: data.audioFileIds,
+        audioTranscripts: mapAudioTranscriptsForCreate(data.audioTranscripts),
+        ocrAssetIds: data.ocrAssetIds,
+        photoAssetIds: data.photoAssetIds,
       })
 
       if (result) {
-        // Attach audio files
-        if (data.audioFileIds && data.audioFileIds.length > 0) {
-          for (const assetId of data.audioFileIds) {
-            const audioData = data.audioTranscripts?.[assetId]
-            try {
-              await fetch(`/api/journal-entries/${result.id}/media`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  assetId,
-                  role: 'SOURCE',
-                  transcript: audioData?.transcript || null,
-                  transcriptModel: audioData?.model || null,
-                }),
-              })
-            } catch (err) {
-              console.error('Failed to attach audio:', err)
-            }
-          }
-        }
-
-        // Attach OCR assets
-        if (data.ocrAssetIds && data.ocrAssetIds.length > 0) {
-          for (const assetId of data.ocrAssetIds) {
-            try {
-              await fetch(`/api/journal-entries/${result.id}/media`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assetId, role: 'SOURCE' }),
-              })
-            } catch (err) {
-              console.error('Failed to attach OCR asset:', err)
-            }
-          }
-        }
-
-        // Attach photo assets
-        if (data.photoAssetIds && data.photoAssetIds.length > 0) {
-          for (const assetId of data.photoAssetIds) {
-            try {
-              await fetch(`/api/journal-entries/${result.id}/media`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assetId, role: 'GALLERY' }),
-              })
-            } catch (err) {
-              console.error('Failed to attach photo:', err)
-            }
-          }
-        }
-
-        // Refetch if media was attached
-        if (
-          (data.audioFileIds?.length) ||
-          (data.ocrAssetIds?.length) ||
-          (data.photoAssetIds?.length)
-        ) {
+        if (data.audioFileIds?.length || data.ocrAssetIds?.length || data.photoAssetIds?.length) {
           await refetch()
         }
 
@@ -353,14 +318,23 @@ export function DiarySection({ date, timeBoxId, onToast }: DiarySectionProps) {
         typeId: data.typeId,
         templateId: data.templateId || undefined,
         content: data.content,
+        fieldValues: data.fieldValues,
         title: data.title,
         isSensitive: data.isSensitive,
         timeBoxId,
         occurredAt: data.occurredAt ? new Date(data.occurredAt) : undefined,
+        capturedAt: data.capturedAt ? new Date(data.capturedAt) : undefined,
+        audioFileIds: data.audioFileIds,
+        audioTranscripts: mapAudioTranscriptsForCreate(data.audioTranscripts),
+        ocrAssetIds: data.ocrAssetIds,
+        photoAssetIds: data.photoAssetIds,
       })
       if (result) {
         setIsFormOpen(false)
         onToast?.('Eintrag erstellt', 'success')
+        if (data.audioFileIds?.length || data.ocrAssetIds?.length || data.photoAssetIds?.length) {
+          await refetch()
+        }
         setPipelineModalEntryId(result.id)
       }
     } catch (err) {
@@ -369,7 +343,7 @@ export function DiarySection({ date, timeBoxId, onToast }: DiarySectionProps) {
     } finally {
       setIsSubmitting(false)
     }
-  }, [createEntry, timeBoxId, onToast])
+  }, [createEntry, timeBoxId, onToast, refetch])
 
   /** Edit submit via PATCH */
   const handleEditSubmit = useCallback(async (entryId: string, data: {

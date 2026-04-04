@@ -701,8 +701,9 @@ Die folgenden Entscheidungen wurden getroffen:
 
 **Umsetzung**: 
 - Für bestehende Einträge: `MicrophoneButton` mit `existingEntryId` nutzt `/api/journal-entries/[id]/audio`
-- Für neue Einträge: Audio-Upload erfolgt nach Speichern des Eintrags
-- Legacy-Route `/api/diary/upload-audio` bleibt bis Phase 6 parallel aktiv
+- Für neue Einträge: Audio wird vor dem Speichern via `/api/transcribe` transkribiert und bei `keepAudio=true` als Draft-`MediaAsset` abgelegt
+- Beim anschliessenden `createEntry` werden `audioFileIds` und `audioTranscripts` direkt mitgegeben, sodass die `MediaAttachment`-Verknüpfung im Create-Flow entsteht
+- Legacy-Route `/api/diary/upload-audio` wurde in Phase 6 entfernt
 
 **Begründung**: Die neue Route bietet dieselbe Funktionalität (Transkription, MediaAttachment-Erstellung) und ist Teil der Unified API.
 
@@ -861,19 +862,18 @@ interface JournalEntryCardProps {
 
 | Route | Funktion | Erstellt MediaAsset | Erstellt MediaAttachment | Transkription |
 |-------|----------|---------------------|--------------------------|---------------|
-| `/api/transcribe` | Nur Transkription | ❌ | ❌ | ✅ |
-| `/api/diary/upload-audio` | Legacy Audio-Upload | ✅ | ❌ | ✅ |
+| `/api/transcribe` | Transkription und optionaler Draft-Audio-Upload | Optional | ❌ | ✅ |
 | `/api/journal-entries/[id]/audio` | Unified Audio-Upload | ✅ | ✅ | ✅ |
 | `/api/journal-ai/segment-audio` | Transkript-Segmentierung | ❌ | ❌ | ❌ (nutzt vorhandenes) |
 
-**Problem**: `/api/diary/upload-audio` erstellt **kein MediaAttachment**, nur ein loses MediaAsset. Die Verknüpfung zum JournalEntry erfolgt nicht automatisch.
+**Aktueller Stand**: Für neue Einträge liefert `/api/transcribe` bei `keepAudio=true` ein Draft-`MediaAsset`, das anschliessend im `createEntry`-Flow als `ATTACHMENT` verknüpft wird. Für bestehende Einträge erfolgt Upload und Verknüpfung weiterhin direkt über `/api/journal-entries/[id]/audio`.
 
 #### Komponenten (aktueller Stand)
 
 | Komponente | Verwendet von | APIs | Features |
 |------------|---------------|------|----------|
-| `MicrophoneButton` | DiarySection, DiaryEntriesAccordion, DynamicJournalForm, MealNotesSection, MealNotesAccordion, Coach, Reflections | `/api/journal-entries/[id]/audio`, `/api/diary/upload-audio`, `/api/transcribe` | Aufnahme, Pegel-Anzeige, Pause/Resume, Stop, Cancel, Modell-Auswahl |
-| `AudioUploadButton` | DiarySection | `/api/diary/upload-audio` | Datei-Upload, Stage-Anzeige, Timer |
+| `MicrophoneButton` | DiarySection, DynamicJournalForm, MealNotesSection, MealNotesAccordion, Coach, Reflections | `/api/journal-entries/[id]/audio`, `/api/transcribe` | Aufnahme, Pegel-Anzeige, Pause/Resume, Stop, Cancel, Modell-Auswahl |
+| `AudioUploadButton` | DiarySection, DynamicJournalForm | `/api/journal-entries/[id]/audio`, `/api/transcribe` | Datei-Upload, Stage-Anzeige, Timer |
 
 **Probleme identifiziert**:
 1. `AudioUploadButton` hat **keinen Support** für `/api/journal-entries/[id]/audio`

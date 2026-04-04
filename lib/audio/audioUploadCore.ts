@@ -207,11 +207,46 @@ export async function uploadAudioForEntry(
  * Options for standalone audio upload (legacy diary endpoint)
  */
 export async function uploadAudioStandalone(
-  _file: File,
-  _options: UploadStandaloneOptions,
-  _onStageChange?: OnStageChange
+  file: File,
+  options: UploadStandaloneOptions,
+  onStageChange?: OnStageChange
 ): Promise<AudioUploadResult> {
-  throw new Error("Standalone audio upload is no longer supported. Please save the entry first and upload audio to the entry.")
+  const { model, keepAudio, capturedAt } = options
+
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('model', model)
+  fd.append('keepAudio', String(keepAudio))
+  if (capturedAt) {
+    fd.append('capturedAt', capturedAt)
+  }
+
+  onStageChange?.('uploading', STAGE_MESSAGES.uploading)
+
+  const res = await fetch('/api/transcribe', {
+    method: 'POST',
+    body: fd,
+    credentials: 'same-origin',
+  })
+
+  if (!res.ok) {
+    throw new Error(await parseServerError(res))
+  }
+
+  onStageChange?.('transcribing', STAGE_MESSAGES.transcribing)
+
+  const data = await res.json()
+
+  onStageChange?.('complete', STAGE_MESSAGES.complete)
+
+  return {
+    text: data.text,
+    audioFileId: data.assetId ?? null,
+    audioFilePath: data.filePath ?? null,
+    capturedAt: data.capturedAt ?? capturedAt,
+    model: data.model || model,
+    keepAudio: data.keepAudio ?? keepAudio,
+  }
 }
 
 /**

@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import type { User } from '@prisma/client'
 import { getPrisma } from '@/lib/core/prisma'
 import { createJournalService } from '@/lib/services/journal/journalService'
 import { logger } from '@/lib/core/logger'
@@ -18,7 +19,18 @@ import { z } from 'zod'
 
 async function getUserId(): Promise<string | null> {
   const cookieStore = await cookies()
-  return cookieStore.get('userId')?.value || null
+  const cookieUserId = cookieStore.get('userId')?.value
+  const prisma = getPrisma()
+
+  let user: User | null = cookieUserId
+    ? await prisma.user.findUnique({ where: { id: cookieUserId } })
+    : null
+
+  if (!user) {
+    user = await prisma.user.findUnique({ where: { username: 'demo' } })
+  }
+
+  return user?.id || null
 }
 
 // =============================================================================

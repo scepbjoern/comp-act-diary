@@ -55,6 +55,20 @@ interface JournalTemplate {
   typeId: string | null
 }
 
+function mapAudioTranscriptsForCreate(
+  audioTranscripts?: Record<string, { transcript: string; model: string }>
+): Array<{ assetId: string; transcript: string; transcriptModel?: string | null }> | undefined {
+  if (!audioTranscripts || Object.keys(audioTranscripts).length === 0) {
+    return undefined
+  }
+
+  return Object.entries(audioTranscripts).map(([assetId, transcriptData]) => ({
+    assetId,
+    transcript: transcriptData.transcript,
+    transcriptModel: transcriptData.model || null,
+  }))
+}
+
 // =============================================================================
 // EDIT MODE WRAPPER (shows form + panels together)
 // =============================================================================
@@ -169,7 +183,6 @@ export default function JournalPage() {
     error,
     createEntry,
     deleteEntry,
-    runPipeline,
     loadMore,
     refetch,
   } = useJournalEntries({
@@ -322,6 +335,7 @@ export default function JournalPage() {
     title?: string
     isSensitive?: boolean
     occurredAt?: string
+    capturedAt?: string | null
     audioFileIds?: string[]
     audioTranscripts?: Record<string, { transcript: string; model: string }>
     ocrAssetIds?: string[]
@@ -333,73 +347,21 @@ export default function JournalPage() {
         typeId: data.typeId,
         templateId: data.templateId || undefined,
         content: data.content,
+        fieldValues: data.fieldValues,
         title: data.title,
         isSensitive: data.isSensitive,
         occurredAt: data.occurredAt ? new Date(data.occurredAt) : undefined,
+        capturedAt: data.capturedAt ? new Date(data.capturedAt) : undefined,
+        audioFileIds: data.audioFileIds,
+        audioTranscripts: mapAudioTranscriptsForCreate(data.audioTranscripts),
+        ocrAssetIds: data.ocrAssetIds,
+        photoAssetIds: data.photoAssetIds,
       })
 
       if (result) {
         setIsFormOpen(false)
         push('Eintrag erstellt', 'success')
-        
-        // Attach audio files after entry creation
-        if (data.audioFileIds && data.audioFileIds.length > 0) {
-          for (const assetId of data.audioFileIds) {
-            const audioData = data.audioTranscripts?.[assetId]
-            try {
-              await fetch(`/api/journal-entries/${result.id}/media`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  assetId,
-                  role: 'SOURCE',
-                  transcript: audioData?.transcript || null,
-                  transcriptModel: audioData?.model || null,
-                }),
-              })
-            } catch (err) {
-              console.error('Failed to attach audio:', err)
-            }
-          }
-          await refetch()
-        }
-
-        // Attach OCR assets after entry creation
-        if (data.ocrAssetIds && data.ocrAssetIds.length > 0) {
-          for (const assetId of data.ocrAssetIds) {
-            try {
-              await fetch(`/api/journal-entries/${result.id}/media`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assetId, role: 'SOURCE' }),
-              })
-            } catch (err) {
-              console.error('Failed to attach OCR asset:', err)
-            }
-          }
-        }
-
-        // Attach photo assets after entry creation
-        if (data.photoAssetIds && data.photoAssetIds.length > 0) {
-          for (const assetId of data.photoAssetIds) {
-            try {
-              await fetch(`/api/journal-entries/${result.id}/media`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assetId, role: 'GALLERY' }),
-              })
-            } catch (err) {
-              console.error('Failed to attach photo:', err)
-            }
-          }
-        }
-
-        // Refetch if any media was attached
-        if (
-          (data.audioFileIds && data.audioFileIds.length > 0) ||
-          (data.ocrAssetIds && data.ocrAssetIds.length > 0) ||
-          (data.photoAssetIds && data.photoAssetIds.length > 0)
-        ) {
+        if (data.audioFileIds?.length || data.ocrAssetIds?.length || data.photoAssetIds?.length) {
           await refetch()
         }
       }
@@ -419,13 +381,22 @@ export default function JournalPage() {
         typeId: data.typeId,
         templateId: data.templateId || undefined,
         content: data.content,
+        fieldValues: data.fieldValues,
         title: data.title,
         isSensitive: data.isSensitive,
         occurredAt: data.occurredAt ? new Date(data.occurredAt) : undefined,
+        capturedAt: data.capturedAt ? new Date(data.capturedAt) : undefined,
+        audioFileIds: data.audioFileIds,
+        audioTranscripts: mapAudioTranscriptsForCreate(data.audioTranscripts),
+        ocrAssetIds: data.ocrAssetIds,
+        photoAssetIds: data.photoAssetIds,
       })
       if (result) {
         setIsFormOpen(false)
         push('Eintrag erstellt', 'success')
+        if (data.audioFileIds?.length || data.ocrAssetIds?.length || data.photoAssetIds?.length) {
+          await refetch()
+        }
         // Open pipeline modal instead of running immediately
         setPipelineModalEntryId(result.id)
       }
@@ -435,7 +406,7 @@ export default function JournalPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [createEntry, push])
+  }, [createEntry, push, refetch])
 
   /** Phase 5: Handle edit-submit from DynamicJournalForm (edit mode) */
   const handleEditSubmit = useCallback(async (entryId: string, data: {

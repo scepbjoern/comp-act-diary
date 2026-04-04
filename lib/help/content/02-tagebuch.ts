@@ -262,14 +262,13 @@ GET/DELETE /api/photos/[id]                  → Foto laden/löschen</code></pre
       <p>Die Upload-Logik ist in <code>lib/audio/audioUploadCore.ts</code> zentralisiert. Drei Funktionen:</p>
       <ul>
         <li><code>uploadAudioForEntry()</code> – Upload zu bestehendem Entry (MediaAsset + Attachment)</li>
-        <li><code>uploadAudioStandalone()</code> – Legacy-Endpoint für neue Einträge</li>
+        <li><code>uploadAudioStandalone()</code> – Draft-Upload für neue Einträge (MediaAsset optional, noch ohne Attachment)</li>
         <li><code>transcribeOnly()</code> – Nur Transkription, ohne Audio-Persistenz</li>
       </ul>
       <h4>Audio-Aufnahme</h4>
       <p>Web Audio API mit MediaRecorder (WebM/Opus oder MP4/AAC)</p>
       <h4>API-Endpunkte</h4>
-      <pre><code>POST /api/transcribe                         → Nur transkribieren
-POST /api/diary/upload-audio                 → Standalone-Upload
+      <pre><code>POST /api/transcribe                         → Transkribieren, optional mit Draft-MediaAsset
 POST /api/journal-entries/[id]/audio         → Upload zu bestehendem Entry
 POST /api/journal-ai/segment-audio           → Transkript auf Felder verteilen</code></pre>
       <h4>Validierung</h4>

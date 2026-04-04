@@ -322,9 +322,8 @@ interface DynamicJournalFormProps {
 | `/api/journal-entries/[id]/audio` | POST | Audio hochladen + verknüpfen | 4 |
 | `/api/journal-entries/[id]/media` | POST | Media (Foto/OCR) verknüpfen | 4 |
 | `/api/journal-entries/[id]/media/[attachmentId]` | DELETE | Media-Attachment löschen | 4 |
-| `/api/transcribe` | POST | Nur Transkription (ohne Speicherung) | ✅ |
+| `/api/transcribe` | POST | Transkription; bei `keepAudio=true` Draft-`MediaAsset` für neue Einträge | ✅ |
 | `/api/journal-ai/segment-audio` | POST | Transkript auf Template-Felder verteilen | ✅ |
-| `/api/diary/upload-audio` | POST | Legacy Audio-Upload (bleibt bis Phase 6) | Legacy |
 
 ### 5.2 Zu prüfende APIs
 
@@ -381,6 +380,31 @@ onAudioData({ text, audioFileId, attachmentId })
     │
     ▼
 Transkript in Feld einfügen, Entry wird refetcht
+```
+
+### 5.5 Datenfluss: Audio-Upload für neuen Entry
+
+```
+DynamicJournalForm (Create-Mode, noch ohne existingEntryId)
+    │
+    ▼
+MicrophoneButton / AudioUploadButton mit keepAudio=true
+    │
+    ▼
+POST /api/transcribe
+    ├── transkribiert Audio
+    ├── erstellt optional ein Draft-MediaAsset
+    └── gibt { text, assetId, model } zurück
+    │
+    ▼
+DynamicJournalForm
+    ├── fügt Transkript sofort ins passende Feld ein
+    └── sammelt audioFileIds + audioTranscripts
+    │
+    ▼
+POST /api/journal-entries
+    ├── body enthält audioFileIds + audioTranscripts
+    └── createEntry erstellt die MediaAttachments mit role=ATTACHMENT
 ```
 
 ---

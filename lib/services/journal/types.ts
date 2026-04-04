@@ -139,6 +139,8 @@ export interface EntryMediaAttachment {
  * Used for lean list views.
  */
 export interface EntryWithBaseRelations extends JournalEntry {
+  occurredAt: Date | null
+  capturedAt: Date | null
   type: EntryTypeInfo | null
   template: EntryTemplateInfo | null
   location: EntryLocationInfo | null
