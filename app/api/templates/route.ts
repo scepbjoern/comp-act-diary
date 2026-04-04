@@ -7,12 +7,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/core/prisma'
 import { createTemplateSchema } from '@/types/journal'
-import { TaxonomyOrigin } from '@prisma/client'
+import type { User } from '@prisma/client'
 
 // Get userId from cookie
 async function getUserId(): Promise<string | null> {
   const cookieStore = await cookies()
-  return cookieStore.get('userId')?.value || null
+  const cookieUserId = cookieStore.get('userId')?.value
+
+  let user: User | null = cookieUserId
+    ? await prisma.user.findUnique({ where: { id: cookieUserId } })
+    : null
+
+  if (!user) {
+    user = await prisma.user.findUnique({ where: { username: 'demo' } })
+  }
+
+  return user?.id || null
 }
 
 /**
@@ -124,7 +134,6 @@ export async function POST(request: NextRequest) {
         fields: fields ?? undefined,
         aiConfig: aiConfig ?? undefined,
         typeId: typeId || null,
-        origin: TaxonomyOrigin.USER,
       },
       include: {
         type: {
