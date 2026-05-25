@@ -14,6 +14,23 @@
 
 
 ## Varia
+1. STT hat mit Schweizerdeutsch recht gut funktioniert:  https://huggingface.co/spaces/andito/parakeet-v3-streaming
+2. GLM-5 mit aufnehmen als Grund-LLM: https://www.youtube.com/watch?v=x9e4D-t_Dfo
+3. Minimax-M2.25 mit aufnehmen als Grund-LLM: https://www.youtube.com/watch?v=hsQA5TSHZ7I&t=710s
+4. Weitere Inference-Anbieter analog zu ASR Everywhere:
+   - Huggingface
+   - OpenRouter
+5. Neue Features:
+   a. Über Sprache Transkript, Content, Zusammenfassung, usw. korrigieren können. Manchmal sind es einzelne Worte oder Absätze, die falsch verstanden wurden beim Transkribieren. Das führt dann dazu, dass der Tagebucheintrag, die Zusammenfassung und die Analyse nicht korrekt sind. Daher wäre es super, wenn es wie ein sprachgesteuerter Korrekturmodus gibt. 
+   b. Auf einen Tagebucheintrag explizit (mit (automatischem) Link) Bezug nehmen können und/oder Kommentare hinzufügen können.
+   c. Wie bei ASR Everywhere:  Transkriptionsregeln hinzufügen können, z.B. dass Worte wie Räterschen, AnnaLena, usw. korrekt interpretiert werden
+6. GLM OCR: https://youtu.be/-D7o3E0eBf4?t=77
+7. Step 3.5 Flash (schnelles midsize Modell): https://youtu.be/-D7o3E0eBf4?t=759
+8. Schnelles, günstiges Modell von Google: https://youtu.be/9FruIqE0OEw?t=907&si=XlMDARRRs8x0xfTg
+9. Weiteres STT: https://youtu.be/BZ1hs2ZcnJc?t=703&si=HoqoawHLDSavEyB2 -> Microsoft MAI-Transcribe 1
+
+
+
 **.env**: an .env.example anpassen, damit alle Beschreibungen enthalten sind. Zudem folgende Aussage prüfen: "MISTRAL_API_KEY und MAPBOX_ACCESS_TOKEN werden aktuell im Code nicht verwendet (Suche ergab keine Treffer)"
 
 **Vibe Voice ASR Speech-to-text**: https://www.youtube.com/watch?v=BYPlfLQm0CQ&t=1441s
@@ -36,12 +53,16 @@
 **JSON-Export**: Für Backup/Migration
 
 ### Reisetagebuch:
+**Weiter auswerten**: docs\2026-03_Reisetagebuchinspirationen_Temp.pdf
+
 **Inspiration**:
     - https://www.journiapp.com/blog
     - https://findpenguins.com/
     - https://www.polarsteps.com/de/
 
 **Erste Überlegungen**: Aus Sicht des Tagebuchs, das ausgedruckt wird, möchte ich natürlich die Möglichkeit haben, einen PDF-Export zu machen. Und es braucht sicher ein Titelblatt, das man gestalten muss. Dann brauche ich die Möglichkeit, die Reise in Abschnitte zu unterteilen. Das heisst umgekehrt, dass man mehrere Tagebucheinträge kombinieren kann zu einem Abschnitt. Es braucht auch die Möglichkeit, dass man innerhalb der Abschnitte zum Beispiel zunächst eine Zusammenfassung für den Abschnitt insgesamt, zum Beispiel ein bestimmtes Land oder eine Woche, ein Festival, erstellen kann. Und einen Titel für den Abschnitt geben kann. Dann ist es möglich sein, für einzelne Tage in diesem Abschnitt wiederum Zusammenfassungen des Tages zu machen und auch eine Karte einzublenden, die zeigt, welche Orte man an diesem Tag besucht hat. Dasselbe gilt übrigens auch für den Abschnitt und dort ist es möglich, eine Standortkarte mitzugeben. Und pro Tag muss es auch möglich sein, mehrere Tagebucheinträge zu machen für verschiedene Stationen, die man an diesem Tag gesehen hat. Und dort sollte es auch möglich sein, dass man mit einem QR-Code Webseiten aufrufen kann, zum Beispiel Google Maps für dieses Restaurant oder Hotel oder was auch immer. Selbstverständlich ist ein wichtiger Bestandteil Fotos und jedes Foto soll zu einem Tag und oder Ort gehören. Und was glaube ich aktuell auch noch komplett fehlt, ist, dass bei jedem Foto, wenn man das möchte, noch eine kleine Notiz stehen kann, so wie eine Caption, was man auf dem Foto sieht oder wo das aufgenommen wurde.
+
+
 
 **Instagram & WhatsApp Status**: Möglichkeit, einzelne Post direkt auf Instagram oder WhatsApp Status zu setzen
 
