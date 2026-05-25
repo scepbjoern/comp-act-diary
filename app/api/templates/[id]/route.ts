@@ -7,12 +7,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { prisma } from '@/lib/core/prisma'
 import { updateTemplateSchema } from '@/types/journal'
+import type { User } from '@prisma/client'
 import { TaxonomyOrigin } from '@prisma/client'
 
 // Get userId from cookie
 async function getUserId(): Promise<string | null> {
   const cookieStore = await cookies()
-  return cookieStore.get('userId')?.value || null
+  const cookieUserId = cookieStore.get('userId')?.value
+
+  let user: User | null = cookieUserId
+    ? await prisma.user.findUnique({ where: { id: cookieUserId } })
+    : null
+
+  if (!user) {
+    user = await prisma.user.findUnique({ where: { username: 'demo' } })
+  }
+
+  return user?.id || null
 }
 
 type RouteContext = {

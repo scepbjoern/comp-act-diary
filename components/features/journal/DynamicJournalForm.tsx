@@ -311,6 +311,50 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
     }
     return map
   })
+  const [expandedTranscriptAttachmentId, setExpandedTranscriptAttachmentId] = useState<string | null>(null)
+  const [selectTargetTranscriptAttachmentId, setSelectTargetTranscriptAttachmentId] = useState<string | null>(null)
+
+  const textareaFields = useMemo(() => fields.filter((field) => field.type === 'textarea'), [fields])
+
+  const applyTranscriptToField = useCallback((attachmentId: string, targetFieldId?: string) => {
+    const transcript = editableTranscripts[attachmentId]?.transcript ?? ''
+
+    if (!transcript.trim()) {
+      onToast?.('Es ist kein Original-Transkript zum Übernehmen vorhanden', 'error')
+      return
+    }
+
+    if (fields.length === 0) {
+      setFieldValues((prev) => ({
+        ...prev,
+        content: transcript,
+      }))
+      onToast?.('Original-Transkript wurde in den Inhalt übernommen', 'success')
+      return
+    }
+
+    if (textareaFields.length === 0) {
+      onToast?.('Dieses Template hat kein Textfeld für die Übernahme', 'error')
+      return
+    }
+
+    const resolvedFieldId = targetFieldId || (textareaFields.length === 1 ? textareaFields[0]?.id : undefined)
+
+    if (!resolvedFieldId) {
+      setSelectTargetTranscriptAttachmentId(attachmentId)
+      return
+    }
+
+    setFieldValues((prev) => ({
+      ...prev,
+      [resolvedFieldId]: transcript,
+    }))
+
+    setSelectTargetTranscriptAttachmentId(null)
+
+    const targetField = textareaFields.find((field) => field.id === resolvedFieldId)
+    onToast?.(`Original-Transkript wurde in ${targetField?.label || 'das Textfeld'} übernommen`, 'success')
+  }, [editableTranscripts, fields, onToast, textareaFields])
 
   // Build submit data (shared by save and save+pipeline)
   const buildSubmitData = useCallback(() => {
@@ -903,10 +947,28 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
                       }}
                       onError={(msg) => onToast?.(msg, 'error')}
                     />
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-xs"
+                      onClick={() => applyTranscriptToField(att.id)}
+                      disabled={isSubmitting}
+                    >
+                      Transkript in Felder übernehmen
+                    </button>
                   </div>
                   {/* Editable transcript textarea */}
                   <div className="border-t border-base-300 p-2">
-                    <label className="text-xs text-base-content/60 mb-1 block">Original-Transkript</label>
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <label className="text-xs text-base-content/60 block">Original-Transkript</label>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-xs"
+                        onClick={() => setExpandedTranscriptAttachmentId(att.id)}
+                        disabled={isSubmitting}
+                      >
+                        Vollbild
+                      </button>
+                    </div>
                     <textarea
                       value={editable?.transcript ?? ''}
                       onChange={(e) =>
@@ -919,13 +981,98 @@ export const DynamicJournalForm = forwardRef<DynamicJournalFormHandle, DynamicJo
                         }))
                       }
                       disabled={isSubmitting}
-                      className="textarea textarea-bordered textarea-sm w-full min-h-16 resize-y text-sm font-mono"
+                      className="textarea textarea-bordered w-full min-h-48 resize-y text-sm font-mono leading-6"
                       placeholder="Kein Transkript vorhanden"
                     />
                   </div>
                 </div>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {selectTargetTranscriptAttachmentId && textareaFields.length > 1 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-base-content/60 p-4">
+          <div className="card w-full max-w-xl bg-base-100 shadow-2xl">
+            <div className="card-body gap-4">
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold">Zielfeld auswählen</h3>
+                <p className="text-sm text-base-content/60">Wähle das Feld aus, dessen Inhalt durch das Original-Transkript ersetzt werden soll.</p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {textareaFields.map((field) => (
+                  <button
+                    key={field.id}
+                    type="button"
+                    className="btn btn-outline justify-start"
+                    onClick={() => applyTranscriptToField(selectTargetTranscriptAttachmentId, field.id)}
+                    disabled={isSubmitting}
+                  >
+                    {field.label || field.id}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setSelectTargetTranscriptAttachmentId(null)}
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {expandedTranscriptAttachmentId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-base-content/60 p-4">
+          <div className="card w-full max-w-5xl bg-base-100 shadow-2xl">
+            <div className="card-body gap-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold">Original-Transkript bearbeiten</h3>
+                  <p className="text-sm text-base-content/60">Hier kannst du das Original-Transkript komfortabel im Grossformat anpassen.</p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm btn-circle"
+                  onClick={() => setExpandedTranscriptAttachmentId(null)}
+                >
+                  <IconX className="h-5 w-5" />
+                </button>
+              </div>
+
+              <textarea
+                value={editableTranscripts[expandedTranscriptAttachmentId]?.transcript ?? ''}
+                onChange={(e) =>
+                  setEditableTranscripts((prev) => ({
+                    ...prev,
+                    [expandedTranscriptAttachmentId]: {
+                      ...prev[expandedTranscriptAttachmentId],
+                      transcript: e.target.value,
+                    },
+                  }))
+                }
+                disabled={isSubmitting}
+                className="textarea textarea-bordered h-[70vh] w-full resize-none text-sm font-mono leading-6"
+                placeholder="Kein Transkript vorhanden"
+              />
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setExpandedTranscriptAttachmentId(null)}
+                >
+                  Schliessen
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
