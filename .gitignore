@@ -58,3 +58,7 @@ coverage/
 /uploads/
 
 .windsurf
+
+# Agent-Skill-Bridges (Symlinks auf .agents/skills/, via npm run setup:skills)
+.claude/skills
+.kilo/skills

@@ -18,7 +18,8 @@
     "db:studio": "prisma studio",
     "icons:convert": "tsx scripts/convert-icons.ts",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "setup:skills": "node scripts/setup-skills.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.17",
