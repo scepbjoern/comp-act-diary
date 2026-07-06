@@ -158,7 +158,8 @@ Dokumentiere im Plan:
 - Zod-Schemas und React Hook Form, falls Formulare betroffen sind
 - Prisma-Änderungen, falls nötig
 - Auth-Prüfung (userId-Cookie) und Zugriffsregeln (z. B. journalEntryAccessService)
-- Unit- und E2E-Teststrategie
+- Vitest-Teststrategie
+- Hilfe-System-Aktualisierung (`lib/help/`), falls das Feature UI- oder API-sichtbar ist – als eigener Task oder Teil des Abschluss-Tasks (siehe `docs/coding-guidelines/09-documentation.md`)
 - Edge Cases und Regressionen
 
 Bei Prisma-Schema-Änderungen: `npx prisma db push && npx prisma generate` gemäss docs/setup-and-testing_docs/SCHEMA_WORKFLOW.md einplanen. NIE `npm run db:reset` vorschlagen – die Datenbank enthält Produktivdaten. Keine Prisma Migrations verwenden. Bei Datenmigrationen ein Script unter scripts/ nach bestehendem Muster vorsehen.

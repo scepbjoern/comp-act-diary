@@ -90,7 +90,7 @@ damit <Nutzen/Wert>.
 
 ### Anti-Patterns to Avoid
 
-- Kein Supabase, DaisyUI, LangChain, Prisma Migrations, Raw SQL oder `new PrismaClient()` ausserhalb Singleton.
+- Kein Redux, keine anderen ORMs, CSS-Frameworks oder Icon-Libraries, keine Prisma Migrations, kein `new PrismaClient()` ausserhalb des Singletons. Raw SQL nur wo bereits etabliert (Volltextsuche in `lib/services/searchService.ts`).
 - Keine parallele Architektur neben bestehenden `app/`, `lib/`, `components/` Patterns.
 - Keine Python-/pytest-/ruff-Regeln.
 

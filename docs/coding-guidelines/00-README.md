@@ -1,6 +1,6 @@
 # Coding Guidelines
 
-Diese Dokumentation beschreibt die verbindlichen Coding-Standards und Best Practices für das comp-act-diary Projekt. Sie dient als Referenz für LLM-Assistenten (Windsurf/Cascade) und Entwickler.
+Diese Dokumentation beschreibt die verbindlichen Coding-Standards und Best Practices für das comp-act-diary Projekt. Sie dient als Referenz für AI-Agenten (Claude Code, Kilo Code u. a.) und Entwickler. Kompakter Einstieg und Workflow-Regeln für Agenten: `KILO_INSTRUCTIONS.md` im Root; Feature-Workflow: `docs/PIV-WORKFLOW.md`.
 
 ---
 
@@ -56,8 +56,8 @@ Diese Dokumentation beschreibt die verbindlichen Coding-Standards und Best Pract
 ### Dokumentation
 - **Hilfe-System** bei jedem neuen Feature aktualisieren
 - **Kontextuelle Help-Links** in Feature-Seiten einbauen
-- **Konzept-Dokumente** vor Implementation erstellen
+- **Feature-Plan** vor Implementation über den PIV-Workflow erstellen (`/plan-feature` → `docs/project/features/[name]/plan-vNNN.md`); die früheren Konzept-Dokumente unter `docs/concepts/` sind Archiv
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-22
+**Letzte Aktualisierung:** 2026-07-06

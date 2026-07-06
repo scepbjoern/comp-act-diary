@@ -69,6 +69,11 @@ docs/project/features/[feature-name]/user-guide.md
 docs/project/features/[feature-name]/developer-notes.md
 ```
 
+Zusätzlich verpflichtend bei Features mit UI- oder API-Sichtbarkeit (gemäss `docs/coding-guidelines/09-documentation.md`):
+
+- **In-App-Hilfe-System aktualisieren**: Topic in `lib/help/helpStructure.ts` ergänzen, Content in der passenden Kategorie-Datei unter `lib/help/content/` schreiben (summary/instructions/technical), kontextuellen Help-Link auf der Feature-Seite einbauen. Icons müssen in `components/ui/TablerIcon.tsx` gemappt sein.
+- Bei Schema-Änderungen: `docs/data-model-architecture.md` nachführen.
+
 Optional nur bei klarer Relevanz oder wenn im Plan vorgesehen:
 
 - `docs/project/features/[feature-name]/validation-notes.md` für ausführliche manuelle Validierungsprotokolle, wenn diese den Plan sprengen würden.

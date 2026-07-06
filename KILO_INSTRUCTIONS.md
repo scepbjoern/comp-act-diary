@@ -1,7 +1,7 @@
 # KILO_INSTRUCTIONS.md – Coding-Guide für comp-act-diary
 
 > Diese Datei steuert, wie AI-Agenten (Kilo Code, Claude Code, Codex u. a.) in diesem Projekt arbeiten.
-> Projektkontext (Was/Warum) → siehe `AGENTS.md`. Detaillierte Coding-Regeln → `docs/coding-guidelines/00-README.md` (verbindlich, kapitelweise nach Kontext lesen).
+> Projektkontext (Was/Warum) → siehe `AGENTS.md`. Detaillierte Coding-Regeln → `docs/coding-guidelines/00-README.md` (verbindlich, kapitelweise nach Kontext lesen). Diese Datei ist der kompakte Einstieg und regelt den Workflow; bei Detailfragen gelten die Coding-Guidelines. Widersprüche bitte melden statt still zu entscheiden.
 
 ## Tech-Stack (nicht verhandelbar)
 
@@ -85,7 +85,7 @@ docs/               # PRD, Konzepte, Guidelines, docs/project/ (PIV-Artefakte)
 2. **Review Plan** – Initialen Plan committen, in frischer Session mit `/review-feature-plan` prüfen, in der Autor-Session mit `/integrate-feature-plan-review` in eine neue Plan-Version überführen (typisch `plan-v002.md`).
 3. **Implement** – `/execute docs/project/features/[feature-name]/plan-v002.md` setzt die Tasks autonom nacheinander um; gestoppt wird nur bei den definierten Stop-Bedingungen (fachliche Entscheidungen, Planabweichungen, ungeplante Schema-Änderungen, wiederholt fehlschlagende Validierung).
 4. **Validate** – `npm run test:run`, `npx tsc --noEmit`, `npm run lint`; bei grösseren Änderungen `npm run build`. Manuelle Prüfung konsolidiert am Ende.
-5. **Document** – Nach vollständiger Umsetzung mit `/document` Endanwender- und Entwicklerdokumentation erstellen.
+5. **Document** – Nach vollständiger Umsetzung mit `/document` Endanwender- und Entwicklerdokumentation erstellen; bei UI-/API-sichtbaren Features gehört dazu das In-App-Hilfe-System (`lib/help/`, siehe `docs/coding-guidelines/09-documentation.md`).
 6. **Reflect bei Verdacht** – Nach `/document` in derselben Session mit `/reflect-rules` prüfen, ob Agent-Fehler, Planlücken oder wiederholte Korrekturen dauerhafte Regel-/Skill-Anpassungen erfordern.
 7. **Commit** – Nach validierten Tasks oder Phasen darf `/commit` einen fokussierten Zwischencommit erstellen. Der finale Feature-Commit folgt nach `/document` (und ggf. `/reflect-rules`).
 

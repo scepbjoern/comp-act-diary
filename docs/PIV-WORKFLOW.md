@@ -68,6 +68,8 @@ Für jedes Feature bewusst **zwei frische Sessions** verwenden – eine für Pla
 /commit                     ← finaler Feature-Commit
 ```
 
+`/document` erstellt `user-guide.md` und `developer-notes.md` im Feature-Ordner und aktualisiert bei UI-/API-sichtbaren Features das In-App-Hilfe-System (`lib/help/`) inkl. kontextuellem Help-Link – gemäss `docs/coding-guidelines/09-documentation.md`.
+
 ## Kleine Änderungen ohne PIV
 
 Bugfixes und Kleinständerungen (eine Datei, kein Schema, kein neues Konzept) brauchen keinen Plan-Zyklus – direkt umsetzen, validieren, `/commit`. Der PIV-Loop lohnt sich ab Features mit mehreren Tasks, Schema-Änderungen oder Architekturentscheidungen.

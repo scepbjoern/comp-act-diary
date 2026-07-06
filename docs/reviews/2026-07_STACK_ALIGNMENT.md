@@ -98,7 +98,9 @@
 
 **Machbare Strategie, falls gewünscht:** Koexistenz ist technisch problemlos (beides Tailwind). shadcn via CLI initialisieren, neue Features in shadcn bauen, bestehende Seiten nur bei ohnehin anstehenden Umbauten migrieren (z. B. wenn `DynamicJournalForm` gemäss Review-Befund 11 zerlegt wird). Big-Bang wäre **3–6 Wochen** Aufwand bei hohem Regressionsrisiko in einer funktionierenden, täglich genutzten App.
 
-**Empfehlung:** Nicht als Migrationsprojekt angehen. Wenn Angleichung ans Starter Kit gewünscht ist: Koexistenz-Strategie mit shadcn für Neues; DaisyUI-Bestand leben lassen. Die Stack-Regel im Projekt entsprechend als «DaisyUI (Bestand) + shadcn (neu)» oder schlicht «DaisyUI» festhalten – Hauptsache eindeutig für die Agents.
+**Empfehlung:** Nicht als Migrationsprojekt angehen. Wenn Angleichung ans Starter Kit gewünscht ist: Koexistenz-Strategie mit shadcn für Neues; DaisyUI-Bestand leben lassen.
+
+> **Entscheid (2026-07-06):** Koexistenz-Strategie beschlossen. shadcn wird nach Tailwind 4 (Etappe 2) initialisiert; neue Features nutzen shadcn, bestehende Seiten werden nur bei ohnehin anstehenden Umbauten migriert. Stack-Regel: «DaisyUI (Bestand) + shadcn (neu)» – wird bei shadcn-Einführung in `KILO_INSTRUCTIONS.md` und `docs/coding-guidelines/07-ui-styling.md` nachgeführt.
 
 ---
 
@@ -116,7 +118,9 @@
 
 **Aufwand:** 2–4 Tage inkl. Datenmigration und Test aller geschützten Flows.
 
-**Alternative (Minimalvariante):** Nur Review-Massnahme 1+3 umsetzen (zentraler Helper + HMAC-signiertes Cookie) – 1 Tag, behebt die akuten Probleme, bleibt aber vom Starter-Kit-Muster entfernt. Empfehlung: Minimalvariante **jetzt** (Teil der Review-Fixes), Better Auth als bewusste spätere Entscheidung, idealerweise **nach** Prisma 7/Next 16.
+**Alternative (Minimalvariante):** Nur Review-Massnahme 1+3 umsetzen (zentraler Helper + HMAC-signiertes Cookie) – 1 Tag, behebt die akuten Probleme, bleibt aber vom Starter-Kit-Muster entfernt.
+
+> **Entscheid (2026-07-06):** Better Auth wird **komplett übernommen**. Machbarkeit sofort: gegeben – Better Auth 1.6 läuft mit Next.js 15 und Prisma 6 (Prisma-Adapter ist versionsunabhängig genug). Empfehlung daher: **direkt nach Etappe 0** umsetzen (als Etappe 1a, vor den Framework-Upgrades). Damit entfällt die HMAC-Minimalvariante als Wegwerfarbeit, und die Framework-Upgrades profitieren bereits von der zentralisierten Auth. Der einzige Mehraufwand: beim späteren Next-16-Upgrade sind kleine Anpassungen an async `cookies()` in den Auth-Helpern nötig – vernachlässigbar.
 
 ---
 
@@ -135,13 +139,17 @@ Diese Abweichungen sind in `AGENTS.md`/`KILO_INSTRUCTIONS.md` des Projekts dokum
 
 ## 5. Gesamtempfehlung
 
+Beschlossene Roadmap (Stand 2026-07-06, Details und Session-Anleitung in `docs/project/ROADMAP.md`):
+
 ```text
-Etappe 0 (sofort, Teil der Review-Fixes):  zentrale Auth-Helper, Env lazy, CI          ~2 Tage
-Etappe 1 (Framework-Basis, 6 Teiletappen):  Playwright → src/ → Prisma 7 → Next 16
-                                            + React 19 → Tailwind 4 → Zod 4           ~5–9 Tage
-Etappe 2 (optional, bewusst entscheiden):   Better Auth                                ~2–4 Tage
-Etappe 3 (nur bei echtem Bedarf):           shadcn-Koexistenz für neue Features        laufend
-Nie:                                        SQLite, Port-Forwarding-Deployment         –
+Etappe 0 (Review-Fixes):        Env lazy + Docker-Secrets, CI, actions.ts → Services,
+                                Upload-Härtung, Paket-/Config-Hygiene                  ~2 Tage
+Etappe 1 (Auth):                Better Auth komplett (ersetzt HMAC-Minimalvariante,
+                                inkl. zentralem Session-Helper, Demo-Fallback weg)    ~2–4 Tage
+Etappe 2 (Framework-Basis):     Playwright → src/ → Prisma 7 → Next 16 + React 19
+                                → Tailwind 4 → Zod 4 (6 Teiletappen)                  ~5–9 Tage
+Etappe 3 (UI, laufend):         shadcn-Koexistenz für neue Features                    laufend
+Nie:                            SQLite, Port-Forwarding-Deployment                     –
 ```
 
-Nach Etappe 1 ist der Stack in allen «grundsätzlichen Dingen» (Framework-Versionen, Layout, ORM-Pattern, Test-Setup, Agent-Workflow) deckungsgleich mit dem Starter Kit; UI-Kit und Auth bleiben die einzigen dokumentierten Abweichungen.
+Nach Etappe 2 ist der Stack in allen «grundsätzlichen Dingen» (Framework-Versionen, Layout, ORM-Pattern, Auth-Muster, Test-Setup, Agent-Workflow) deckungsgleich mit dem Starter Kit; das UI-Kit bleibt als dokumentierte Koexistenz-Abweichung.

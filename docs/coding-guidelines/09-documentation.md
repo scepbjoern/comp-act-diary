@@ -69,31 +69,15 @@ lib/help/
 - **instructions**: Wie benutze ich es? (Schritt-für-Schritt)
 - **technical**: Technische Details (API, Datenmodell, Code-Beispiele)
 
-### 2. Konzept-Dokumente
+### 2. Feature-Pläne (PIV-Workflow)
 
-Für geplante Features unter `docs/concepts/`.
+Neue Features werden über den PIV-Workflow geplant und dokumentiert (siehe `docs/PIV-WORKFLOW.md`):
 
-**Naming-Konvention:** `YYYY-MM_Feature_Name.md`
+- Plan: `docs/project/features/[feature-name]/plan-vNNN.md` (via `/plan-feature`, reviewt und versioniert)
+- Abschlussdokumentation: `user-guide.md` und `developer-notes.md` im selben Feature-Ordner (via `/document`)
+- Feature-Index: `TASKS.md` im Root
 
-**Template:**
-```markdown
-# Feature Name
-
-## Zusammenfassung
-Kurze Beschreibung...
-
-## User Stories
-- Als Benutzer möchte ich...
-
-## Technisches Design
-### Datenmodell
-### API-Endpunkte
-### UI-Komponenten
-
-## Implementierungsplan
-1. [ ] Schritt 1
-2. [ ] Schritt 2
-```
+Die früheren Konzept-Dokumente unter `docs/concepts/` (Naming `YYYY-MM_Feature_Name.md`) sind Archiv; umgesetzte liegen unter `docs/concepts/implemented/`. Für neue Features keine neuen Konzept-Dokumente mehr anlegen.
 
 ### 3. Technische Dokumentation
 
@@ -105,9 +89,9 @@ Kurze Beschreibung...
 
 ## Wann was dokumentieren
 
-| Änderung | Hilfe-System | Konzept | data-model-arch | README |
+| Änderung | Hilfe-System | Plan | data-model-arch | README |
 |----------|--------------|---------|-----------------|--------|
-| Neue Seite/Feature | ✅ | ✅ (vorher) | - | - |
+| Neue Seite/Feature | ✅ | ✅ PIV-Plan (vorher) | - | - |
 | Schema-Änderung | - | - | ✅ | - |
 | Neue API | ✅ (technical) | - | - | - |
 | Neue Dependency | - | - | - | ✅ |
@@ -157,16 +141,18 @@ const iconMap: Record<string, typeof IconSettings> = {
 ## Workflow bei Feature-Implementation
 
 1. **Vor der Implementation:**
-   - Konzept-Dokument erstellen/lesen
+   - Feature-Plan über den PIV-Workflow erstellen und reviewen (`/plan-feature`, `/review-feature-plan`, `/integrate-feature-plan-review`)
 
-2. **Während der Implementation:**
+2. **Während der Implementation (`/execute`):**
    - Code-Kommentare für komplexe Logik
+   - Task-Status und Validierung in der Plan-Datei nachführen
 
-3. **Nach der Implementation:**
+3. **Nach der Implementation (`/document`):**
+   - `user-guide.md` und `developer-notes.md` im Feature-Ordner erstellen
    - Hilfe-System aktualisieren (Topic + Content)
    - Kontextuellen Help-Link hinzufügen
    - Bei Schema-Änderungen: `data-model-architecture.md` updaten
-   - Konzept-Dokument als "implementiert" markieren
+   - Feature in `TASKS.md` auf `done` setzen
 
 ---
 
@@ -220,4 +206,4 @@ GET /api/calendar/events</code></pre>
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-22
+**Letzte Aktualisierung:** 2026-07-06
