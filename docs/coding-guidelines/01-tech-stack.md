@@ -8,7 +8,7 @@ Dieses Projekt verwendet einen festen Stack. **Keine Alternativ-Frameworks vorsc
 
 | Technologie | Version | Zweck |
 |-------------|---------|-------|
-| **Next.js** | 14+ | Full-Stack Framework, App Router |
+| **Next.js** | 15 | Full-Stack Framework, App Router |
 | **React** | 18+ | UI Library |
 | **TypeScript** | 5+ | Typisierung |
 
@@ -48,7 +48,6 @@ Dieses Projekt verwendet einen festen Stack. **Keine Alternativ-Frameworks vorsc
 | Technologie | Zweck |
 |-------------|-------|
 | **Vercel AI SDK** | AI-Streaming, Chat |
-| **Mastra** | AI Agent Framework |
 | **Pino** | Structured Logging |
 
 ---

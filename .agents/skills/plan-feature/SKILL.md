@@ -1,0 +1,244 @@
+---
+name: plan-feature
+description: >
+  Turns a feature idea or PRD reference into a granular, reviewable, versioned implementation plan for this starter kit. Use it when a new feature needs an initial plan before review and before code is written. ONLY activate when the user explicitly runs /plan-feature or directly requests this specific workflow by name. Do NOT activate during normal development, planning, or implementation conversations.
+compatibility: Next.js 15, React 18, Prisma 6, PostgreSQL, Tailwind 3 + DaisyUI
+metadata:
+  piv-phase: plan
+  version: "2.0"
+disable-model-invocation: true
+argument-hint: "[feature-description-or-prd-reference]"
+---
+
+> **KiloCode-Modus:** Dieser Skill muss im **Code-Modus** ausgeführt werden. Im Architect- oder Plan-Modus beschränkt KiloCode Schreibrechte auf `.kilo/`-Ordner – Dateien würden dort abgelegt statt in den korrekten Projektverzeichnissen (`docs/`, `TASKS.md`). Wechsle in KiloCode vor der Ausführung auf den **Code-Modus**.
+
+# Plan Feature: Feature Planen
+
+## Input
+
+Feature-Beschreibung oder Referenz auf bestehende Datei: `$ARGUMENTS`
+
+Beispiele:
+
+- `/plan-feature Antrag-Formular mit Statusänderung`
+- `/plan-feature docs/project/prds/antrag-workflow-v002.md Kapitel Einreichung`
+
+## Grundregel
+
+Schreibe in dieser Phase keinen Produktivcode. Ziel ist ein reviewbarer, kontextreicher initialer Plan als Grundlage für `/review-feature-plan`.
+
+Qualitätsziel: Der initiale Plan `plan-v001.md` soll so vollständig sein, dass er in einer frischen Reviewer-Session kritisch geprüft werden kann. Nach Review und Integration entsteht mindestens `plan-v002.md`; erst eine fachlich bestätigte, reviewte Plan-Version ist autoritative Arbeitsgrundlage für `/execute`.
+
+## Phase 1: Initiales Feature-Verständnis
+
+Verstehe zuerst grob, was gebaut werden soll. Stelle in dieser frühen Phase nur Fragen, wenn ohne Antwort keine sinnvolle Recherche starten kann.
+
+Ermittle initial:
+
+- Welches Problem löst das Feature?
+- Welcher User Value oder Business Impact wahrscheinlich gemeint ist
+- Was ist im Scope und was explizit nicht?
+- Welche Daten, Statuswerte, KI-Funktionen oder Zugriffsregeln sind betroffen?
+- Gibt es ein PRD oder bestehende Dokumentation unter `docs/`?
+- Welche manuelle Prüfung soll am Ende möglich sein?
+
+Erstelle oder verfeinere eine vorläufige User Story:
+
+```text
+Als <Rolle>
+möchte ich <Aktion/Ziel>,
+damit <Nutzen/Wert>.
+```
+
+Klassifiziere das Feature vorläufig:
+
+- Feature-Typ: New Capability, Enhancement, Refactor oder Bug Fix
+- Komplexität: Low, Medium oder High
+- Primär betroffene Systeme: UI, Route Handler, Services, Prisma, Auth, LLM, Tests
+- Abhängigkeiten: externe Libraries, ENV-Werte, bestehende Daten oder offene Entscheidungen
+
+Wenn Anforderungen unklar sind, aber durch Repo- oder Dokumentationsrecherche wahrscheinlich geklärt werden können, frage den Nutzer noch nicht. Recherchiere zuerst selbst.
+
+## Phase 2: Relevanten Kontext Lesen
+
+Lies mindestens:
+
+- Relevante PRD- oder Konzeptdatei unter `docs/`, falls genannt oder auffindbar
+- `KILO_INSTRUCTIONS.md` oder `CLAUDE.md`
+- `AGENTS.md`
+- `TASKS.md`
+- `package.json`
+- `prisma/schema.prisma`, wenn Datenmodell, Rollen oder Status betroffen sind
+- Ähnliche Implementierungen in `app/`, `lib/`, `components/`, `hooks/`, `__tests__/`
+
+Nutze bestehende Patterns. Erfinde keine parallele Architektur.
+
+Analysiere explizit:
+
+- Projektstruktur, Sprachen, Frameworks und Runtime-Versionen
+- Architekturgrenzen zwischen `app/`, `lib/`, `components/`, Prisma und Tests
+- ähnliche Implementierungen im Codebase
+- Naming-, Datei-, Fehlerbehandlungs-, Logging- und UI-Patterns
+- Anti-Patterns, die vermieden werden müssen
+- externe Dependencies, Versionen und Integrationsweise
+- bestehende Teststruktur und ähnliche Vitest-Beispiele in `__tests__/`
+- Integration Points: Navigation, Route Handler, Services, Prisma-Modelle, Auth-Prüfung, LLM
+
+## Phase 3: Externe Recherche und Dokumentation
+
+Nutze externe Recherche nur, wenn sie für korrekte Planung nötig ist, z.B. bei Next.js 15 APIs, Prisma 6, dem Vercel AI SDK, Mapbox oder DaisyUI.
+
+Dokumentiere Referenzen im Plan mit:
+
+- Link zur offiziellen Dokumentation
+- spezifischem Abschnitt oder Thema
+- kurzer Begründung, warum diese Referenz relevant ist
+
+Prüfe besonders:
+
+- aktuelle APIs und Breaking Changes
+- bekannte Gotchas
+- Security- und Performance-Aspekte
+- Best Practices für die verwendeten Libraries
+
+## Phase 4: Menschliche Präzisierung nach Recherche
+
+Stelle nach Phase 2 und 3 gezielte Rückfragen, wenn wichtige Punkte nicht selbst aus Repo, PRD, Dokumentation oder offiziellen Quellen ableitbar sind.
+
+Frage nur nach Entscheidungen, nicht nach Informationen, die du selbst recherchieren kannst. Gute Rückfragen betreffen zum Beispiel:
+
+- fachlicher Scope oder Non-Scope
+- gewünschtes Verhalten bei Statuswechseln oder Sonderfällen
+- Priorisierung zwischen zwei plausiblen UX- oder Architekturvarianten
+- fehlende fachliche Regeln zu Rollen, Berechtigungen oder Benachrichtigungen
+- unklare Akzeptanzkriterien
+
+Nachdem der Mensch Präzisierungsfragen beantwortet hat, prüfe, ob eine erneute Phase 2 oder Phase 3 nötig ist. Wiederhole Repo-Recherche und externe Recherche bei Bedarf gezielter und gründlicher für die geklärten Details, bevor du den finalen Plan schreibst.
+
+Plane nicht auf Basis kritischer Annahmen. Dokumentiere nichtkritische Annahmen ausdrücklich im Plan.
+
+## PRD-Inkonsistenz erkannt
+
+Wenn du beim Planen feststellst, dass das PRD widersprüchlich, unvollständig oder fachlich nicht mehr aktuell ist, stoppe die Feature-Planung.
+
+Führe keine stille Korrektur im Feature-Plan durch und plane nicht um das Problem herum.
+
+Erkläre dem Nutzer konkret:
+
+- welche PRD-Stelle problematisch ist
+- warum daraus kein belastbarer Feature-Plan entstehen kann
+- welche Entscheidung, Ergänzung oder Korrektur im PRD nötig ist
+- ob bereits bestehende Feature-Pläne dadurch möglicherweise betroffen sind
+
+Fordere den Nutzer auf, zuerst `/update-prd [PRD-Pfad]` auszuführen. Danach soll `/plan-feature` mit der neuen PRD-Version erneut gestartet werden.
+
+Wenn durch die PRD-Aktualisierung bereits vorhandene Feature-Pläne betroffen sind, weise darauf hin, dass dafür `/update-feature-plan [Plan-Pfad]` genutzt werden soll. Bis dahin sollen betroffene Plan-Versionen nicht als Grundlage für `/execute` verwendet werden.
+
+## Phase 5: Strategisches Durchdenken
+
+Denke vor der Plan-Datei explizit durch:
+
+- Wie passt das Feature in die bestehende Architektur?
+- Welche Reihenfolge und Abhängigkeiten sind kritisch?
+- Welche Edge Cases, Race Conditions oder Fehlerfälle können auftreten?
+- Welche Security-, Performance- und Maintainability-Risiken gibt es?
+- Welche Alternativen wurden erwogen und warum wird der gewählte Ansatz bevorzugt?
+- Ist Backward Compatibility relevant? Nur einplanen, wenn es einen konkreten Grund gibt.
+
+## Phase 6: Architektur- und Datei-Entscheide
+
+Dokumentiere im Plan:
+
+- Betroffene bestehende Dateien
+- Neue Dateien mit Begründung
+- relevante Dateien mit Zeilenhinweisen, wenn möglich, und warum sie gelesen werden müssen
+- konkrete Patterns to Follow mit Beispielen oder Dateireferenzen
+- Server Component vs. Client Component
+- Server Actions vs. Route Handler
+- Zod-Schemas und React Hook Form, falls Formulare betroffen sind
+- Prisma-Änderungen, falls nötig
+- Auth-Prüfung (userId-Cookie) und Zugriffsregeln (z. B. journalEntryAccessService)
+- Vitest-Teststrategie
+- Hilfe-System-Aktualisierung (`lib/help/`), falls das Feature UI- oder API-sichtbar ist – als eigener Task oder Teil des Abschluss-Tasks (siehe `docs/coding-guidelines/09-documentation.md`)
+- Edge Cases und Regressionen
+
+Bei Prisma-Schema-Änderungen: `npx prisma db push && npx prisma generate` gemäss docs/setup-and-testing_docs/SCHEMA_WORKFLOW.md einplanen. NIE `npm run db:reset` vorschlagen – die Datenbank enthält Produktivdaten. Keine Prisma Migrations verwenden. Bei Datenmigrationen ein Script unter scripts/ nach bestehendem Muster vorsehen.
+
+## Phase 7: Plan-Datei Erstellen
+
+Erstelle eine Markdown-Datei unter:
+
+```text
+docs/project/features/[feature-name]/plan-v001.md
+```
+
+Nutze kebab-case für `[feature-name]`, z.B. `docs/project/features/antrag-formular/plan-v001.md`.
+
+Die Datei ist kombinierter Spec+Plan+Tasks-Container. Verwende `references/plan-template.md` als Ausgangspunkt und fülle alle relevanten Abschnitte konkret aus. Entferne keine Qualitätsabschnitte nur deshalb, weil sie Arbeit machen; schreibe stattdessen `Nicht relevant` mit kurzer Begründung.
+
+Dokumentiere im Plan selbst die Plan-Version `v001` und fülle im Abschnitt `## Plan-Änderungshistorie` mindestens den Eintrag für `v001` aus. Wenn ein Feature-Ordner bereits eine `plan-v001.md` enthält, stoppe und frage, ob eine neue Feature-Planung, eine Review-Integration oder eine Aktualisierung gemeint ist.
+
+Task-Format:
+
+- Nutze Aktionskeywords wie `CREATE`, `UPDATE`, `ADD`, `REMOVE`, `REFACTOR`, `MIRROR`.
+- Jeder Task muss aus Nutzersicht sinnvoll validierbar sein: Er enthält eine fachlich oder technisch eigenständige Änderung, bei der ein Mensch nach der Umsetzung sagen kann, ob sie korrekt ist. Technische Folgeschritte, die immer zwingend auf einen anderen Task folgen, sind kein eigenständiger Task – sie gehören in denselben Task.
+- Gegenbeispiel schlechte Granularität: Task 1 „Prisma-Schema anpassen", Task 2 „`npx prisma generate` ausführen". `prisma generate` ist eine technische Konsequenz der Schema-Änderung, keine eigenständig validierbare Einheit. Korrekt: Ein Task „Prisma-Schema erweitern und Client generieren".
+- Weitere Gegenbeispiele: „Datei erstellen" ohne Inhalt als eigener Task; „Import ergänzen" ohne die zugehörige Nutzung; „ENV-Variable eintragen" ohne die dazugehörige Service-Anbindung.
+- Richtige Granularität: Ein Task deckt eine zusammenhängende, in sich vollständige Änderung ab – z.B. „Prisma-Modell und zugehörige Server Action erstellen" oder „Formularkomponente mit Validierung und Fehleranzeige implementieren".
+- Jeder Task muss `IMPLEMENT`, `PATTERN`, `IMPORTS`, `GOTCHA`, `ACCEPTANCE CRITERIA` und `VALIDATE` enthalten, sofern anwendbar.
+- Jeder Task startet mit Status `planned`.
+
+VALIDATE-Abschnitt: Unterscheide explizit zwischen automatisierten und manuellen Prüfungen:
+
+- **Automatisiert:** Nenne den genauen Befehl (z.B. `npm run test:run`, `npm run build`) und das erwartete Ergebnis (z.B. „alle Tests grün", „Build ohne Fehler").
+- **Manuell:** Beschreibe Schritt für Schritt, was der Mensch tun muss: welcher Befehl zu starten ist, welche URL aufzurufen ist, was genau zu klicken oder einzugeben ist und was konkret zu sehen sein muss. Dieser Text wird vom Agent während `/execute` wörtlich als Prüfanleitung an den Menschen ausgegeben – er muss daher präzise und vollständig sein, nicht nur ein Stichwort.
+- Enthält ein Task keine UI- oder Laufzeitänderung, genügt die automatisierte Validierung; schreibe dennoch explizit „Keine manuelle Prüfung erforderlich", damit der Agent das nicht ambig interpretiert.
+
+Validierung stack-spezifisch:
+
+- TypeScript/React/Zod/Prisma-Logik: `npm run test:run`
+- Typecheck und Lint: `npx tsc --noEmit` und `npm run lint`
+- grössere Änderungen: `npm run build`
+- lokale Laufzeit und UI: Nutzer prüft `npm run dev` und manuelle Schritte
+- Regressionen über bestehende Vitest-Tests abdecken, keine Python-/pytest-Regeln verwenden
+
+## Phase 8: Plan-Qualität Prüfen
+
+Prüfe den Plan vor dem Speichern gegen diese Kriterien:
+
+- Context Completeness: Pflichtlektüre, Patterns, Gotchas, Integration Points und Docs sind spezifisch.
+- Implementation Ready: Ein anderer Agent kann top-to-bottom umsetzen, ohne zusätzliche Recherche zu erfinden.
+- Pattern Consistency: Bestehende Architektur und Konventionen werden eingehalten.
+- Information Density: Keine generischen Aufgaben; alle Tasks nennen Dateien, Aktionen und Validierung.
+- Validation Complete: Jeder Task hat konkrete Validierungsschritte.
+- Edge Cases: relevante Fehlerfälle, Security und Berechtigungen sind bedacht.
+- Documentation Ready: spätere Endanwender- und Entwicklerdokumentation ist mitgedacht.
+
+Vergib einen Confidence Score `#/10` für die Wahrscheinlichkeit, dass `/execute` den Plan taskweise erfolgreich umsetzen kann. Begründe Werte unter 8 kurz.
+
+## Phase 9: Root-TASKS.md Aktualisieren
+
+Nach Erstellung der Plan-Datei aktualisiere `TASKS.md` als Feature-Index:
+
+- Feature-Name
+- Status `planned`
+- Schema-Hinweis `nein`, `geplant` oder `ja`
+- Link zur Plan-Datei
+- Datum
+
+Trage keine Detailtasks in Root-`TASKS.md` ein.
+
+## Output
+
+Zeige danach:
+
+- Pfad der erstellten Plan-Datei
+- Kurzzusammenfassung des Ansatzes
+- Feature-Typ und Komplexität
+- wichtigste Risiken, Gotchas oder offenen Entscheidungen
+- Confidence Score für die Umsetzung
+- Offene Fragen oder Annahmen
+- Hinweis: Committe den initialen Feature-Plan `v001` und den aktualisierten `TASKS.md`-Eintrag, bevor die Review-Session startet. Dafür kann der Nutzer `/commit` verwenden oder in VS Code Source Control die Änderungen committen und sich dort eine Commit Message vorschlagen lassen.
+- Hinweis: Als nächster Schritt soll eine neue Reviewer-Session gestartet werden: zuerst `/prime`, danach `/review-feature-plan [Plan-Pfad]`.
+- Hinweis: Die Review-Ergebnisse sollen danach in der ursprünglichen Autor-Session mit `/integrate-feature-plan-review [Plan-Pfad] [Review-Datei]` geprüft und in eine neue Plan-Version, z.B. `plan-v002.md`, eingearbeitet werden.
+- Hinweis: Erst nach Review, Integration, fachlicher Bestätigung und Commit der neuesten Plan-Version darf `/execute [Plan-Pfad]` implementieren.
