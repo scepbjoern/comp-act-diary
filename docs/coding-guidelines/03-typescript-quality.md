@@ -111,7 +111,15 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']),
 })
 
-export const env = envSchema.parse(process.env)
+export type Env = z.infer<typeof envSchema>
+let cachedEnv: Env | null = null
+
+export function getEnv(): Env {
+  if (!cachedEnv) {
+    cachedEnv = envSchema.parse(process.env)
+  }
+  return cachedEnv
+}
 ```
 
 ---

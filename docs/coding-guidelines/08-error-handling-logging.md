@@ -175,9 +175,9 @@ export const logger = pino({
 ### ENV-Variable fehlt
 
 ```typescript
-// lib/config/env.ts validiert beim Start
+// lib/config/env.ts validiert lazy via getEnv(), Fail-Fast beim Serverstart über instrumentation.ts
 // Bei fehlendem OPENAI_API_KEY:
-// ❌ App startet nicht
+// ❌ App startet nicht (Zod-Validierung bricht ab)
 // → Prüfe .env Datei
 ```
 
