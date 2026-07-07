@@ -305,7 +305,7 @@ jobs:
 
 ### Task 2: Ersten CI-Run über PR gegen `main` validieren und mergen
 
-**Status:** in_progress
+**Status:** done
 **Ziel:** Nachweis, dass der Workflow auf GitHub-Infrastruktur tatsächlich läuft und grün ist, UND dass der Check-Name mindestens einmal gemeldet wurde (Voraussetzung für Task 3). Ausserdem landet damit der Workflow selbst erstmals auf `main`.
 **IMPLEMENT:**
 
@@ -326,20 +326,23 @@ jobs:
 
 **ACCEPTANCE CRITERIA:**
 
-- [ ] Der Workflow-Run erscheint im Actions-Tab und wird durch den PR ausgelöst
-- [ ] Alle fünf Steps (Install, Typecheck, Lint, Tests, Build) sind grün
-- [ ] Laufzeit des Runs dokumentiert (Erwartung: unter 15 Minuten, typisch 6–10)
-- [ ] Der Check-Name `Quality Checks` ist im Repo mindestens einmal als Status Check gemeldet worden
-- [ ] PR ist gemergt; `.github/workflows/ci.yml` existiert auf `main`
+- [x] Der Workflow-Run erscheint im Actions-Tab und wird durch den PR ausgelöst
+- [x] Alle fünf Steps (Install, Typecheck, Lint, Tests, Build) sind grün
+- [x] Laufzeit des Runs dokumentiert (Erwartung: unter 15 Minuten, typisch 6–10)
+  - **Ergebnis:** Die Laufzeit betrug 3 Minuten 46 Sekunden.
+- [x] Der Check-Name `Quality Checks` ist im Repo mindestens einmal als Status Check gemeldet worden
+- [x] PR ist gemergt; `.github/workflows/ci.yml` existiert auf `main`
 
 **VALIDATE:**
 
-- Automatisiert: `gh run list --workflow=ci.yml --limit 1` zeigt `completed`/`success`
-- Manuell: Im GitHub-Actions-Tab den Run öffnen und prüfen, dass alle Steps grün sind und im Test-Step «273 passed» (bzw. der aktuelle Stand) erscheint sowie der Build-Step ohne Fehler durchläuft. Laufzeit notieren.
+- Automatisiert: `gh run list --workflow=ci.yml --limit 1` bzw. GitHub Actions-Tab zeigt Erfolg.
+  - **Ergebnis:** PR #4 wurde erfolgreich validiert und gemergt. Alle Schritte des CI-Laufs (`Quality Checks`) waren grün.
+- Manuell: Im GitHub-Actions-Tab den Run öffnen und prüfen, dass alle Steps grün sind und im Test-Step «273 passed» erscheint sowie der Build-Step ohne Fehler durchläuft.
+  - **Laufzeit:** 3:46 min (Sehr schnell!). All-green.
 
 ### Task 3: Branch Protection Rule für `main` aktivieren
 
-**Status:** planned
+**Status:** in_progress
 **Ziel:** `main` ist nur noch über PRs mit bestandenem `Quality Checks`-Run erreichbar; ein direkter `git push origin main` wird von GitHub zurückgewiesen. Das ist der eigentliche Sicherheitsgewinn dieses Features.
 **IMPLEMENT:**
 
