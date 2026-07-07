@@ -464,6 +464,16 @@ Lokal vor dem Commit ausführen (spiegelt den neuen CI-Schritt); zusätzlich Tei
 - Optional (Nutzer-Entscheid bei `/document`): CI-Badge im `README.md` (`![CI](https://github.com/scepbjoern/comp-act-diary/actions/workflows/ci.yml/badge.svg)`).
 - Endanwender-/In-App-Hilfe (`lib/help/`): Nicht relevant – keine UI- oder API-sichtbare Änderung.
 
+## Documentation Results
+
+Erstellt durch `/document` am 2026-07-07:
+
+| Datei | Inhalt |
+|---|---|
+| `docs/project/features/ci-workflow/user-guide.md` | Schritt-für-Schritt-Anleitung: Änderungen über PR nach `main` bringen, rote Runs beheben, Escape Hatch |
+| `docs/project/features/ci-workflow/developer-notes.md` | Technische Details: Workflow-Trigger, Steps, Concurrency, Ruleset-Konfiguration, Gotchas, Wartungshinweise |
+| `docs/setup-and-testing_docs/CI_WORKFLOW.md` | Betriebsdoku: Trigger-Tabelle, Step-Liste, neuer `main`-Workflow, Budget-Rationale, Escape Hatch |
+
 ## Notes and Trade-offs
 
 - **Schmaler Trigger als bewusster Budget-Entscheid:** Feature-Branch-Pushes laufen ohne CI. Das verschiebt die Fehlerentdeckung auf PR-/Merge-Zeitpunkt – akzeptiert, weil der lokale PIV-Loop dieselben Checks bereits vor jedem Commit ausführt. Sollte das Budget-Verhältnis sich ändern (z. B. GitHub Pro), ist die Erweiterung auf alle Branches eine Ein-Zeilen-Änderung.
