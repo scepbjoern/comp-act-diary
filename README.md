@@ -17,6 +17,10 @@
   <a href="#documentation">Dokumentation</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/scepbjoern/comp-act-diary/actions/workflows/ci.yml"><img src="https://github.com/scepbjoern/comp-act-diary/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+</p>
+
 ---
 
 ## Features

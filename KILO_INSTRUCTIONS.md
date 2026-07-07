@@ -129,3 +129,4 @@ Stoppe und frage **vor**:
 - Kein Commit ohne erfolgreiche oder begründet dokumentierte Validierung
 - Kleine, fokussierte Zwischencommits nach validierten Tasks oder Phasen sind erwünscht
 - Nach bestätigtem Commit wird auf den aktuellen Branch gepusht (`git push origin <branch>`)
+- **Merges nach `main` laufen zwingend über einen Pull Request** (direkte `git push origin main` werden seit Etappe 0.2 von GitHub abgelehnt). Lokales `git merge + git push origin main` funktioniert für `main` nicht mehr – stattdessen Feature-Branch pushen und PR öffnen.
