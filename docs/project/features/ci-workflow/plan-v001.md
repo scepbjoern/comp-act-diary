@@ -305,7 +305,7 @@ jobs:
 
 ### Task 2: Ersten CI-Run über PR gegen `main` validieren und mergen
 
-**Status:** planned
+**Status:** in_progress
 **Ziel:** Nachweis, dass der Workflow auf GitHub-Infrastruktur tatsächlich läuft und grün ist, UND dass der Check-Name mindestens einmal gemeldet wurde (Voraussetzung für Task 3). Ausserdem landet damit der Workflow selbst erstmals auf `main`.
 **IMPLEMENT:**
 
