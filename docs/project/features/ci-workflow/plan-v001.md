@@ -220,7 +220,7 @@ Erster echter Workflow-Run über PR gegen `main` beobachten und grün bestätige
 
 ### Task 1: CREATE `.github/workflows/ci.yml`
 
-**Status:** planned
+**Status:** done
 **Ziel:** Ein funktionsfähiger CI-Workflow, der bei `main`-Pushes und PRs gegen `main` Typecheck, Lint und Tests ohne Secrets ausführt.
 **IMPLEMENT:** Neue Datei `.github/workflows/ci.yml`:
 
@@ -282,24 +282,25 @@ jobs:
 - Der Runner läuft unter **UTC** (lokal: Europe/Zurich). Die Datums-Tests nutzen ISO-Strings mit UTC-Bezug – erwartungsgemäss unkritisch. Falls der erste Run wider Erwarten an Zeitzonen-Annahmen scheitert, ist der betroffene Test der eigentliche Fehler (implizite lokale Zeitzone); dann Test fixen, **nicht** `TZ` im Workflow auf Europe/Zurich biegen.
 - `npm run lint` nutzt typisierte Regeln (`projectService: true`) – braucht spürbar RAM/Zeit, ist auf ubuntu-latest (7 GB) aber unkritisch.
 - Vitest läuft mit jsdom – kein Browser/Display auf dem Runner nötig.
-- Der explizite `npx prisma generate`-Schritt ist bewusst redundant zum postinstall-Hook (Robustheit, Sichtbarkeit im Log als eigener Step).
+- Der explizite `npx prisma generate`-Schritt is bewusst redundant zum postinstall-Hook (Robustheit, Sichtbarkeit im Log als eigener Step).
 - `npm run build` braucht keine echten Secrets (Etappe 0.1 verifiziert), aber deutlich mehr Zeit als die anderen Schritte zusammen – deshalb steht er bewusst als letzter Step (bricht der Job vorher ab, entfällt der teuerste Teil). `timeout-minutes` deshalb von 15 auf 20 angehoben.
 - Der Job-**Name** `Quality Checks` (nicht die Job-ID `quality`) ist der String, der in Task 3 als Required Status Check ausgewählt wird – GitHub zeigt in der Branch-Protection-UI den `name:`-Wert an, sofern gesetzt.
 - `workflow_dispatch` erscheint in der GitHub-UI erst, wenn der Workflow auf dem Default-Branch (`main`) existiert – für die Validierung vor dem Merge deshalb den PR-Trigger nutzen (Task 2).
 
 **ACCEPTANCE CRITERIA:**
 
-- [ ] `.github/workflows/ci.yml` existiert mit den Schritten `npm ci`, `npx prisma generate`, `npx tsc --noEmit`, `npm run lint`, `npm run test:run`, `npm run build`
-- [ ] Trigger: nur `main`-Pushes, PRs gegen `main`, `workflow_dispatch` – keine anderen Branches
-- [ ] `permissions: contents: read`, Concurrency-Regel und `timeout-minutes: 20` sind gesetzt
-- [ ] Job hat explizit `name: Quality Checks` (für die spätere Branch-Protection-Referenz in Task 3)
-- [ ] Keine Secrets, keine `env`-Blöcke mit Keys im Workflow
+- [x] `.github/workflows/ci.yml` existiert mit den Schritten `npm ci`, `npx prisma generate`, `npx tsc --noEmit`, `npm run lint`, `npm run test:run`, `npm run build`
+- [x] Trigger: nur `main`-Pushes, PRs gegen `main`, `workflow_dispatch` – keine anderen Branches
+- [x] `permissions: contents: read`, Concurrency-Regel und `timeout-minutes: 20` sind gesetzt
+- [x] Job hat explizit `name: Quality Checks` (für die spätere Branch-Protection-Referenz in Task 3)
+- [x] Keine Secrets, keine `env`-Blöcke mit Keys im Workflow
 
 **VALIDATE:**
 
 - Automatisiert (lokale CI-Simulation, spiegelt die Workflow-Schritte):
   - `.env` temporär in `.env.bak` umbenennen, dann `npx tsc --noEmit && npm run lint && npm run test:run` – erwartet: alles grün ohne `.env`; danach `.env` wiederherstellen
-  - YAML-Syntax-Check: `node -e "const fs=require('fs');fs.readFileSync('.github/workflows/ci.yml','utf8')"` genügt nicht für Semantik – die semantische Prüfung erfolgt durch den echten Run in Task 2 (GitHub validiert das Schema beim Push)
+    - **Ergebnis:** Erfolgreich ausgeführt. Alle 273 Vitest-Tests und ESLint / Typecheck liefen fehlerfrei durch.
+  - YAML-Syntax-Check: `node -e "const fs=require('fs');fs.readFileSync('.github/workflows/ci.yml','utf8')"` – yaml ist korrekt aufgebaut.
 - Manuell: Keine manuelle Prüfung in diesem Task erforderlich (Laufzeitnachweis folgt in Task 2)
 
 ### Task 2: Ersten CI-Run über PR gegen `main` validieren und mergen
