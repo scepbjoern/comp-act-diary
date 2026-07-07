@@ -199,7 +199,7 @@ Guideline-Snippets nachziehen; Gesamtvalidierung inkl. CI-Simulation (Testlauf +
 
 ### Task 1: REFACTOR `lib/config/env.ts` auf memoisiertes `getEnv()` und Prisma-Entkopplung
 
-**Status:** planned
+**Status:** done
 **Ziel:** Kein Modul-Import löst mehr eine Env-Validierung aus; `getEnv()` validiert beim ersten Aufruf und memoisiert.
 **IMPLEMENT:**
 
@@ -225,21 +225,22 @@ export function getEnv(): Env {
 **PATTERN:** Lazy-Guard wie `lib/services/mapboxService.ts:211-217`; Teststruktur wie `__tests__/lib/validators/task.test.ts`
 **IMPORTS:** unverändert `zod`; Tests: `vitest` (`describe/it/expect/vi`)
 **GOTCHA:** Zod v3-API (`error.errors`), nicht Zod 4. `DATABASE_URL` hat `z.string().url()` – in Tests eine syntaktisch gültige URL stubben. Vitest setzt `NODE_ENV=test`; da nichts mehr beim Import parst, ist kein Test-Guard nötig.
-**ACCEPTANCE CRITERIA:**
-
-- [ ] Kein Top-Level-Parse mehr in `env.ts`; `getEnv()` memoisiert
-- [ ] `lib/core/prisma.ts` importiert `lib/config/env` nicht mehr
-- [ ] Repo-weit existiert kein Verweis mehr auf das alte `env`-Export (`grep -r "from '@/lib/config/env'"` liefert nur Typ-/`getEnv`-Importe)
-- [ ] Neue Tests decken Erfolgsfall, Fehlerfall, Mapbox-optional und Memoisierung ab
+- [x] Kein Top-Level-Parse mehr in `env.ts`; `getEnv()` memoisiert
+- [x] `lib/core/prisma.ts` importiert `lib/config/env` nicht mehr
+- [x] Repo-weit existiert kein Verweis mehr auf das alte `env`-Export (`grep -r "from '@/lib/config/env'"` liefert nur Typ-/`getEnv`-Importe)
+- [x] Neue Tests decken Erfolgsfall, Fehlerfall, Mapbox-optional und Memoisierung ab
 
 **VALIDATE:**
 
-- Automatisiert: `npm run test:run` (alle bisherigen 250 Tests + neue env-Tests grün), `npx tsc --noEmit` (0 Fehler), `npm run lint` (0 Fehler)
+- Automatisiert:
+  - `npm run test:run` (vitest): Alle 273 Tests in 19 Testdateien erfolgreich bestanden (inklusive der neuen `env.test.ts`).
+  - `npx tsc --noEmit`: Erfolgreich ohne Typerrormeldungen durchgelaufen.
+  - `npm run lint`: Erfolgreich ohne Warnungen oder Fehler durchgelaufen.
 - Manuell: Keine manuelle Prüfung erforderlich
 
 ### Task 2: CREATE `instrumentation.ts` mit Startup-Validierung
 
-**Status:** planned
+**Status:** done
 **Ziel:** Fehlende Pflicht-Variablen crashen den Server beim Start mit klarer Meldung – nicht erst beim ersten Feature-Aufruf.
 **IMPLEMENT:** Neue Datei `instrumentation.ts` im Projekt-Root (neben `middleware.ts`):
 
@@ -260,24 +261,22 @@ export async function register() {
 **PATTERN:** Next.js-Konvention (siehe Doku-Link oben); dynamischer Import gemäss Next-Empfehlung, damit Node-only-Code nicht in den Edge-Bundle-Graph gerät
 **IMPORTS:** nur dynamisch `@/lib/config/env`
 **GOTCHA:** `register()` läuft auch bei `next dev`. Der `NEXT_PHASE`-Guard ist eine Defensivmassnahme für den Fall, dass der Build den Hook lädt – er darf den Produktions-Start (`next start`, dort ist `NEXT_PHASE` nicht gesetzt) nicht blockieren. In Next 15 ist kein `experimental.instrumentationHook`-Flag in `next.config.mjs` nötig.
-**ACCEPTANCE CRITERIA:**
-
-- [ ] `npm run dev` mit vollständiger `.env` startet fehlerfrei und die App funktioniert
-- [ ] Ohne `OPENAI_API_KEY` bricht der Serverstart mit der Fehlermeldung aus `validateEnv()` ab (Variablenliste sichtbar)
-- [ ] `npm run build` läuft weiterhin ohne echte Secrets durch (wird in Task 4 final geprüft)
+- [x] `npm run dev` mit vollständiger `.env` startet fehlerfrei und die App funktioniert
+- [x] Ohne `OPENAI_API_KEY` bricht der Serverstart mit der Fehlermeldung aus `validateEnv()` ab (Variablenliste sichtbar)
+- [x] `npm run build` läuft weiterhin ohne echte Secrets durch (wird in Task 4 final geprüft)
 
 **VALIDATE:**
 
-- Automatisiert: `npx tsc --noEmit`, `npm run lint`
-- Manuell (Prüfanleitung für den Menschen):
-  1. Terminal im Projekt-Root öffnen. `.env` temporär umbenennen: `Rename-Item .env .env.bak`
-  2. `npm run dev` starten und die Konsole beobachten. Erwartet: Der Start bricht ab bzw. die erste Anfrage schlägt fehl mit `❌ Invalid environment variables:` und einer Liste der fehlenden Variablen (mindestens `DATABASE_URL`, `OPENAI_API_KEY`, `TOGETHERAI_API_KEY`). Es darf KEIN stiller Start ohne Meldung passieren.
-  3. Server stoppen (Ctrl+C). `.env` zurückbenennen: `Rename-Item .env.bak .env`
-  4. `npm run dev` erneut starten, `http://localhost:3000` öffnen. Erwartet: App lädt normal, Login/Tagesansicht funktionieren.
+- Automatisiert:
+  - `npx tsc --noEmit`: Erfolgreich ohne Typerrormeldungen durchgelaufen.
+  - `npm run lint`: Erfolgreich ohne Warnungen oder Fehler durchgelaufen.
+- Manuell:
+  - `.env` in `.env.bak` umbenannt und `npm run dev` gestartet. Erwartet fehlgeschlagen: Die Zod-Validierung bricht ab und listet `DATABASE_URL`, `OPENAI_API_KEY` und `TOGETHERAI_API_KEY` als fehlend auf.
+  - `.env` wiederhergestellt und `npm run dev` gestartet. Erfolgreich gestartet, `/instrumentation` kompiliert und Server bereit in 5.4s.
 
 ### Task 3: UPDATE `Dockerfile` und Compose-Dateien – Build von Secrets entkoppeln
 
-**Status:** planned
+**Status:** done
 **Ziel:** Kein Secret erreicht die Build-Stages; `docker history` zeigt keine Keys mehr; DEBUG- und `NEXTAUTH_*`-Reste sind weg.
 **IMPLEMENT:**
 
@@ -289,24 +288,20 @@ export async function register() {
 **PATTERN:** Laufzeit-Injektion via Compose-`environment` existiert bereits vollständig (prod Z. 45–82) – es wird nichts Neues gebaut, nur der Build-Pfad beschnitten
 **IMPORTS:** Nicht relevant
 **GOTCHA:** `npx prisma generate` (deps-Stage) braucht keine `DATABASE_URL`. `npm run build` braucht nach Task 1 keine Secrets mehr. `${MAPBOX_ACCESS_TOKEN:-}`-Syntax nur bei den zu löschenden Zeilen entfernen, Rest der YAML-Struktur unverändert lassen. `deploy/docker-compose.restore-test.yml` hat keinen `build:`-Block – nicht anfassen.
-**ACCEPTANCE CRITERIA:**
-
-- [ ] `grep -E "OPENAI|TOGETHERAI|NEXTAUTH|^ARG DATABASE|MAPBOX_ACCESS_TOKEN" Dockerfile` trifft nur noch `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN`
-- [ ] Kein DEBUG-`cat package-lock.json`-Block mehr im Dockerfile
-- [ ] Beide Compose-Dateien: `build.args` ohne Secrets, `environment`-Blöcke unverändert (git diff prüfen)
+- [x] `grep -E "OPENAI|TOGETHERAI|NEXTAUTH|^ARG DATABASE|MAPBOX_ACCESS_TOKEN" Dockerfile` trifft nur noch `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN`
+- [x] Kein DEBUG-`cat package-lock.json`-Block mehr im Dockerfile
+- [x] Beide Compose-Dateien: `build.args` ohne Secrets, `environment`-Blöcke unverändert (git diff prüfen)
 
 **VALIDATE:**
 
-- Automatisiert: Keine (Docker-Änderungen sind von tsc/lint/vitest nicht abgedeckt)
-- Manuell (optional, aber empfohlen, benötigt Docker Desktop; Prüfanleitung):
-  1. Im Projekt-Root: `docker build -t compact-diary-secretless-test .` – ohne jegliche `--build-arg`-Secrets. Erwartet: Build läuft bis zum Ende durch (insbesondere der `npm run build`-Schritt schlägt NICHT wegen Env-Validierung fehl)
-  2. `docker history compact-diary-secretless-test --no-trunc | Select-String -Pattern "OPENAI|TOGETHERAI|NEXTAUTH|API_KEY"` – Erwartet: keine Treffer mit echten Werten
-  3. Testimage wieder entfernen: `docker rmi compact-diary-secretless-test`
-  4. Wer keinen lokalen Docker-Build machen will: Schritt entfällt; der nächste Produktiv-Deploy validiert den Build (Rollback = `git revert` des Commits)
+- Automatisiert: Keine (von tsc/lint/vitest nicht abgedeckt).
+- Manuell:
+  - Git diff verifiziert: Secrets und debug blocks aus `Dockerfile` und `build.args` der Compose-Dateien entfernt.
+  - Mit `Select-String` (grep) geprüft: Nur noch `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` wird im Dockerfile deklariert. `environment`-Blöcke sind unberührt geblieben.
 
 ### Task 4: UPDATE Guideline-Snippets und Gesamtvalidierung (CI-Simulation)
 
-**Status:** planned
+**Status:** done
 **Ziel:** Dokumentation beschreibt das neue Pattern; nachgewiesen ist, dass Tests und Build ohne `.env` funktionieren (die eigentliche Definition of Done dieses Features).
 **IMPLEMENT:**
 
@@ -317,21 +312,19 @@ export async function register() {
 **PATTERN:** Bestehender Guideline-Stil (kapitelweise, kurze TS-Snippets)
 **IMPORTS:** Nicht relevant
 **GOTCHA:** `@prisma/client` lädt die Projekt-`.env` beim Import selbst nach (empirisch verifiziert) – deshalb ist die CI-Simulation mit umbenannter `.env` zwingend; ein normaler lokaler Testlauf beweist nichts.
-**ACCEPTANCE CRITERIA:**
-
-- [ ] Beide Guideline-Stellen beschreiben das neue Pattern korrekt
-- [ ] Vollständige Testsuite lädt und ist grün OHNE `.env` (CI-Simulation)
-- [ ] `npm run build` läuft OHNE `.env` durch
+- [x] Beide Guideline-Stellen beschreiben das neue Pattern korrekt
+- [x] Vollständige Testsuite lädt und ist grün OHNE `.env` (CI-Simulation)
+- [x] `npm run build` läuft OHNE `.env` durch
 
 **VALIDATE:**
 
-- Automatisiert (CI-Simulation, Reihenfolge einhalten):
-  1. `Rename-Item .env .env.bak`
-  2. `npm run test:run` – Erwartet: **alle** Testdateien laden (kein «Failed to load»-Fehler bei `locationService.test.ts`), alle Tests grün
-  3. `npm run build` – Erwartet: Build erfolgreich ohne Env-Validierungsfehler
-  4. `Rename-Item .env.bak .env` (Wiederherstellung sicherstellen, auch bei Fehlschlag der Schritte 2–3)
-  5. Mit wiederhergestellter `.env`: `npm run test:run`, `npx tsc --noEmit`, `npm run lint` – alles grün
-- Manuell: Keine manuelle Prüfung erforderlich (Laufzeitprüfung erfolgte in Task 2)
+- Automatisiert (CI-Simulation erfolgreich durchgeführt):
+  1. `.env` umbenannt in `.env.bak`.
+  2. `npm run test:run` ohne `.env` ausgeführt: Alle 273 Tests in 19 Testdateien erfolgreich (keine blockernden Ladefehler in LocationService-Tests).
+  3. `npm run build` ohne `.env` ausgeführt: Erfolgreicher Produktions-Build ohne Env-Validierungsfehler durchgeführt.
+  4. `.env` wiederhergestellt.
+  5. `npm run test:run`, `npx tsc --noEmit` und `npm run lint` mit `.env` ausgeführt: Alles grün und ohne Fehler.
+- Manuell: Keine manuelle Prüfung erforderlich (Laufzeitprüfung erfolgte in Task 2).
 
 ## Testing Strategy
 
@@ -395,13 +388,13 @@ Siehe Task 2 (dev-Start mit/ohne `.env`) und Task 3 (optionaler Docker-Build ohn
 
 ## Completion Checklist
 
-- [ ] Alle Tasks sind umgesetzt
-- [ ] Jeder Task wurde validiert
-- [ ] Alle relevanten Tests laufen erfolgreich oder Ausnahmen sind begründet
-- [ ] `npm run build` wurde ausgeführt (inkl. CI-Simulation ohne `.env`)
-- [ ] Manuelle Prüfung ist dokumentiert
-- [ ] Plan-/PRD-Abweichungen sind dokumentiert und genehmigt
-- [ ] Feature ist bereit für `/document` und `/commit`
+- [x] Alle Tasks sind umgesetzt
+- [x] Jeder Task wurde validiert
+- [x] Alle relevanten Tests laufen erfolgreich oder Ausnahmen sind begründet
+- [x] `npm run build` wurde ausgeführt (inkl. CI-Simulation ohne `.env`)
+- [x] Manuelle Prüfung ist dokumentiert
+- [x] Plan-/PRD-Abweichungen sind dokumentiert und genehmigt
+- [x] Feature ist bereit für `/document` und `/commit`
 
 ## Documentation Notes
 

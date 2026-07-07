@@ -16,7 +16,8 @@ const envSchema = z.object({
   MISTRAL_API_KEY: z.string().optional(),
   
   // Maps & Location
-  MAPBOX_ACCESS_TOKEN: z.string().min(1, 'MAPBOX_ACCESS_TOKEN is required'),
+  // Mapbox access token is optional during build and runtime fallback is handled in mapboxService
+  MAPBOX_ACCESS_TOKEN: z.string().optional(),
   
   // Google Integration (optional)
   GOOGLE_CLIENT_ID: z.string().optional(),
@@ -55,8 +56,15 @@ function validateEnv() {
   }
 }
 
-// Export validated environment variables
-export const env = validateEnv()
-
 // Type-safe access to environment variables
 export type Env = z.infer<typeof envSchema>
+
+let cachedEnv: Env | null = null
+
+/** Validates and returns environment variables. Memoized after first call. */
+export function getEnv(): Env {
+  if (!cachedEnv) {
+    cachedEnv = validateEnv()
+  }
+  return cachedEnv
+}

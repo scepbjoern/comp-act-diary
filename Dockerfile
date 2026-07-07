@@ -20,30 +20,11 @@ ENV HTTP_PROXY=${HTTP_PROXY} \
     HTTPS_PROXY=${HTTPS_PROXY} \
     NO_PROXY=${NO_PROXY}
 
-# Phase 9: Environment variables for build (API keys, database, etc.)
-ARG OPENAI_API_KEY
-ARG TOGETHERAI_API_KEY
-ARG DATABASE_URL
-ARG NEXTAUTH_URL
-ARG NEXTAUTH_SECRET
+# Phase 9: Environment variables for build
 ARG CACHEBUST
-
-ENV OPENAI_API_KEY=${OPENAI_API_KEY} \
-    TOGETHERAI_API_KEY=${TOGETHERAI_API_KEY} \
-    DATABASE_URL=${DATABASE_URL} \
-    NEXTAUTH_URL=${NEXTAUTH_URL} \
-    NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 
 # Phase 9: Copy only package files for better layer caching
 COPY package*.json ./
-
-# DEBUG: Show what we're actually building
-RUN echo "=== DEBUG: Prisma version in package-lock.json ===" \
- && cat package-lock.json | grep -A3 '"prisma"' \
- && echo "=== DEBUG: Prisma version in package.json ===" \
- && cat package.json | grep -A2 '"prisma"' \
- && echo "=== DEBUG: Full package.json content ===" \
- && cat package.json
 
 # Show versions
 RUN node -v && npm -v
@@ -80,21 +61,9 @@ FROM node:24-bookworm AS build
 WORKDIR /app
 
 # Phase 9: Pass build args to build stage
-ARG OPENAI_API_KEY
-ARG TOGETHERAI_API_KEY
-ARG DATABASE_URL
-ARG NEXTAUTH_URL
-ARG NEXTAUTH_SECRET
-ARG MAPBOX_ACCESS_TOKEN
 ARG NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
 
-ENV OPENAI_API_KEY=${OPENAI_API_KEY} \
-    TOGETHERAI_API_KEY=${TOGETHERAI_API_KEY} \
-    DATABASE_URL=${DATABASE_URL} \
-    NEXTAUTH_URL=${NEXTAUTH_URL} \
-    NEXTAUTH_SECRET=${NEXTAUTH_SECRET} \
-    MAPBOX_ACCESS_TOKEN=${MAPBOX_ACCESS_TOKEN} \
-    NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=${NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}
+ENV NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=${NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}
 
 # Copy dependencies from deps stage (including generated Prisma client)
 COPY --from=deps /app/node_modules ./node_modules
